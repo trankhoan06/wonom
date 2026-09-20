@@ -6,11 +6,34 @@ $(document).ready(function () {
     // Hide the fixed header while scrolling down and reveal it when scrolling up.
     if (window.gsap) {
         const header = document.querySelector(".header");
+        const pageSections = Array.from(document.querySelectorAll(".pa_section"));
         let lastScrollY = window.scrollY;
         let headerHidden = false;
 
+        const syncHeaderSection = () => {
+            pageSections.forEach((section) => section.classList.remove("has-header"));
+            if (headerHidden || !pageSections.length) return;
+
+            const viewportMiddle = window.scrollY + (window.innerHeight / 2);
+            const activeSection = pageSections.reduce((nearest, section) => {
+                const sectionMiddle = section.offsetTop + (section.offsetHeight / 2);
+                const nearestMiddle = nearest.offsetTop + (nearest.offsetHeight / 2);
+                return Math.abs(sectionMiddle - viewportMiddle) < Math.abs(nearestMiddle - viewportMiddle)
+                    ? section
+                    : nearest;
+            }, pageSections[0]);
+
+            activeSection.classList.add("has-header");
+        };
+
         const setHeaderVisibility = (hidden) => {
-            if (!header || hidden === headerHidden) return;
+            if (!header) return;
+
+            if (hidden === headerHidden) {
+                syncHeaderSection();
+                return;
+            }
+
             headerHidden = hidden;
 
             gsap.to(header, {
@@ -19,6 +42,8 @@ $(document).ready(function () {
                 ease: hidden ? "power2.in" : "power2.out",
                 overwrite: "auto"
             });
+
+            syncHeaderSection();
         };
 
         window.addEventListener("scroll", function () {
@@ -37,6 +62,8 @@ $(document).ready(function () {
             setHeaderVisibility(scrollDistance > 0);
             lastScrollY = currentScrollY;
         }, { passive: true });
+
+        syncHeaderSection();
     }
 
     // Full-page navigation: one wheel/key gesture moves exactly one section.
@@ -261,8 +288,83 @@ $(document).ready(function () {
             $('#langWrapper').removeClass('active');
         }
     });
+    const heroImageTransition = window.WebGLImageTransition
+        ? new WebGLImageTransition({
+            container: document.querySelector('.home_banner'),
+            images: Array.from(document.querySelectorAll('.home_banner_image_item img')).map((image) => image.currentSrc || image.src),
+            duration: 850,
+        })
+        : null;
+
+    const syncHomeBannerImage = (bannerSwiper) => {
+        $('.home_banner_image_item').each(function (index) {
+            $(this).toggleClass('active', index === bannerSwiper.realIndex);
+        });
+        if (heroImageTransition) heroImageTransition.goTo(bannerSwiper.realIndex);
+    };
+
+    const homeBannerTextLines = new WeakMap();
+
+    if (window.SplitText) {
+        gsap.registerPlugin(SplitText);
+
+        $('.home_banner_item .swiper-slide-txt').each(function (index, element) {
+            SplitText.create(element, {
+                type: 'lines',
+                mask: 'lines',
+                linesClass: 'home_banner_text_line',
+                autoSplit: true,
+                onSplit: function (split) {
+                    homeBannerTextLines.set(element, split.lines);
+
+                    const slide = element.closest('.home_banner_item');
+                    const isActive = slide.classList.contains('swiper-slide-active') || (!swiper && index === 0);
+                    gsap.set(split.lines, { yPercent: isActive ? 0 : 100 });
+                },
+            });
+        });
+    }
+
+    const animateHomeBannerText = (bannerSwiper) => {
+        if (!window.SplitText) return;
+
+        const activeSlide = bannerSwiper.slides[bannerSwiper.activeIndex];
+        const previousSlide = bannerSwiper.slides[bannerSwiper.previousIndex];
+        if (!activeSlide || !previousSlide || activeSlide === previousSlide) return;
+
+        const activeText = activeSlide.querySelector('.swiper-slide-txt');
+        const previousText = previousSlide.querySelector('.swiper-slide-txt');
+        const activeLines = activeText
+            ? homeBannerTextLines.get(activeText) || Array.from(activeText.querySelectorAll('.home_banner_text_line'))
+            : [];
+        const previousLines = previousText
+            ? homeBannerTextLines.get(previousText) || Array.from(previousText.querySelectorAll('.home_banner_text_line'))
+            : [];
+
+        gsap.killTweensOf([...activeLines, ...previousLines]);
+        gsap.timeline()
+            .set(activeLines, { yPercent: 100 }, 0)
+            .to(previousLines, {
+                yPercent: -100,
+                duration: 0.65,
+                stagger: 0.07,
+                ease: 'power3.inOut',
+            }, 0)
+            .to(activeLines, {
+                yPercent: 0,
+                duration: 0.75,
+                stagger: 0.07,
+                ease: 'power3.out',
+            }, 0.14);
+    };
+
     var swiper = new Swiper('.mySwiper', {
         loop: true,
+        effect: 'fade',
+        fadeEffect: {
+            crossFade: true,
+        },
+        speed: 850,
         // autoplay: {
         //     delay: 3000,
         //     disableOnInteraction: false,
@@ -273,6 +375,11 @@ $(document).ready(function () {
         },
         pagination: {
             el: '.swiper-pagination',
+        },
+        on: {
+            init: syncHomeBannerImage,
+            slideChange: syncHomeBannerImage,
+            slideChangeTransitionStart: animateHomeBannerText,
         },
     });
     var swiper1 = new Swiper('.home_experience_inner', {
