@@ -39,6 +39,31 @@ html {
     overflow: hidden;
 }
 
+/* One wheel gesture = one full section (desktop). On smaller screens the
+   content keeps its natural height so it is never clipped. */
+@media only screen and (min-width: 992px) {
+    html.fullpage-scroll,
+    html.fullpage-scroll body {
+        overscroll-behavior-y: none;
+    }
+
+    html.fullpage-scroll .pa_section {
+        min-height: 100vh;
+        scroll-snap-align: start;
+    }
+
+    html.fullpage-scroll .home_tour {
+        height: 100vh;
+    }
+
+    html.fullpage-scroll .home_tour_bg,
+    html.fullpage-scroll .home_tour_bg img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+}
+
 
 
 * {
@@ -485,6 +510,7 @@ h2 {
     left: 0;
     right: 0;
     z-index: 1000000;
+    will-change: transform;
 }
 
 .header-container {
@@ -1029,12 +1055,13 @@ h2 {
 }
 
 .home_intro_bottom_bar {
-    bottom: 0;
+    bottom: -6.7rem;
     left: 0;
     right: 0;
-    height: 4.2rem;
+    height: 11rem;
     z-index: 3;
     border-top: 3px solid #460700;
+    border-bottom: 3px solid #460700;
 }
 
 .home_intro_bg {
@@ -1060,6 +1087,9 @@ h2 {
 
 .home_intro_right {
     grid-column: 8/13;
+    display: flex;
+    flex-direction: column;
+    gap: 1.6rem;
 }
 
 .home_intro_inner {
@@ -1254,10 +1284,13 @@ h2 {
 }
 
 .home_experience_top {
-    top: 0;
+    top: calc(6.7rem - 11rem);
     left: 0;
     right: 0;
-    height: 7.6rem;
+    height: 11rem;
+    border-bottom: 3px solid #460700;
+    border-top: 3px solid #460700;
+
 }
 
 .home_experience_inner {

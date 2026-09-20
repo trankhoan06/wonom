@@ -2,6 +2,207 @@ $(document).ready(function () {
     const parseRem = (input) => {
         return (input / 10) * parseFloat($("html").css("font-size"));
     };
+
+    // Hide the fixed header while scrolling down and reveal it when scrolling up.
+    if (window.gsap) {
+        const header = document.querySelector(".header");
+        let lastScrollY = window.scrollY;
+        let headerHidden = false;
+
+        const setHeaderVisibility = (hidden) => {
+            if (!header || hidden === headerHidden) return;
+            headerHidden = hidden;
+
+            gsap.to(header, {
+                yPercent: hidden ? -110 : 0,
+                duration: 0.35,
+                ease: hidden ? "power2.in" : "power2.out",
+                overwrite: "auto"
+            });
+        };
+
+        window.addEventListener("scroll", function () {
+            const currentScrollY = Math.max(window.scrollY, 0);
+            const scrollDistance = currentScrollY - lastScrollY;
+
+            if (currentScrollY <= 10 || document.querySelector(".header_menu.active")) {
+                setHeaderVisibility(false);
+                lastScrollY = currentScrollY;
+                return;
+            }
+
+            // Ignore tiny movements to keep the header from flickering on a trackpad.
+            if (Math.abs(scrollDistance) < 6) return;
+
+            setHeaderVisibility(scrollDistance > 0);
+            lastScrollY = currentScrollY;
+        }, { passive: true });
+    }
+
+    // Full-page navigation: one wheel/key gesture moves exactly one section.
+    // Kept desktop-only because the tablet/mobile layout uses natural heights.
+    if (window.gsap && window.ScrollToPlugin) {
+        gsap.registerPlugin(ScrollToPlugin);
+
+        const fullpageMatchMedia = gsap.matchMedia();
+
+        fullpageMatchMedia.add("(min-width: 992px)", function () {
+            const sections = gsap.utils.toArray(".pa_section");
+            const html = document.documentElement;
+            const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+            let currentIndex = 0;
+            let isAnimating = false;
+            let touchStartY = 0;
+            let scrollTween = null;
+            let wheelGestureActive = false;
+            let wheelIdleTimer = null;
+            let wheelDelta = 0;
+
+            const popupIsOpen = () => document.querySelector(
+                ".popup_tour.active, .popup_form.active, .popup_member.active"
+            );
+
+            const nearestSectionIndex = () => {
+                const viewportMiddle = window.scrollY + (window.innerHeight / 2);
+                let nearest = 0;
+                let nearestDistance = Infinity;
+
+                sections.forEach((section, index) => {
+                    const middle = section.offsetTop + (section.offsetHeight / 2);
+                    const distance = Math.abs(middle - viewportMiddle);
+                    if (distance < nearestDistance) {
+                        nearest = index;
+                        nearestDistance = distance;
+                    }
+                });
+
+                return nearest;
+            };
+
+            const updateHash = (section) => {
+                const nextHash = section.id ? `#${section.id}` : window.location.pathname;
+                window.history.replaceState(null, "", nextHash);
+            };
+
+            const goToSection = (nextIndex) => {
+                if (isAnimating || popupIsOpen()) return;
+
+                const clampedIndex = gsap.utils.clamp(0, sections.length - 1, nextIndex);
+                if (clampedIndex === currentIndex) return;
+
+                const nextSection = sections[clampedIndex];
+                isAnimating = true;
+
+                scrollTween = gsap.to(window, {
+                    scrollTo: { y: nextSection, autoKill: false },
+                    duration: reduceMotion ? 0.2 : 0.78,
+                    ease: "power3.inOut",
+                    onComplete: function () {
+                        currentIndex = clampedIndex;
+                        isAnimating = false;
+                        scrollTween = null;
+                        updateHash(nextSection);
+                    }
+                });
+            };
+
+            const onWheel = (event) => {
+                if (popupIsOpen()) return;
+                event.preventDefault();
+
+                // Trackpads often emit many very small deltas. Accumulate them
+                // so a light gesture is enough, while still allowing only one
+                // section change until that gesture has fully ended.
+                const deltaMultiplier = event.deltaMode === 1 ? 16 : (event.deltaMode === 2 ? window.innerHeight : 1);
+                wheelDelta += event.deltaY * deltaMultiplier;
+
+                window.clearTimeout(wheelIdleTimer);
+                wheelIdleTimer = window.setTimeout(function () {
+                    wheelGestureActive = false;
+                    wheelDelta = 0;
+                }, 140);
+
+                if (Math.abs(wheelDelta) < 3) return;
+                if (wheelGestureActive) return;
+                wheelGestureActive = true;
+                const direction = wheelDelta > 0 ? 1 : -1;
+                goToSection(currentIndex + direction);
+            };
+
+            const onKeydown = (event) => {
+                if (event.repeat || popupIsOpen() || /INPUT|TEXTAREA|SELECT/.test(event.target.tagName)) return;
+
+                const nextKeys = ["ArrowDown", "PageDown", "Space"];
+                const previousKeys = ["ArrowUp", "PageUp"];
+
+                if (nextKeys.includes(event.code) || nextKeys.includes(event.key)) {
+                    event.preventDefault();
+                    goToSection(currentIndex + 1);
+                } else if (previousKeys.includes(event.code) || previousKeys.includes(event.key)) {
+                    event.preventDefault();
+                    goToSection(currentIndex - 1);
+                } else if (event.key === "Home") {
+                    event.preventDefault();
+                    goToSection(0);
+                } else if (event.key === "End") {
+                    event.preventDefault();
+                    goToSection(sections.length - 1);
+                }
+            };
+
+            const onTouchStart = (event) => {
+                touchStartY = event.changedTouches[0].clientY;
+            };
+
+            const onTouchEnd = (event) => {
+                if (popupIsOpen()) return;
+                const distance = touchStartY - event.changedTouches[0].clientY;
+                if (Math.abs(distance) < 50) return;
+                goToSection(currentIndex + (distance > 0 ? 1 : -1));
+            };
+
+            const onNavClick = (event) => {
+                const href = event.currentTarget.getAttribute("href");
+                if (href === "#") return;
+                const targetId = href === "/#top" || href === "#top" ? null : href.slice(1);
+                const nextIndex = targetId
+                    ? sections.findIndex((section) => section.id === targetId)
+                    : 0;
+
+                if (nextIndex < 0) return;
+                event.preventDefault();
+                goToSection(nextIndex);
+            };
+
+            const onScroll = () => {
+                if (!isAnimating) currentIndex = nearestSectionIndex();
+            };
+
+            html.classList.add("fullpage-scroll");
+            currentIndex = nearestSectionIndex();
+
+            window.addEventListener("wheel", onWheel, { passive: false });
+            window.addEventListener("keydown", onKeydown);
+            window.addEventListener("touchstart", onTouchStart, { passive: true });
+            window.addEventListener("touchend", onTouchEnd, { passive: true });
+            window.addEventListener("scroll", onScroll, { passive: true });
+
+            const navLinks = document.querySelectorAll('.header-nav a[href^="#"], a[href="/#top"], a[href="#top"]');
+            navLinks.forEach((link) => link.addEventListener("click", onNavClick));
+
+            return function () {
+                if (scrollTween) scrollTween.kill();
+                window.clearTimeout(wheelIdleTimer);
+                html.classList.remove("fullpage-scroll");
+                window.removeEventListener("wheel", onWheel);
+                window.removeEventListener("keydown", onKeydown);
+                window.removeEventListener("touchstart", onTouchStart);
+                window.removeEventListener("touchend", onTouchEnd);
+                window.removeEventListener("scroll", onScroll);
+                navLinks.forEach((link) => link.removeEventListener("click", onNavClick));
+            };
+        });
+    }
     $('#langSelectorBtn').on('click', function (e) {
         e.stopPropagation();
         $('#langWrapper').toggleClass('active');
