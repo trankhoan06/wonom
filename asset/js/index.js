@@ -11,7 +11,48 @@ $(document).ready(function () {
     $('.header_menu').on('click', function (e) {
         $(this).toggleClass('active');
         $('.header-nav').toggleClass('active');
+        $('.header_overlay').toggleClass('active');
     });
+
+    // Close hamburger menu when clicking overlay
+    $('.header_overlay').on('click', function () {
+        $('.header_menu').removeClass('active');
+        $('.header-nav').removeClass('active');
+        $(this).removeClass('active');
+    });
+
+    // Tab logic cho phần Khám Phá 5 Tầng (Explore)
+    $('.home_explore_sidebar_tab_item').on('click', function () {
+        if ($(this).hasClass('active')) return;
+
+        var oldIndex = $('.home_explore_sidebar_tab_item.active').index();
+        var newIndex = $(this).index();
+        var targetTab = $(this).attr('data-tab');
+
+        // Đổi trạng thái tab sidebar
+        $('.home_explore_sidebar_tab_item').removeClass('active');
+        $(this).addClass('active');
+
+        // Đổi trạng thái nội dung (wrap)
+        $('.home_explore_content_tab').each(function (index) {
+            if (index < newIndex) {
+                // Các tab bên trên -> thêm remove
+                $(this).removeClass('active').addClass('remove');
+            } else if (index === newIndex) {
+                // Tab được chọn -> thêm active
+                $(this).removeClass('remove').addClass('active');
+            } else {
+                // Các tab bên dưới -> bỏ hết remove và active
+                $(this).removeClass('active remove');
+            }
+        });
+    });
+
+    // Khởi tạo tab đầu tiên nếu chưa có
+    if ($('.home_explore_content_tab.active').length === 0) {
+        $('.home_explore_content_tab[data-tab="tab1f"]').addClass('active');
+    }
+
 
     // Close dropdown when clicking outside
     $(document).on('click', function (e) {
