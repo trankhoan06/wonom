@@ -7,6 +7,12 @@ $(document).ready(function () {
         $('#langWrapper').toggleClass('active');
     });
 
+    // Toggle hamburger menu
+    $('.header_menu').on('click', function (e) {
+        $(this).toggleClass('active');
+        $('.header-nav').toggleClass('active');
+    });
+
     // Close dropdown when clicking outside
     $(document).on('click', function (e) {
         if (!$(e.target).closest('#langWrapper').length) {
