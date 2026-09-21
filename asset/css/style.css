@@ -213,23 +213,23 @@ a:hover {
 
 
 .h1 {
-    font-size: 4.8rem;
+    font-size: min(4.8rem, 5.2vh);
 }
 
 .h2 {
-    font-size: 4.4rem;
+    font-size: min(4.4rem, 4.8vh);
 }
 
 .h3 {
-    font-size: 4rem;
+    font-size: min(4rem, 4.4vh);
 }
 
 .h4 {
-    font-size: 3.2rem;
+    font-size: min(3.2rem, 3.6vh);
 }
 
 .h5 {
-    font-size: 2.4rem;
+    font-size: min(2.4rem, 2.4vh);
 }
 
 .h6 {
@@ -262,7 +262,7 @@ p {
 }
 
 .txt_64 {
-    font-size: 6.4rem;
+    font-size: min(6.4rem, 7vh);
 }
 
 
@@ -1425,9 +1425,6 @@ h2 {
     height: 100%;
 }
 
-.home_experience_item.h2 {
-    font-size: min(4.4rem, 4.4vh);
-}
 
 .home_experience_list_card_item {
     display: flex;
@@ -1676,6 +1673,8 @@ h2 {
     width: 18.4rem;
     padding-inline: 2.4rem;
     border-right: 2px solid #460700;
+    border-left: 2px solid #460700;
+    margin-left: -2px;
     position: relative;
 }
 
@@ -1797,7 +1796,7 @@ h2 {
 }
 
 .home_explore_sidebar_bottom {
-
+    margin-inline: -2.4rem;
     flex: none;
 }
 
@@ -2226,19 +2225,23 @@ h2 {
     position: relative;
 }
 
-.home_event_subtitle {
+.home_event.has-header .home_event_subtitle {
     padding-top: 14.81vh;
 }
 
+.home_event_subtitle {
+    padding-top: 7.81vh;
+}
+
 .home_event_title {
-    margin-top: 2.4rem;
+    margin-top: min(2.4rem, 2.6vh);
     color: #FFCE56;
     text-shadow: -1.5px -1.5px 0 #460700, 0 -1.5px 0 #460700, 1.5px -1.5px 0 #460700, 1.5px 0 0 #460700, 1.5px 1.5px 0 #460700, 0 1.5px 0 #460700, -1.5px 1.5px 0 #460700, -1.5px 0 0 #460700;
     -webkit-text-stroke: 0;
 }
 
 .home_event_card {
-    margin-top: 6rem;
+    margin-top: min(6vh, 6rem);
     padding-bottom: .4rem;
 }
 
@@ -2251,13 +2254,13 @@ h2 {
 }
 
 .home_event_icon.icon1 {
-    width: 13.6rem;
+    width: min(13.6rem, 14.81vh);
     left: 13rem;
     top: 24.69vh;
 }
 
 .home_event_icon.icon2 {
-    width: 12.7rem;
+    width: min(12.7rem, 13.8vh);
     right: 13rem;
     top: 15.19vh;
 }
@@ -2298,11 +2301,17 @@ h2 {
     margin-top: .4rem;
 }
 
+.home_event.has-header .home_event_card_item_img {
+    max-height: min(38.1rem, 50vh);
+
+}
+
 .home_event_card_item_img {
     border: 2px solid #460700;
     border-radius: 1.6rem;
     overflow: hidden;
     box-shadow: 4px 4px 0 0 #460700;
+    max-height: min(41.1rem, 56vh);
 }
 
 .svg_rotate_wrap:hover .home_event_card_item_txt_icon svg path {
@@ -2502,6 +2511,7 @@ h2 {
 
 .footer>.container {
     padding-top: 14.81vh;
+    height: 100vh;
 }
 
 .footer_info {
@@ -2544,7 +2554,7 @@ h2 {
 
 .footer_contact {
     grid-column: 7/13;
-    margin-top: 4.8rem;
+    margin-top: min(4.8rem, 5.4vh);
 }
 
 .footer_contact_inner {
@@ -2561,7 +2571,7 @@ h2 {
 }
 
 .footer_contact_num_icon {
-    width: 6.4rem;
+    width: min(6.4rem, 7vh);
 }
 
 .footer_contact_des {
@@ -2569,7 +2579,7 @@ h2 {
 }
 
 .footer_contact_num {
-    margin-top: 3.2rem;
+    margin-top: min(3.2rem, 4vh);
     display: flex;
     gap: 1.6rem;
     align-items: center;
@@ -2577,7 +2587,7 @@ h2 {
 
 .footer_contact_button.btn {
     background-color: #1A66FF;
-    margin-top: 3.2rem;
+    margin-top: min(3.2rem, 4vh);
 }
 
 .footer_contact_num_txt {
@@ -2620,7 +2630,7 @@ h2 {
     position: absolute;
     right: var(--padding-container);
     gap: 6rem;
-    top: -7.4rem;
+    bottom: calc(100% + min(3.4rem, 3.4vh));
 }
 
 .footer_contact_info_social {
@@ -2688,21 +2698,26 @@ h2 {
 
 .footer_bot {
     position: absolute;
-    bottom: 2.4rem;
+    bottom: min(2.4rem, 2.55vh);
     width: 100%;
 }
 
 
 .footer_bot_icon {
     position: absolute;
-    width: 49.7rem;
-    top: -23.9rem;
+    width: min(49.7rem, 55vh);
+    bottom: 100%;
     left: var(--padding-container);
 
 }
 
 .footer_bot_img {
     border-bottom: 2px solid #460700;
+    height: min(6.8rem, 7.2vh);
+}
+
+.footer_bot_img img {
+    object-position: top;
 }
 
 .footer_bot_inner.container {
@@ -2788,8 +2803,9 @@ h2 {
 }
 
 .footer_bot_right_img {
-    width: 11.6rem;
+    height: min(4.4rem, 5.4vh);
 }
+
 
 .footer_bot_right {
     display: flex;
@@ -2950,7 +2966,6 @@ h2 {
 
 .popup_tour_title {
     text-shadow: -2px -2px 0 #460700, 0 -2px 0 #460700, 2px -2px 0 #460700, 2px 0 0 #460700, 2px 2px 0 #460700, 0 2px 0 #460700, -2px 2px 0 #460700, -2px 0 0 #460700;
-    font-size: min(3.2rem, 3.6vh);
 }
 
 .popup_tour_close_inner {
