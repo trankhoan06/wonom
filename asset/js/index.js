@@ -84,6 +84,33 @@ $(document).ready(function () {
             let wheelGestureActive = false;
             let wheelIdleTimer = null;
             let wheelDelta = 0;
+            let nestedWheelElement = null;
+            let touchScrollElement = null;
+            let touchScrollStartTop = 0;
+
+            const getCustomScrollElement = (target) => {
+                return target instanceof Element ? target.closest("[custom-scroll]") : null;
+            };
+
+            const getScrollLimit = (element) => Math.max(element.scrollHeight - element.clientHeight, 0);
+
+            const canScrollElement = (element, deltaY, scrollTop = element.scrollTop) => {
+                const scrollLimit = getScrollLimit(element);
+                if (scrollLimit <= 1 || deltaY === 0) return false;
+
+                return deltaY > 0
+                    ? scrollTop < scrollLimit - 1
+                    : scrollTop > 1;
+            };
+
+            const resetWheelGestureAfterIdle = () => {
+                window.clearTimeout(wheelIdleTimer);
+                wheelIdleTimer = window.setTimeout(function () {
+                    wheelGestureActive = false;
+                    nestedWheelElement = null;
+                    wheelDelta = 0;
+                }, 140);
+            };
 
             const popupIsOpen = () => document.querySelector(
                 ".popup_tour.active, .popup_form.active, .popup_member.active"
@@ -135,6 +162,24 @@ $(document).ready(function () {
 
             const onWheel = (event) => {
                 if (popupIsOpen()) return;
+
+                const customScrollElement = getCustomScrollElement(event.target);
+
+                // Let an overflowing custom-scroll consume the whole wheel
+                // gesture. Keeping it locked until the gesture ends prevents
+                // trackpad momentum from unexpectedly changing sections when
+                // the inner element reaches its boundary.
+                if (customScrollElement && (
+                    canScrollElement(customScrollElement, event.deltaY)
+                    || nestedWheelElement === customScrollElement
+                )) {
+                    nestedWheelElement = customScrollElement;
+                    wheelGestureActive = false;
+                    wheelDelta = 0;
+                    resetWheelGestureAfterIdle();
+                    return;
+                }
+
                 event.preventDefault();
 
                 // Trackpads often emit many very small deltas. Accumulate them
@@ -143,11 +188,7 @@ $(document).ready(function () {
                 const deltaMultiplier = event.deltaMode === 1 ? 16 : (event.deltaMode === 2 ? window.innerHeight : 1);
                 wheelDelta += event.deltaY * deltaMultiplier;
 
-                window.clearTimeout(wheelIdleTimer);
-                wheelIdleTimer = window.setTimeout(function () {
-                    wheelGestureActive = false;
-                    wheelDelta = 0;
-                }, 140);
+                resetWheelGestureAfterIdle();
 
                 if (Math.abs(wheelDelta) < 3) return;
                 if (wheelGestureActive) return;
@@ -161,11 +202,19 @@ $(document).ready(function () {
 
                 const nextKeys = ["ArrowDown", "PageDown", "Space"];
                 const previousKeys = ["ArrowUp", "PageUp"];
+                const movesForward = nextKeys.includes(event.code) || nextKeys.includes(event.key);
+                const movesBackward = previousKeys.includes(event.code) || previousKeys.includes(event.key);
+                const customScrollElement = getCustomScrollElement(event.target);
 
-                if (nextKeys.includes(event.code) || nextKeys.includes(event.key)) {
+                if (customScrollElement && (
+                    (movesForward && canScrollElement(customScrollElement, 1))
+                    || (movesBackward && canScrollElement(customScrollElement, -1))
+                )) return;
+
+                if (movesForward) {
                     event.preventDefault();
                     goToSection(currentIndex + 1);
-                } else if (previousKeys.includes(event.code) || previousKeys.includes(event.key)) {
+                } else if (movesBackward) {
                     event.preventDefault();
                     goToSection(currentIndex - 1);
                 } else if (event.key === "Home") {
@@ -179,12 +228,24 @@ $(document).ready(function () {
 
             const onTouchStart = (event) => {
                 touchStartY = event.changedTouches[0].clientY;
+                touchScrollElement = getCustomScrollElement(event.target);
+                touchScrollStartTop = touchScrollElement ? touchScrollElement.scrollTop : 0;
             };
 
             const onTouchEnd = (event) => {
                 if (popupIsOpen()) return;
                 const distance = touchStartY - event.changedTouches[0].clientY;
                 if (Math.abs(distance) < 50) return;
+
+                // If this swipe started while the nested element could scroll
+                // in that direction, it belongs to that element even when the
+                // swipe itself reaches the boundary.
+                if (touchScrollElement && canScrollElement(
+                    touchScrollElement,
+                    distance,
+                    touchScrollStartTop
+                )) return;
+
                 goToSection(currentIndex + (distance > 0 ? 1 : -1));
             };
 
@@ -250,19 +311,28 @@ $(document).ready(function () {
     });
 
     // Tab logic cho phần Khám Phá 5 Tầng (Explore)
+    let exploreTabTransitionTimer = null;
+
     $('.home_explore_sidebar_tab_item').on('click', function () {
         if ($(this).hasClass('active')) return;
 
         var oldIndex = $('.home_explore_sidebar_tab_item.active').index();
         var newIndex = $(this).index();
         var targetTab = $(this).attr('data-tab');
+        var $contentTabs = $('.home_explore_content_tab');
+        var $transitionTabs = $contentTabs.eq(oldIndex)
+            .add($contentTabs.filter('[data-tab="' + targetTab + '"]'));
+
+        window.clearTimeout(exploreTabTransitionTimer);
+        $contentTabs.removeClass('is-transitioning');
+        $transitionTabs.addClass('is-transitioning');
 
         // Đổi trạng thái tab sidebar
         $('.home_explore_sidebar_tab_item').removeClass('active');
         $(this).addClass('active');
 
         // Đổi trạng thái nội dung (wrap)
-        $('.home_explore_content_tab').each(function (index) {
+        $contentTabs.each(function (index) {
             if (index < newIndex) {
                 // Các tab bên trên -> thêm remove
                 $(this).removeClass('active').addClass('remove');
@@ -274,6 +344,10 @@ $(document).ready(function () {
                 $(this).removeClass('active remove');
             }
         });
+
+        exploreTabTransitionTimer = window.setTimeout(function () {
+            $transitionTabs.removeClass('is-transitioning');
+        }, 650);
     });
 
     // Khởi tạo tab đầu tiên nếu chưa có
