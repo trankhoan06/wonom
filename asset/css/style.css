@@ -842,12 +842,11 @@ h2 {
     .header-nav {
         background-color: #FFF6DB;
         position: fixed;
-        top: 0;
-        bottom: 0;
+        height: calc(100vh - 7.2rem);
         right: 0;
         left: 50%;
         border-left: 2px solid #460700;
-        top: 7.7rem;
+        top: 7.2rem;
         display: flex;
         flex-direction: column;
         align-items: flex-start;
@@ -905,6 +904,8 @@ h2 {
         right: 0;
         left: 28.2%;
         padding-inline: 3.2rem;
+        height: calc(100vh - 6.3rem);
+        top: 6.3rem;
     }
 
     .header-logo {
@@ -1287,18 +1288,12 @@ h2 {
         margin-top: 24rem;
     }
 
-    .home_intro_icon {
-        width: 11rem;
-        bottom: 1.4rem;
-        z-index: 11111;
-    }
-
     .home_intro_image_inner {
         width: 20.7rem;
     }
 
     .home_intro_image_wrap {
-        bottom: 5.4rem;
+        bottom: 10.4rem;
         gap: 2.5rem;
         left: -2.5rem;
         right: -2.5rem;
@@ -1315,7 +1310,7 @@ h2 {
         width: auto;
         left: 1.4rem;
         right: 2.7rem;
-        bottom: 12.4rem;
+        bottom: 15.4rem;
         transform: rotate(6.318deg);
     }
 
@@ -1324,12 +1319,41 @@ h2 {
         width: 1.4rem;
         top: -1.5rem;
     }
+
+    .home_intro_icon {
+        width: 14rem;
+        bottom: 1.4rem;
+        z-index: 11111;
+        right: 3.7rem;
+    }
+
+    .home_intro_icon1 {
+        width: 11.7rem;
+        bottom: 4.2rem;
+        z-index: 111111;
+        left: 2.3rem;
+    }
+
+    .home_intro_icon2 {
+        width: 12rem;
+        bottom: 2.4rem;
+        z-index: 111111;
+    }
+
+    .home_intro_bottom_bar {
+        bottom: 0;
+    }
+
+    .home_intro_bottom_bar {
+        position: relative;
+        margin-top: 28rem;
+    }
 }
 
 @media only screen and (max-width: 767px) {
     .home_intro_bottom_bar {
         position: relative;
-        margin-top: 18rem;
+        margin-top: 20rem;
     }
 
     .home_intro_image_inner {
@@ -1337,7 +1361,7 @@ h2 {
     }
 
     .home_intro_image_wrap {
-        bottom: 5.4rem;
+        bottom: 7.4rem;
         gap: 2.5rem;
         left: -2.5rem;
         right: -2.5rem;
@@ -1347,6 +1371,21 @@ h2 {
         z-index: 11;
         width: 1.4rem;
         top: -1.5rem;
+    }
+
+    .home_intro_icon1 {
+        width: 7.7rem;
+    }
+
+    .home_intro_icon2 {
+        width: 8rem;
+    }
+
+    .home_intro_icon {
+        width: 11rem;
+        bottom: 1.4rem;
+        z-index: 11111;
+        right: 3.7rem;
     }
 }
 
@@ -1412,6 +1451,8 @@ h2 {
     height: calc(100% - 8.3vh - 2.4vh);
     margin-top: auto;
     margin-bottom: 2.4vh;
+    width: 100%;
+    padding-right: .4rem;
 }
 
 .home_experience.has-header .home_experience_list {
@@ -1556,19 +1597,24 @@ h2 {
 
 
 @media only screen and (max-width: 991px) {
+
     .home_experience .container {
-        padding-top: 3.2rem;
+        padding-top: 5.4rem;
+        padding-bottom: 0;
     }
 
     .home_experience_list_card {
         display: flex;
         flex-wrap: wrap;
-        gap: 2.4;
+        gap: 2.4rem;
+        width: 100%;
+
+        padding-bottom: .4rem;
     }
 
     .home_experience_inner {
         position: relative;
-        margin-top: 3.2rem;
+        margin-top: 0;
     }
 
     .home_experience_list_card_item_content {
@@ -1589,9 +1635,19 @@ h2 {
         width: 100%;
     }
 
+    .home_experience_list_card_item_img img {
+        position: unset;
+    }
+
+
 }
 
-@media only screen and (max-width: 767px) {}
+@media only screen and (max-width: 767px) {
+    .home_experience .container {
+        padding-top: 7.4rem;
+        padding-bottom: 0;
+    }
+}
 
 /* home_explore */
 .home_explore_wrap {
@@ -2051,7 +2107,7 @@ h2 {
 }
 
 .home_explore_list_button.btn:hover {
-    transform: translate(2px, calc(-50% + 2px));
+    transform: translate(1px, calc(-50% + 1px));
 }
 
 .home_explore_bg {
@@ -2066,7 +2122,19 @@ h2 {
 }
 
 
-@media only screen and (max-width: 991px) {}
+@media only screen and (max-width: 991px) {
+    .home_explore_container {
+        height: auto;
+    }
+
+    .home_explore_content_tab {
+        position: relative;
+    }
+
+    .home_explore_content_tab {
+        transform: translateY(0);
+    }
+}
 
 @media only screen and (max-width: 767px) {}
 
