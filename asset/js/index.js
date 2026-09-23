@@ -7,12 +7,13 @@ $(document).ready(function () {
     if (window.gsap) {
         const header = document.querySelector(".header");
         const pageSections = Array.from(document.querySelectorAll(".pa_section"));
+        const desktopMedia = window.matchMedia("(min-width: 992px)");
         let lastScrollY = window.scrollY;
         let headerHidden = false;
 
         const syncHeaderSection = () => {
             pageSections.forEach((section) => section.classList.remove("has-header"));
-            if (headerHidden || !pageSections.length) return;
+            if (!desktopMedia.matches || headerHidden || !pageSections.length) return;
 
             const viewportMiddle = window.scrollY + (window.innerHeight / 2);
             const activeSection = pageSections.reduce((nearest, section) => {
@@ -62,6 +63,8 @@ $(document).ready(function () {
             setHeaderVisibility(scrollDistance > 0);
             lastScrollY = currentScrollY;
         }, { passive: true });
+
+        desktopMedia.addEventListener("change", syncHeaderSection);
 
         syncHeaderSection();
     }
@@ -113,7 +116,7 @@ $(document).ready(function () {
             };
 
             const popupIsOpen = () => document.querySelector(
-                ".popup_tour.active, .popup_form.active, .popup_member.active"
+                ".popup_tour.active, .popup_form.active, .popup_member.active, .workshop_detail_popup.active"
             );
 
             const nearestSectionIndex = () => {
@@ -366,7 +369,7 @@ $(document).ready(function () {
         ? new WebGLImageTransition({
             container: document.querySelector('.home_banner'),
             images: Array.from(document.querySelectorAll('.home_banner_image_item img')).map((image) => image.currentSrc || image.src),
-            duration: 850,
+            duration: 1100,
         })
         : null;
 
@@ -448,22 +451,13 @@ $(document).ready(function () {
             prevEl: '.home_banner_button_prev',
         },
         pagination: {
-            el: '.swiper-pagination',
+            el: '.home_banner_pagination',
+            clickable: true,
         },
         on: {
             init: syncHomeBannerImage,
             slideChange: syncHomeBannerImage,
             slideChangeTransitionStart: animateHomeBannerText,
-        },
-    });
-    var swiper1 = new Swiper('.home_experience_inner', {
-        slidesPerView: 'auto',
-        spaceBetween: parseRem(48),
-        loop: true,
-        speed: 3000,
-        autoplay: {
-            delay: 0,
-            disableOnInteraction: false,
         },
     });
     var swiper2 = new Swiper('.home_explore_list', {
@@ -492,18 +486,72 @@ $(document).ready(function () {
     });
 
     var swiper3 = new Swiper('.home_event_card', {
-        slidesPerView: 3,
+        slidesPerView: 1,
         spaceBetween: parseRem(24),
+        breakpoints: {
+            992: {
+                slidesPerView: 3,
+                spaceBetween: parseRem(24),
+            },
+            768: {
+                slidesPerView: 2,
+                spaceBetween: parseRem(24),
+            },
+        },
         navigation: {
             nextEl: '.home_event_card_item_button_next',
             prevEl: '.home_event_card_item_button_prev',
         },
     });
 
+    var homeTourThumbs = new Swiper('.home_tour_card_slide', {
+        slidesPerView: 'auto',
+        spaceBetween: parseRem(12),
+        freeMode: true,
+        watchSlidesProgress: true,
+        watchOverflow: true,
+        slideToClickedSlide: true,
+        observer: true,
+        observeParents: true,
+        grabCursor: true,
+    });
+
+    var homeTourImageTransition = window.WebGLImageTransition
+        ? new WebGLImageTransition({
+            container: document.querySelector('.home_tour_main'),
+            images: Array.from(document.querySelectorAll('.home_tour_main_item img')).map(function (image) {
+                return image.currentSrc || image.src;
+            }),
+            duration: 1100,
+        })
+        : null;
+
+    var homeTourSwiper = new Swiper('.home_tour_main', {
+        speed: 850,
+        effect: 'fade',
+        fadeEffect: {
+            crossFade: true,
+        },
+        navigation: {
+            nextEl: '.home_tour_card_detail_button_inner_next',
+            prevEl: '.home_tour_card_detail_button_inner_prev',
+        },
+        thumbs: {
+            swiper: homeTourThumbs,
+        },
+        on: {
+            slideChange: function (swiper) {
+                if (homeTourImageTransition) {
+                    homeTourImageTransition.goTo(swiper.realIndex);
+                }
+            },
+        },
+    });
+
     var swiper4 = new Swiper('.home_space_right_card.card1', {
-        direction: 'vertical',
-        slidesPerView: 1.8,
-        spaceBetween: parseRem(24),
+        direction: 'horizontal',
+        slidesPerView: 1.2,
+        spaceBetween: parseRem(16),
         mousewheel: false,
         loop: true,
         speed: 5000,
@@ -511,11 +559,22 @@ $(document).ready(function () {
             delay: 0,
             disableOnInteraction: false,
         },
+        breakpoints: {
+            768: {
+                slidesPerView: 2.2,
+                spaceBetween: parseRem(24),
+            },
+            992: {
+                direction: 'vertical',
+                slidesPerView: 2,
+                spaceBetween: parseRem(24),
+            },
+        },
     });
     var swiper5 = new Swiper('.home_space_right_card.card2', {
-        direction: 'vertical',
-        slidesPerView: 1.8,
-        spaceBetween: parseRem(24),
+        direction: 'horizontal',
+        slidesPerView: 1.2,
+        spaceBetween: parseRem(16),
         mousewheel: false,
         loop: true,
         speed: 5000,
@@ -524,7 +583,42 @@ $(document).ready(function () {
             disableOnInteraction: false,
             reverseDirection: true,
         },
+        breakpoints: {
+            768: {
+                slidesPerView: 2.2,
+                spaceBetween: parseRem(24),
+            },
+            992: {
+                direction: 'vertical',
+                slidesPerView: 2,
+                spaceBetween: parseRem(24),
+            },
+        },
     });
+
+    function pauseAutoplayOutsideViewport(swiperInstance, selector) {
+        var element = document.querySelector(selector);
+        if (!element || !swiperInstance || !swiperInstance.autoplay || !('IntersectionObserver' in window)) return;
+
+        var isInViewport = false;
+        var syncAutoplay = function () {
+            if (isInViewport && !document.hidden) {
+                swiperInstance.autoplay.start();
+            } else {
+                swiperInstance.autoplay.stop();
+            }
+        };
+        var observer = new IntersectionObserver(function (entries) {
+            isInViewport = Boolean(entries[0] && entries[0].isIntersecting);
+            syncAutoplay();
+        }, { rootMargin: '150px 0px' });
+
+        observer.observe(element);
+        document.addEventListener('visibilitychange', syncAutoplay);
+    }
+
+    pauseAutoplayOutsideViewport(swiper4, '.home_space_right_card.card1');
+    pauseAutoplayOutsideViewport(swiper5, '.home_space_right_card.card2');
 
     $('.global_btn_list_item').hover(
         function () {
@@ -569,8 +663,82 @@ $(document).ready(function () {
         $('.popup_tour.tour').addClass('active');
     });
 
-    $('.popup_tour_close').click(function () {
+    $('.tour .popup_tour_close').click(function () {
         $('.popup_tour.tour').removeClass('active');
+    });
+
+    var eventPopupData = [
+        {
+            title: 'GIẢM 20% BAN NGÀY TRONG TUẦN',
+            apply: 'Thường xuyên',
+            category: 'Discount',
+            condition: 'Là thành viên Wonom',
+            image: '/asset/img/store.jpg',
+            subtitle: 'Giảm giá trải nghiệm mọi tầng'
+        },
+        {
+            title: 'PHÒNG CHỤP HANBOK THEO MÙA',
+            apply: 'Theo mùa',
+            category: 'Trải nghiệm',
+            condition: 'Áp dụng theo lịch chương trình',
+            image: '/asset/img/store.jpg',
+            subtitle: 'Lưu giữ khoảnh khắc trong không gian đậm chất Hàn Quốc'
+        },
+        {
+            title: 'ĐÊM ROOFTOP DISCO',
+            apply: 'Cuối tuần',
+            category: 'Rooftop',
+            condition: 'Áp dụng tại tầng 5',
+            image: '/asset/img/store.jpg',
+            subtitle: 'Đêm nhạc và cocktail trên rooftop Wonom'
+        },
+        {
+            title: 'PHÒNG CHỤP HANBOK THEO MÙA',
+            apply: 'Theo mùa',
+            category: 'Trải nghiệm',
+            condition: 'Áp dụng theo lịch chương trình',
+            image: '/asset/img/store.jpg',
+            subtitle: 'Lưu giữ khoảnh khắc trong không gian đậm chất Hàn Quốc'
+        }
+    ];
+
+    function renderEventPopupList() {
+        $('.popup_tour.event .popup_tour_sidebar_suggest').html(eventPopupData.map(function (item, index) {
+            return '<button class="popup_tour_sidebar_suggest_item" type="button" data-event-index="' + index + '">' +
+                '<span class="popup_tour_sidebar_suggest_item_img img_full"><img src="' + item.image + '" alt=""></span>' +
+                '<span class="popup_tour_sidebar_suggest_item_title txt_bold">' + item.title + '</span></button>';
+        }).join(''));
+    }
+
+    function showEventPopupItem(index) {
+        var item = eventPopupData[index] || eventPopupData[0];
+        var $popup = $('.popup_tour.event');
+
+        $popup.find('.event_popup_sidebar_card_title').text(item.title);
+        $popup.find('.event_popup_apply').text(item.apply);
+        $popup.find('.event_popup_category').text(item.category);
+        $popup.find('.event_popup_condition').text(item.condition);
+        $popup.find('.event_popup_content_img img').attr('src', item.image).attr('alt', item.title);
+        $popup.find('.event_popup_content_title').text(item.title);
+        $popup.find('.event_popup_content_subtitle').text(item.subtitle);
+        $popup.find('[data-event-index]').removeClass('active')
+            .filter('[data-event-index="' + index + '"]').addClass('active');
+    }
+
+    renderEventPopupList();
+
+    $('.home_event_card_item').click(function () {
+        var index = $(this).index();
+        showEventPopupItem(index);
+        $('.popup_tour.event').addClass('active').attr('aria-hidden', 'false');
+    });
+
+    $('.popup_tour.event').on('click', '[data-event-index]', function () {
+        showEventPopupItem(Number($(this).attr('data-event-index')));
+    });
+
+    $('.event .popup_tour_close').click(function () {
+        $('.popup_tour.event').removeClass('active').attr('aria-hidden', 'true');
     });
     $('.footer_bot_right_txt').click(function () {
         $('.popup_tour.policy').addClass('active');
@@ -579,29 +747,529 @@ $(document).ready(function () {
     $('.policy .popup_tour_close').click(function () {
         $('.popup_tour.policy').removeClass('active');
     });
-    $('.home_space_left_button ').click(function () {
-        $('.popup_tour.space').addClass('active');
+    var restaurantPageFlip = null;
+    var restaurantMenuPages = [];
+    var activeExplorePopup = null;
+    var explorePopupData = {
+        '1f': {
+            title: '1F · NHÀ HÀNG MUJIGE',
+            menuLabel: 'THỰC ĐƠN',
+            menuPages: [
+                '/asset/img/menu1.webp', '/asset/img/menu2.webp',
+                '/asset/img/menu1.webp', '/asset/img/menu2.webp',
+                '/asset/img/menu1.webp', '/asset/img/menu2.webp',
+                '/asset/img/menu1.webp', '/asset/img/menu2.webp',
+                '/asset/img/menu1.webp', '/asset/img/menu2.webp'
+            ],
+            galleryImages: [
+                '/asset/img/store.jpg', '/asset/img/store.jpg', '/asset/img/store.jpg',
+                '/asset/img/store.jpg', '/asset/img/store.jpg', '/asset/img/store.jpg',
+                '/asset/img/store.jpg', '/asset/img/store.jpg', '/asset/img/store.jpg',
+                '/asset/img/store.jpg', '/asset/img/store.jpg', '/asset/img/store.jpg'
+            ]
+        },
+        '2f': {
+            title: '2F · TRANG PHỤC TRUYỀN THỐNG',
+            menuLabel: 'BẢNG GIÁ',
+            menuPages: [
+                '/asset/img/menu1.webp', '/asset/img/menu2.webp',
+                '/asset/img/menu1.webp', '/asset/img/menu2.webp',
+                '/asset/img/menu1.webp', '/asset/img/menu2.webp',
+                '/asset/img/menu1.webp', '/asset/img/menu2.webp',
+                '/asset/img/menu1.webp', '/asset/img/menu2.webp'
+            ],
+            galleryImages: [
+                '/asset/img/store.jpg', '/asset/img/store.jpg', '/asset/img/store.jpg',
+                '/asset/img/store.jpg', '/asset/img/store.jpg', '/asset/img/store.jpg',
+                '/asset/img/store.jpg', '/asset/img/store.jpg', '/asset/img/store.jpg',
+                '/asset/img/store.jpg', '/asset/img/store.jpg', '/asset/img/store.jpg'
+            ]
+        },
+        '3f': {
+            title: '3F · WORKSHOP',
+            menuLabel: '',
+            menuPages: [],
+            galleryFilters: [
+                { value: 'all', label: 'TẤT CẢ' },
+                { value: 'hat', label: 'NÓN' },
+                { value: 'traditional', label: 'ÁO TRUYỀN THỐNG' },
+                { value: 'accessories', label: 'PHỤ KIỆN' }
+            ],
+            galleryImages: [
+                { src: '/asset/img/store.jpg', category: 'hat' },
+                { src: '/asset/img/store.jpg', category: 'traditional' },
+                { src: '/asset/img/store.jpg', category: 'accessories' },
+                { src: '/asset/img/store.jpg', category: 'hat' },
+                { src: '/asset/img/store.jpg', category: 'traditional' },
+                { src: '/asset/img/store.jpg', category: 'accessories' },
+                { src: '/asset/img/store.jpg', category: 'hat' },
+                { src: '/asset/img/store.jpg', category: 'traditional' },
+                { src: '/asset/img/store.jpg', category: 'accessories' },
+                { src: '/asset/img/store.jpg', category: 'hat' },
+                { src: '/asset/img/store.jpg', category: 'traditional' },
+                { src: '/asset/img/store.jpg', category: 'accessories' }
+            ]
+        },
+        '4f': {
+            title: '4F · STRESS ROOM',
+            menuLabel: 'BẢNG GIÁ',
+            menuPages: [
+                '/asset/img/menu1.webp', '/asset/img/menu2.webp',
+                '/asset/img/menu1.webp', '/asset/img/menu2.webp',
+                '/asset/img/menu1.webp', '/asset/img/menu2.webp',
+                '/asset/img/menu1.webp', '/asset/img/menu2.webp',
+                '/asset/img/menu1.webp', '/asset/img/menu2.webp'
+            ],
+            galleryImages: [
+                '/asset/img/img_popup.webp', '/asset/img/store.jpg', '/asset/img/store.jpg',
+                '/asset/img/img_popup.webp', '/asset/img/store.jpg', '/asset/img/store.jpg',
+                '/asset/img/img_popup.webp', '/asset/img/store.jpg', '/asset/img/store.jpg',
+                '/asset/img/img_popup.webp', '/asset/img/store.jpg', '/asset/img/store.jpg'
+            ]
+        },
+        '5f': {
+            title: '5F · ROOFTOP DISCO',
+            menuLabel: 'MENU',
+            menuPages: [
+                '/asset/img/menu1.webp', '/asset/img/menu2.webp',
+                '/asset/img/menu1.webp', '/asset/img/menu2.webp',
+                '/asset/img/menu1.webp', '/asset/img/menu2.webp',
+                '/asset/img/menu1.webp', '/asset/img/menu2.webp',
+                '/asset/img/menu1.webp', '/asset/img/menu2.webp'
+            ],
+            galleryImages: [
+                '/asset/img/home-hero2.webp', '/asset/img/home-hero3.webp', '/asset/img/store.jpg',
+                '/asset/img/home-hero2.webp', '/asset/img/home-hero3.webp', '/asset/img/store.jpg',
+                '/asset/img/home-hero2.webp', '/asset/img/home-hero3.webp', '/asset/img/store.jpg',
+                '/asset/img/home-hero2.webp', '/asset/img/home-hero3.webp', '/asset/img/store.jpg'
+            ]
+        },
+        'library': {
+            title: 'THƯ VIỆN ẢNH',
+            galleryOnly: true,
+            menuLabel: '',
+            menuPages: [],
+            galleryImages: [
+                '/asset/img/home_banner.webp', '/asset/img/home-hero2.webp', '/asset/img/home-hero3.webp',
+                '/asset/img/store.jpg', '/asset/img/img_popup.webp', '/asset/img/home_banner.webp',
+                '/asset/img/home-hero2.webp', '/asset/img/home-hero3.webp', '/asset/img/store.jpg',
+                '/asset/img/img_popup.webp', '/asset/img/home_banner.webp', '/asset/img/store.jpg'
+            ]
+        }
+    };
+
+    function renderExplorePopupTabs(config) {
+        var tabs;
+
+        if (config.galleryOnly) {
+            tabs = [];
+        } else if (config.galleryFilters) {
+            tabs = config.galleryFilters.map(function (filter, index) {
+                return '<button class="restaurant_popup_tab gallery_filter_tab btn bg_white' + (index === 0 ? ' active' : '') + '"' +
+                    ' type="button" role="tab" aria-selected="' + (index === 0 ? 'true' : 'false') + '"' +
+                    ' data-gallery-filter="' + filter.value + '"><span class="btn-inner txt_13 txt_extrabold">' + filter.label + '</span></button>';
+            });
+        } else {
+            tabs = [
+                '<button class="restaurant_popup_tab btn bg_white" type="button" role="tab" aria-selected="false" data-restaurant-view="menu">' +
+                '<span class="btn-inner restaurant_popup_menu_label txt_14 txt_extrabold">' + config.menuLabel + '</span></button>',
+                '<button class="restaurant_popup_tab btn bg_white" type="button" role="tab" aria-selected="false" data-restaurant-view="gallery">' +
+                '<span class="btn-inner txt_14 txt_extrabold">THƯ VIỆN ẢNH</span></button>'
+            ];
+        }
+
+        $('.restaurant_popup_tabs').html(tabs.join(''));
+    }
+
+    function renderExploreMenuThumbs() {
+        var $thumbs = $('.restaurant_menu_thumbs').empty();
+
+        restaurantMenuPages.forEach(function (src, index) {
+            var pageNumber = index + 1;
+            $thumbs.append(
+                '<button class="restaurant_menu_thumb' + (index < 2 ? ' active' : '') + '" type="button"' +
+                ' data-menu-page="' + index + '" aria-label="Trang ' + pageNumber + '">' +
+                '<span class="restaurant_menu_thumb_img"><img src="' + src + '" alt="Nội dung tầng - trang ' + pageNumber + '"></span>' +
+                '<span class="restaurant_menu_thumb_number txt_14 txt_bold">' + pageNumber + '</span></button>'
+            );
+        });
+    }
+
+    function renderExploreGallery(images) {
+        var columns = [[], [], [], []];
+
+        images.forEach(function (item, index) {
+            var src = typeof item === 'string' ? item : item.src;
+            var category = typeof item === 'string' ? 'all' : item.category;
+            columns[index % columns.length].push(
+                '<div class="popup_tour_seeall_list_item_img" data-gallery-category="' + category + '">' +
+                '<div class="popup_tour_seeall_list_item_img_inner img_abs">' +
+                '<div class="popup_tour_seeall_list_item_img_block"></div>' +
+                '<img src="' + src + '" alt="Hình ảnh không gian tầng"></div>' +
+                '<div class="popup_tour_seeall_list_item_img_tag txt_14 txt_bold">tag</div></div>'
+            );
+        });
+
+        $('.restaurant_gallery .popup_tour_seeall_list').html(columns.map(function (items) {
+            return '<div class="popup_tour_seeall_list_item">' + items.join('') + '</div>';
+        }).join(''));
+    }
+
+    function createExploreFlipbookPages() {
+        return restaurantMenuPages.map(function (src, index) {
+            var page = document.createElement('div');
+            var image = document.createElement('img');
+
+            page.className = 'restaurant_flipbook_page';
+            page.setAttribute('data-density', 'soft');
+            image.src = src;
+            image.alt = 'Nội dung tầng - trang ' + (index + 1);
+            image.draggable = false;
+            page.appendChild(image);
+            return page;
+        });
+    }
+
+    function applyExplorePopupData(key) {
+        var config = explorePopupData[key];
+        if (!config || activeExplorePopup === key) return Boolean(config);
+
+        activeExplorePopup = key;
+        restaurantMenuPages = config.menuPages.slice();
+        $('.popup_tour.restaurant .explore_popup_title').text(config.title);
+        renderExplorePopupTabs(config);
+        renderExploreMenuThumbs();
+        renderExploreGallery(config.galleryImages);
+
+        if (restaurantMenuPages.length && restaurantPageFlip) {
+            restaurantPageFlip.updateFromHtml(createExploreFlipbookPages());
+            restaurantPageFlip.turnToPage(0);
+            updateRestaurantMenuPage(0);
+        } else if (restaurantMenuPages.length) {
+            $('.restaurant_menu_page_count').text('1–2 / ' + restaurantMenuPages.length);
+            var bookElement = document.getElementById('restaurant-flipbook');
+            if (!bookElement) return false;
+            bookElement.innerHTML = '<img class="restaurant_flipbook_fallback" src="' + restaurantMenuPages[0] + '" alt="Nội dung tầng">';
+        }
+
+        return true;
+    }
+
+    function updateRestaurantMenuPage(pageIndex) {
+        var currentPage = pageIndex + 1;
+        var activePages = [pageIndex];
+        var orientation = restaurantPageFlip ? restaurantPageFlip.getOrientation() : null;
+        var isTwoPageView = orientation === 'landscape' || orientation === 1;
+
+        if (isTwoPageView && pageIndex + 1 < restaurantMenuPages.length) {
+            activePages.push(pageIndex + 1);
+        }
+
+        $('.restaurant_menu_thumb').removeClass('active');
+        activePages.forEach(function (index) {
+            $('.restaurant_menu_thumb[data-menu-page="' + index + '"]').addClass('active');
+        });
+
+        var pageLabel = activePages.length > 1
+            ? currentPage + '–' + (activePages[activePages.length - 1] + 1)
+            : currentPage;
+        $('.restaurant_menu_page_count').text(pageLabel + ' / ' + restaurantMenuPages.length);
+
+        var activeThumb = document.querySelector('.restaurant_menu_thumb.active');
+        if (activeThumb) activeThumb.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+
+    function initRestaurantFlipbook() {
+        if (restaurantPageFlip || !window.St || !window.St.PageFlip) return;
+
+        var bookElement = document.getElementById('restaurant-flipbook');
+        if (!bookElement) return;
+        bookElement.innerHTML = '';
+
+        createExploreFlipbookPages().forEach(function (page) {
+            bookElement.appendChild(page);
+        });
+
+        restaurantPageFlip = new St.PageFlip(bookElement, {
+            width: 424,
+            height: 594,
+            size: 'stretch',
+            minWidth: 212,
+            maxWidth: 530,
+            minHeight: 297,
+            maxHeight: 735,
+            drawShadow: true,
+            flippingTime: 900,
+            usePortrait: true,
+            startZIndex: 0,
+            autoSize: true,
+            maxShadowOpacity: 0.35,
+            showCover: false,
+            mobileScrollSupport: false
+        });
+
+        restaurantPageFlip.on('flip', function (event) {
+            updateRestaurantMenuPage(event.data);
+        });
+        restaurantPageFlip.on('init', function (event) {
+            updateRestaurantMenuPage(event.data.page);
+        });
+        restaurantPageFlip.on('changeOrientation', function () {
+            updateRestaurantMenuPage(restaurantPageFlip.getCurrentPageIndex());
+        });
+        restaurantPageFlip.loadFromHTML(bookElement.querySelectorAll('.restaurant_flipbook_page'));
+    }
+
+    function openRestaurantPopup(view, popupKey) {
+        if (!applyExplorePopupData(popupKey)) return;
+
+        var $restaurant = $('.popup_tour.restaurant');
+        $restaurant.addClass('active');
+        $restaurant.find('.restaurant_popup_tab').removeClass('active').attr('aria-selected', 'false');
+        var $activeViewTab = $restaurant.find('[data-restaurant-view="' + view + '"]');
+        if ($activeViewTab.length) {
+            $activeViewTab.addClass('active').attr('aria-selected', 'true');
+        } else {
+            $restaurant.find('[data-gallery-filter="all"]').addClass('active').attr('aria-selected', 'true');
+            $restaurant.find('[data-gallery-category]').show();
+        }
+        $restaurant.find('.restaurant_popup_panel').removeClass('active');
+        $restaurant.find('[data-restaurant-panel="' + view + '"]').addClass('active');
+
+        if (view === 'menu') {
+            requestAnimationFrame(function () {
+                requestAnimationFrame(initRestaurantFlipbook);
+            });
+        }
+    }
+
+    $('[data-explore-popup]').click(function () {
+        openRestaurantPopup($(this).attr('data-explore-view'), $(this).attr('data-explore-popup'));
     });
 
-    $('.space .popup_tour_close').click(function () {
-        $('.popup_tour.space').removeClass('active');
+    $('.restaurant_popup_tabs').on('click', '[data-restaurant-view]', function () {
+        var view = $(this).data('restaurant-view');
+        var $restaurant = $(this).closest('.popup_tour.restaurant');
+
+        $restaurant.find('.restaurant_popup_tab').removeClass('active').attr('aria-selected', 'false');
+        $(this).addClass('active').attr('aria-selected', 'true');
+        $restaurant.find('.restaurant_popup_panel').removeClass('active');
+        $restaurant.find('[data-restaurant-panel="' + view + '"]').addClass('active');
+
+        if (view === 'menu') {
+            requestAnimationFrame(function () {
+                requestAnimationFrame(initRestaurantFlipbook);
+            });
+        }
     });
-    $('.home_explore_seeall').click(function () {
-        $('.popup_tour.restaurant').addClass('active');
+
+    $('.restaurant_popup_tabs').on('click', '[data-gallery-filter]', function () {
+        var filter = $(this).attr('data-gallery-filter');
+
+        $('.restaurant_popup_tab').removeClass('active').attr('aria-selected', 'false');
+        $(this).addClass('active').attr('aria-selected', 'true');
+        $('.restaurant_gallery [data-gallery-category]').each(function () {
+            var shouldShow = filter === 'all' || $(this).attr('data-gallery-category') === filter;
+            $(this).toggle(shouldShow);
+        });
+    });
+
+    $('.restaurant_menu_thumbs').on('click', '.restaurant_menu_thumb', function () {
+        if (!restaurantPageFlip) return;
+        restaurantPageFlip.flip(Number($(this).data('menu-page')), 'top');
+    });
+
+    $('.restaurant_menu_prev').click(function () {
+        if (restaurantPageFlip) restaurantPageFlip.flipPrev('top');
+    });
+
+    $('.restaurant_menu_next').click(function () {
+        if (restaurantPageFlip) restaurantPageFlip.flipNext('top');
     });
 
     $('.restaurant .popup_tour_close').click(function () {
         $('.popup_tour.restaurant').removeClass('active');
     });
-    $('.header_button').click(function () {
-        $('.popup_form').addClass('active');
+    $('[data-booking-trigger]').click(function (event) {
+        event.preventDefault();
+
+        var $trigger = $(this);
+        var $popup = $('.popup_form_booking');
+        var $form = $popup.find('.popup_form_booking_form');
+        var bookingType = $trigger.attr('data-booking-type');
+        var subtitle = $trigger.attr('data-booking-subtitle');
+        var showFloorSelect = bookingType === 'general';
+
+        $popup.find('.popup_form_booking_title').text($trigger.attr('data-booking-title'));
+        $popup.find('.popup_form_booking_subtitle').text(subtitle).toggle(Boolean(subtitle));
+        $popup.find('.popup_form_booking_submit').text($trigger.attr('data-booking-submit'));
+        $popup.toggleClass('show-floor-select', showFloorSelect);
+        $popup.find('[data-booking-floor-select]').val('');
+        $form.find('[name="booking_type"]').val(bookingType);
+        $form.find('[name="floor"]').val($trigger.attr('data-booking-floor'));
+        $form.find('[name="venue"]').val($trigger.attr('data-booking-venue'));
+        $form.find('[name="product_id"]').val($trigger.attr('data-booking-product-id') || '');
+        $form.find('[name="product_name"]').val($trigger.attr('data-booking-product-name') || '');
+        $form.attr('data-booking-type', $trigger.attr('data-booking-type'));
+        $form.attr('data-booking-floor', $trigger.attr('data-booking-floor'));
+        $form.attr('data-booking-venue', $trigger.attr('data-booking-venue'));
+        $popup.addClass('active').attr('aria-hidden', 'false');
+    });
+
+    $('[data-booking-floor-select]').change(function () {
+        $('.popup_form_booking_form [name="floor"]').val($(this).val());
+    });
+
+    $('.workshop_filter').click(function () {
+        var category = $(this).attr('data-workshop-filter');
+
+        $('.workshop_filter').removeClass('active');
+        $(this).addClass('active');
+        $('.workshop_card').each(function () {
+            var shouldShow = category === 'all' || $(this).attr('data-workshop-category') === category;
+            $(this).prop('hidden', !shouldShow);
+        });
+    });
+
+    var workshopDetailImages = [];
+    var workshopDetailImageIndex = 0;
+    var workshopDetailThumbSwiper = null;
+    var workshopDetailImageTransition = null;
+
+    function destroyWorkshopDetailImageTransition() {
+        if (workshopDetailImageTransition) {
+            workshopDetailImageTransition.destroy();
+            workshopDetailImageTransition = null;
+        }
+
+        $('.workshop_detail_main_image').removeClass('webgl-transition-ready');
+    }
+
+    function initWorkshopDetailImageTransition() {
+        var container = document.querySelector('.workshop_detail_main_image');
+
+        destroyWorkshopDetailImageTransition();
+        if (!window.WebGLImageTransition || !container || !workshopDetailImages.length) return;
+
+        workshopDetailImageTransition = new WebGLImageTransition({
+            container: container,
+            images: workshopDetailImages,
+            initialIndex: workshopDetailImageIndex,
+            duration: 1100
+        });
+    }
+
+    function showWorkshopDetailImage(index) {
+        if (!workshopDetailImages.length) return;
+
+        workshopDetailImageIndex = (index + workshopDetailImages.length) % workshopDetailImages.length;
+        $('.workshop_detail_main_image > img').attr('src', workshopDetailImages[workshopDetailImageIndex]);
+        $('.workshop_detail_thumb').removeClass('active')
+            .filter('[data-detail-image="' + workshopDetailImageIndex + '"]').addClass('active');
+        if (workshopDetailThumbSwiper) {
+            workshopDetailThumbSwiper.slideTo(workshopDetailImageIndex);
+        }
+        if (workshopDetailImageTransition) {
+            workshopDetailImageTransition.goTo(workshopDetailImageIndex);
+        }
+    }
+
+    function renderWorkshopDetailThumbs() {
+        var $thumbs = $('.workshop_detail_thumbs_inner').empty();
+
+        workshopDetailImages.forEach(function (src, index) {
+            $thumbs.append(
+                '<button class="workshop_detail_thumb swiper-slide' + (index === 0 ? ' active' : '') + '" type="button" data-detail-image="' + index + '" aria-label="Xem ảnh ' + (index + 1) + '">' +
+                '<img src="' + src + '" alt="Ảnh workshop ' + (index + 1) + '"></button>'
+            );
+        });
+
+        if (!workshopDetailThumbSwiper) {
+            workshopDetailThumbSwiper = new Swiper('.workshop_detail_thumbs', {
+                slidesPerView: 'auto',
+                spaceBetween: 10,
+                freeMode: true,
+                grabCursor: true,
+                watchOverflow: true,
+                observer: true,
+                observeParents: true
+            });
+        } else {
+            workshopDetailThumbSwiper.update();
+            workshopDetailThumbSwiper.slideTo(0, 0);
+        }
+    }
+
+    $('.workshop_card_action').click(function () {
+        var $card = $(this).closest('.workshop_card');
+        var productId = $card.attr('data-product-id');
+        var productName = $card.find('.workshop_card_title').text().trim();
+        var mainImage = $card.find('.workshop_card_image img').attr('src');
+
+        destroyWorkshopDetailImageTransition();
+
+        workshopDetailImages = [
+            mainImage,
+            '/asset/img/store.jpg',
+            '/asset/img/store.jpg',
+            '/asset/img/img_popup.webp',
+            '/asset/img/store.jpg',
+            '/asset/img/store.jpg'
+        ];
+        workshopDetailImageIndex = 0;
+        $('.workshop_detail_tag').text($card.find('.workshop_card_tag').text());
+        $('.workshop_detail_title').text(productName);
+        $('.workshop_detail_description').text($card.find('.workshop_card_description').text());
+        $('.workshop_detail_price').text($card.find('.workshop_card_price').text());
+        $('.workshop_detail_booking')
+            .attr('data-booking-product-id', productId)
+            .attr('data-booking-product-name', productName);
+        renderWorkshopDetailThumbs();
+        showWorkshopDetailImage(0);
+        $('.workshop_detail_popup').addClass('active').attr('aria-hidden', 'false');
+        requestAnimationFrame(function () {
+            if (workshopDetailThumbSwiper) {
+                workshopDetailThumbSwiper.update();
+                workshopDetailThumbSwiper.slideTo(0, 0);
+            }
+            initWorkshopDetailImageTransition();
+        });
+    });
+
+    $('.workshop_detail_thumbs').on('click', '.workshop_detail_thumb', function () {
+        showWorkshopDetailImage(Number($(this).attr('data-detail-image')));
+    });
+
+    $('.workshop_detail_prev').click(function () {
+        showWorkshopDetailImage(workshopDetailImageIndex - 1);
+    });
+
+    $('.workshop_detail_next').click(function () {
+        showWorkshopDetailImage(workshopDetailImageIndex + 1);
+    });
+
+    $('.workshop_detail_close, .workshop_detail_overlay, .workshop_detail_booking').click(function () {
+        $('.workshop_detail_popup').removeClass('active').attr('aria-hidden', 'true');
+        destroyWorkshopDetailImageTransition();
+    });
+
+    $(document).keydown(function (event) {
+        if (event.key === 'Escape' && $('.workshop_detail_popup').hasClass('active')) {
+            $('.workshop_detail_popup').removeClass('active').attr('aria-hidden', 'true');
+            destroyWorkshopDetailImageTransition();
+        }
+    });
+
+    $('.popup_form_booking_form').on('submit', function (event) {
+        // Chờ kết nối API/Zalo ở bước backend; giữ nguyên toàn bộ metadata trong form.
+        event.preventDefault();
     });
 
     $('.popup_form .popup_tour_close').click(function () {
-        $('.popup_form').removeClass('active');
+        $(this).closest('.popup_form').removeClass('active').attr('aria-hidden', 'true');
     });
     $('.popup_form_overlay').click(function () {
-        $('.popup_form').removeClass('active');
+        $(this).closest('.popup_form').removeClass('active').attr('aria-hidden', 'true');
     });
 
     // popup_member close
