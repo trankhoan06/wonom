@@ -3,6 +3,60 @@ $(document).ready(function () {
         return (input / 10) * parseFloat($("html").css("font-size"));
     };
 
+    // Keep the page behind an open popup fixed while allowing each popup's
+    // own scrollable content to keep working.
+    const popupSelector = '.popup_tour.active, .popup_form.active, .popup_member.active, .workshop_detail_popup.active';
+    const body = document.body;
+    let pageScrollLocked = false;
+    let lockedScrollY = 0;
+    let previousBodyStyle = null;
+
+    const lockPageScroll = () => {
+        if (pageScrollLocked) return;
+
+        lockedScrollY = window.scrollY;
+        previousBodyStyle = {
+            position: body.style.position,
+            top: body.style.top,
+            left: body.style.left,
+            right: body.style.right,
+            width: body.style.width,
+            overflow: body.style.overflow
+        };
+
+        body.style.position = 'fixed';
+        body.style.top = `-${lockedScrollY}px`;
+        body.style.left = '0';
+        body.style.right = '0';
+        body.style.width = '100%';
+        body.style.overflow = 'hidden';
+        pageScrollLocked = true;
+    };
+
+    const unlockPageScroll = () => {
+        if (!pageScrollLocked) return;
+
+        Object.keys(previousBodyStyle).forEach((property) => {
+            body.style[property] = previousBodyStyle[property];
+        });
+        pageScrollLocked = false;
+        window.scrollTo(0, lockedScrollY);
+    };
+
+    const syncPageScrollLock = () => {
+        if (document.querySelector(popupSelector)) {
+            lockPageScroll();
+        } else {
+            unlockPageScroll();
+        }
+    };
+
+    const popupStateObserver = new MutationObserver(syncPageScrollLock);
+    document.querySelectorAll('.popup_tour, .popup_form, .popup_member, .workshop_detail_popup').forEach((popup) => {
+        popupStateObserver.observe(popup, { attributes: true, attributeFilter: ['class'] });
+    });
+    syncPageScrollLock();
+
     // Hide the fixed header while scrolling down and reveal it when scrolling up.
     if (window.gsap) {
         const header = document.querySelector(".header");
@@ -10,8 +64,13 @@ $(document).ready(function () {
         const desktopMedia = window.matchMedia("(min-width: 992px)");
         let lastScrollY = window.scrollY;
         let headerHidden = false;
+        let sectionTransitioning = false;
 
         const syncHeaderSection = () => {
+            // Keep the current section layout stable until the full-page
+            // transition has actually reached the destination section.
+            if (sectionTransitioning) return;
+
             pageSections.forEach((section) => section.classList.remove("has-header"));
             if (!desktopMedia.matches || headerHidden || !pageSections.length) return;
 
@@ -26,6 +85,27 @@ $(document).ready(function () {
 
             activeSection.classList.add("has-header");
         };
+
+        window.addEventListener('wonom:section-transition-start', function (event) {
+            sectionTransitioning = true;
+
+            const detail = event.detail || {};
+            const destinationSection = pageSections[detail.nextIndex];
+            const destinationHasHeader = desktopMedia.matches && Boolean(detail.destinationHasHeader);
+
+            // Prepare the destination's final layout before it moves into the
+            // viewport. The current section keeps its class until commit.
+            if (destinationSection) {
+                destinationSection.classList.toggle('has-header', destinationHasHeader);
+            }
+
+            setHeaderVisibility(!destinationHasHeader);
+        });
+
+        window.addEventListener('wonom:section-transition-end', function () {
+            sectionTransitioning = false;
+            syncHeaderSection();
+        });
 
         const setHeaderVisibility = (hidden) => {
             if (!header) return;
@@ -148,7 +228,15 @@ $(document).ready(function () {
                 if (clampedIndex === currentIndex) return;
 
                 const nextSection = sections[clampedIndex];
+                const destinationHasHeader = clampedIndex < currentIndex
+                    || Boolean(document.querySelector('.header_menu.active'));
                 isAnimating = true;
+                window.dispatchEvent(new CustomEvent('wonom:section-transition-start', {
+                    detail: {
+                        nextIndex: clampedIndex,
+                        destinationHasHeader: destinationHasHeader
+                    }
+                }));
 
                 scrollTween = gsap.to(window, {
                     scrollTo: { y: nextSection, autoKill: false },
@@ -159,6 +247,7 @@ $(document).ready(function () {
                         isAnimating = false;
                         scrollTween = null;
                         updateHash(nextSection);
+                        window.dispatchEvent(new CustomEvent('wonom:section-transition-end'));
                     }
                 });
             };
@@ -282,7 +371,11 @@ $(document).ready(function () {
             navLinks.forEach((link) => link.addEventListener("click", onNavClick));
 
             return function () {
+                const transitionWasActive = isAnimating;
                 if (scrollTween) scrollTween.kill();
+                if (transitionWasActive) {
+                    window.dispatchEvent(new CustomEvent('wonom:section-transition-end'));
+                }
                 window.clearTimeout(wheelIdleTimer);
                 html.classList.remove("fullpage-scroll");
                 window.removeEventListener("wheel", onWheel);
@@ -315,27 +408,29 @@ $(document).ready(function () {
 
     // Tab logic cho phần Khám Phá 5 Tầng (Explore)
     let exploreTabTransitionTimer = null;
+    const exploreMobileMedia = window.matchMedia('(max-width: 991px)');
+    const $exploreContentTabs = $('.home_explore_content_tab');
+    const $exploreMobileTabs = $('.home_explore_content_subtitle_wrap');
 
-    $('.home_explore_sidebar_tab_item').on('click', function () {
-        if ($(this).hasClass('active')) return;
+    function setExploreTabState(targetTab, animate) {
+        var $targetContent = $exploreContentTabs.filter('[data-tab="' + targetTab + '"]');
+        var oldIndex = $exploreContentTabs.index($exploreContentTabs.filter('.active').first());
+        var newIndex = $exploreContentTabs.index($targetContent);
+        if (newIndex < 0) return;
 
-        var oldIndex = $('.home_explore_sidebar_tab_item.active').index();
-        var newIndex = $(this).index();
-        var targetTab = $(this).attr('data-tab');
-        var $contentTabs = $('.home_explore_content_tab');
-        var $transitionTabs = $contentTabs.eq(oldIndex)
-            .add($contentTabs.filter('[data-tab="' + targetTab + '"]'));
+        var $transitionTabs = $targetContent;
+        if (oldIndex >= 0) $transitionTabs = $transitionTabs.add($exploreContentTabs.eq(oldIndex));
 
         window.clearTimeout(exploreTabTransitionTimer);
-        $contentTabs.removeClass('is-transitioning');
-        $transitionTabs.addClass('is-transitioning');
+        $exploreContentTabs.removeClass('is-transitioning');
+        if (animate) $transitionTabs.addClass('is-transitioning');
 
         // Đổi trạng thái tab sidebar
         $('.home_explore_sidebar_tab_item').removeClass('active');
-        $(this).addClass('active');
+        $('.home_explore_sidebar_tab_item[data-tab="' + targetTab + '"]').addClass('active');
 
         // Đổi trạng thái nội dung (wrap)
-        $contentTabs.each(function (index) {
+        $exploreContentTabs.each(function (index) {
             if (index < newIndex) {
                 // Các tab bên trên -> thêm remove
                 $(this).removeClass('active').addClass('remove');
@@ -348,15 +443,67 @@ $(document).ready(function () {
             }
         });
 
-        exploreTabTransitionTimer = window.setTimeout(function () {
-            $transitionTabs.removeClass('is-transitioning');
-        }, 650);
+        if (animate) {
+            exploreTabTransitionTimer = window.setTimeout(function () {
+                $transitionTabs.removeClass('is-transitioning');
+            }, 650);
+        }
+    }
+
+    $('.home_explore_sidebar_tab_item').on('click', function () {
+        if ($(this).hasClass('active')) return;
+        setExploreTabState($(this).attr('data-tab'), true);
+    });
+
+    $exploreMobileTabs.on('click', function () {
+        if (!exploreMobileMedia.matches) return;
+
+        var $trigger = $(this);
+        var targetTab = $trigger.attr('data-tab');
+        var $targetContent = $exploreContentTabs.filter('[data-tab="' + targetTab + '"]');
+        var isOpen = $trigger.hasClass('active');
+
+        $targetContent.stop(true, true);
+
+        if (isOpen) {
+            $targetContent.slideUp(450, function () {
+                $targetContent.removeClass('active remove');
+            });
+            $trigger.removeClass('active').attr('aria-expanded', 'false');
+            return;
+        }
+
+        $('.home_explore_sidebar_tab_item').removeClass('active');
+        $('.home_explore_sidebar_tab_item[data-tab="' + targetTab + '"]').addClass('active');
+        $targetContent.removeClass('remove').addClass('active');
+        $trigger.addClass('active').attr('aria-expanded', 'true');
+        $targetContent.hide().slideDown(450);
     });
 
     // Khởi tạo tab đầu tiên nếu chưa có
-    if ($('.home_explore_content_tab.active').length === 0) {
-        $('.home_explore_content_tab[data-tab="tab1f"]').addClass('active');
+    if ($exploreContentTabs.filter('.active').length === 0) {
+        $exploreContentTabs.filter('[data-tab="tab1f"]').addClass('active');
     }
+
+    function syncExploreMobileAccordion() {
+        window.clearTimeout(exploreTabTransitionTimer);
+        $exploreContentTabs.stop(true, true).removeAttr('style').removeClass('is-transitioning');
+
+        var targetTab = $('.home_explore_sidebar_tab_item.active').attr('data-tab')
+            || $exploreContentTabs.filter('.active').first().attr('data-tab')
+            || 'tab1f';
+
+        if (exploreMobileMedia.matches) {
+            $exploreContentTabs.removeClass('remove').addClass('active').show();
+            $exploreMobileTabs.addClass('active').attr('aria-expanded', 'true');
+        } else {
+            setExploreTabState(targetTab, false);
+            $exploreMobileTabs.removeClass('active').attr('aria-expanded', 'false');
+        }
+    }
+
+    exploreMobileMedia.addEventListener('change', syncExploreMobileAccordion);
+    syncExploreMobileAccordion();
 
 
     // Close dropdown when clicking outside
@@ -442,10 +589,10 @@ $(document).ready(function () {
             crossFade: true,
         },
         speed: 850,
-        // autoplay: {
-        //     delay: 3000,
-        //     disableOnInteraction: false,
-        // },
+        autoplay: {
+            delay: 5000,
+            disableOnInteraction: false,
+        },
         navigation: {
             nextEl: '.home_banner_button_next',
             prevEl: '.home_banner_button_prev',
@@ -486,7 +633,7 @@ $(document).ready(function () {
     });
 
     var swiper3 = new Swiper('.home_event_card', {
-        slidesPerView: 1,
+        slidesPerView: 1.07,
         spaceBetween: parseRem(24),
         breakpoints: {
             992: {
@@ -551,7 +698,7 @@ $(document).ready(function () {
     var swiper4 = new Swiper('.home_space_right_card.card1', {
         direction: 'horizontal',
         slidesPerView: 1.2,
-        spaceBetween: parseRem(16),
+        spaceBetween: parseRem(24),
         mousewheel: false,
         loop: true,
         speed: 5000,
@@ -619,6 +766,18 @@ $(document).ready(function () {
 
     pauseAutoplayOutsideViewport(swiper4, '.home_space_right_card.card1');
     pauseAutoplayOutsideViewport(swiper5, '.home_space_right_card.card2');
+
+    const globalTopButton = document.querySelector('.global_btn_top.btn');
+    if (globalTopButton) {
+        const syncGlobalTopButton = () => {
+            const isVisible = window.scrollY > 10;
+            globalTopButton.classList.toggle('is-visible', isVisible);
+            globalTopButton.setAttribute('aria-hidden', String(!isVisible));
+        };
+
+        window.addEventListener('scroll', syncGlobalTopButton, { passive: true });
+        syncGlobalTopButton();
+    }
 
     $('.global_btn_list_item').hover(
         function () {
@@ -750,6 +909,7 @@ $(document).ready(function () {
     var restaurantPageFlip = null;
     var restaurantMenuPages = [];
     var activeExplorePopup = null;
+    var exploreGalleryMobileMedia = window.matchMedia('(max-width: 767px)');
     var explorePopupData = {
         '1f': {
             title: '1F · NHÀ HÀNG MUJIGE',
@@ -896,7 +1056,8 @@ $(document).ready(function () {
     }
 
     function renderExploreGallery(images) {
-        var columns = [[], [], [], []];
+        var columnCount = exploreGalleryMobileMedia.matches ? 2 : 4;
+        var columns = Array.from({ length: columnCount }, function () { return []; });
 
         images.forEach(function (item, index) {
             var src = typeof item === 'string' ? item : item.src;
@@ -913,7 +1074,18 @@ $(document).ready(function () {
         $('.restaurant_gallery .popup_tour_seeall_list').html(columns.map(function (items) {
             return '<div class="popup_tour_seeall_list_item">' + items.join('') + '</div>';
         }).join(''));
+
+        var activeFilter = $('.restaurant_popup_tab.gallery_filter_tab.active').attr('data-gallery-filter') || 'all';
+        $('.restaurant_gallery [data-gallery-category]').each(function () {
+            var shouldShow = activeFilter === 'all' || $(this).attr('data-gallery-category') === activeFilter;
+            $(this).toggle(shouldShow);
+        });
     }
+
+    exploreGalleryMobileMedia.addEventListener('change', function () {
+        var config = explorePopupData[activeExplorePopup];
+        if (config) renderExploreGallery(config.galleryImages);
+    });
 
     function createExploreFlipbookPages() {
         return restaurantMenuPages.map(function (src, index) {
