@@ -57,13 +57,11 @@ $(document).ready(function () {
     });
     syncPageScrollLock();
 
-    // Hide the fixed header while scrolling down and reveal it when scrolling up.
+    // Keep the fixed header visible and reserve room for it in the active section.
     if (window.gsap) {
         const header = document.querySelector(".header");
         const pageSections = Array.from(document.querySelectorAll(".pa_section"));
         const desktopMedia = window.matchMedia("(min-width: 992px)");
-        let lastScrollY = window.scrollY;
-        let headerHidden = false;
         let sectionTransitioning = false;
 
         const syncHeaderSection = () => {
@@ -72,7 +70,7 @@ $(document).ready(function () {
             if (sectionTransitioning) return;
 
             pageSections.forEach((section) => section.classList.remove("has-header"));
-            if (!desktopMedia.matches || headerHidden || !pageSections.length) return;
+            if (!desktopMedia.matches || !pageSections.length) return;
 
             const viewportMiddle = window.scrollY + (window.innerHeight / 2);
             const activeSection = pageSections.reduce((nearest, section) => {
@@ -91,15 +89,13 @@ $(document).ready(function () {
 
             const detail = event.detail || {};
             const destinationSection = pageSections[detail.nextIndex];
-            const destinationHasHeader = desktopMedia.matches && Boolean(detail.destinationHasHeader);
+            const destinationHasHeader = desktopMedia.matches;
 
             // Prepare the destination's final layout before it moves into the
             // viewport. The current section keeps its class until commit.
             if (destinationSection) {
                 destinationSection.classList.toggle('has-header', destinationHasHeader);
             }
-
-            setHeaderVisibility(!destinationHasHeader);
         });
 
         window.addEventListener('wonom:section-transition-end', function () {
@@ -107,45 +103,9 @@ $(document).ready(function () {
             syncHeaderSection();
         });
 
-        const setHeaderVisibility = (hidden) => {
-            if (!header) return;
-
-            if (hidden === headerHidden) {
-                syncHeaderSection();
-                return;
-            }
-
-            headerHidden = hidden;
-
-            gsap.to(header, {
-                yPercent: hidden ? -110 : 0,
-                duration: 0.35,
-                ease: hidden ? "power2.in" : "power2.out",
-                overwrite: "auto"
-            });
-
-            syncHeaderSection();
-        };
-
-        window.addEventListener("scroll", function () {
-            const currentScrollY = Math.max(window.scrollY, 0);
-            const scrollDistance = currentScrollY - lastScrollY;
-
-            if (currentScrollY <= 10 || document.querySelector(".header_menu.active")) {
-                setHeaderVisibility(false);
-                lastScrollY = currentScrollY;
-                return;
-            }
-
-            // Ignore tiny movements to keep the header from flickering on a trackpad.
-            if (Math.abs(scrollDistance) < 6) return;
-
-            setHeaderVisibility(scrollDistance > 0);
-            lastScrollY = currentScrollY;
-        }, { passive: true });
-
         desktopMedia.addEventListener("change", syncHeaderSection);
 
+        if (header) gsap.set(header, { yPercent: 0 });
         syncHeaderSection();
     }
 
