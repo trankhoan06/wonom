@@ -1860,6 +1860,7 @@ h2 {
     border-left: 2px solid #460700;
     margin-left: -2px;
     position: relative;
+    z-index: 100001;
 }
 
 .home_explore_sidebar_inner {
@@ -1981,6 +1982,8 @@ h2 {
 .home_explore_sidebar_bottom {
     margin-inline: -2.4rem;
     flex: none;
+    position: relative;
+    z-index: 100002;
 }
 
 .home_explore_sidebar_bottom_title {
@@ -1995,6 +1998,7 @@ h2 {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 0;
+    position: relative;
 
 }
 
@@ -2005,6 +2009,26 @@ h2 {
     text-shadow: -2px -2px 0 #460700, 0 -2px 0 #460700, 2px -2px 0 #460700, 2px 0 0 #460700, 2px 2px 0 #460700, 0 2px 0 #460700, -2px 2px 0 #460700, -2px 0 0 #460700;
     -webkit-text-stroke: 0;
     border-right: 2px solid #460700;
+}
+
+.home_explore_sidebar_bottom_inner[data-current-floor="1"] .item1 {
+    background-color: #FFF6DB;
+}
+
+.home_explore_sidebar_bottom_inner[data-current-floor="2"] .item1 {
+    background-color: #FFCE56;
+}
+
+.home_explore_sidebar_bottom_inner[data-current-floor="3"] .item1 {
+    background-color: #4662AA;
+}
+
+.home_explore_sidebar_bottom_inner[data-current-floor="4"] .item1 {
+    background-color: #E41F2F;
+}
+
+.home_explore_sidebar_bottom_inner[data-current-floor="5"] .item1 {
+    background-color: #7A40F6;
 }
 
 .home_explore_sidebar_bottom_item {
@@ -2026,7 +2050,49 @@ h2 {
     grid-row: 2/3;
     grid-column: 2/3;
     height: 4.6rem;
+    gap: .4rem;
+    position: relative;
+    z-index: 22;
+    background-color: #FFF6DB;
+}
 
+.home_explore_floor_control {
+    padding: 0;
+    border: 0;
+    background-color: #FFF6DB;
+    color: #460700;
+    font: inherit;
+    font-weight: 800;
+    gap: .4rem;
+    cursor: pointer;
+}
+
+.home_explore_floor_control_icon {
+    flex: none;
+}
+
+.home_explore_floor_control_dash {
+    display: none;
+}
+
+.home_explore_floor_control.is-disabled {
+    cursor: default;
+    opacity: 1;
+}
+
+.home_explore_floor_control.is-disabled .home_explore_floor_control_icon,
+.home_explore_floor_control.is-disabled .home_explore_floor_control_label {
+    display: none;
+}
+
+.home_explore_floor_control.is-disabled .home_explore_floor_control_dash {
+    display: inline;
+}
+
+.home_explore_floor_control:not(.is-disabled):hover,
+.home_explore_floor_control:not(.is-disabled):focus-visible {
+    background-color: #FFCE56;
+    outline: 0;
 }
 
 .home_explore_content {

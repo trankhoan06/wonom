@@ -531,15 +531,22 @@
                     </div>
                     <div class="home_explore_sidebar_bottom">
                         <div class="home_explore_sidebar_bottom_title txt_extrabold txt_14">Bạn đang ở tầng...</div>
-                        <div class="home_explore_sidebar_bottom_inner">
+                        <div class="home_explore_sidebar_bottom_inner" data-current-floor="1">
                             <div class="home_explore_sidebar_bottom_item item1 bg_white h4 heading">1F</div>
-                            <div class="home_explore_sidebar_bottom_item txt_extrabold item2">—</div>
-                            <div class="home_explore_sidebar_bottom_item txt_extrabold item3"><svg width="20"
-                                    height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M15 7.5L10 12.5L5 7.5" stroke="#460700" stroke-width="2"
-                                        stroke-linecap="round" stroke-linejoin="round" />
+                            <button type="button" class="home_explore_sidebar_bottom_item home_explore_floor_control txt_extrabold item2 is-disabled" disabled>
+                                <svg class="home_explore_floor_control_icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                    <path d="M3 10L8 5L13 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                                 </svg>
-                                1F</div>
+                                <span class="home_explore_floor_control_label"></span>
+                                <span class="home_explore_floor_control_dash">—</span>
+                            </button>
+                            <button type="button" class="home_explore_sidebar_bottom_item home_explore_floor_control txt_extrabold item3" data-tab="tab2f" aria-label="Đi đến tầng 2">
+                                <svg class="home_explore_floor_control_icon" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                                    <path d="M3 6L8 11L13 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                                <span class="home_explore_floor_control_label">2F</span>
+                                <span class="home_explore_floor_control_dash">—</span>
+                            </button>
                         </div>
                     </div>
                 </div>

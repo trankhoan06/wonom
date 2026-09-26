@@ -371,6 +371,29 @@ $(document).ready(function () {
     const exploreMobileMedia = window.matchMedia('(max-width: 991px)');
     const $exploreContentTabs = $('.home_explore_content_tab');
     const $exploreMobileTabs = $('.home_explore_content_subtitle_wrap');
+    const $exploreFloorSelector = $('.home_explore_sidebar_bottom_inner');
+    const $exploreFloorControls = $exploreFloorSelector.find('.home_explore_floor_control');
+
+    function setExploreFloorControl($control, targetIndex) {
+        var isDisabled = targetIndex < 0 || targetIndex >= $exploreContentTabs.length;
+        var floorLabel = isDisabled ? '' : (targetIndex + 1) + 'F';
+
+        $control
+            .toggleClass('is-disabled', isDisabled)
+            .prop('disabled', isDisabled)
+            .attr('data-tab', isDisabled ? '' : 'tab' + floorLabel.toLowerCase())
+            .attr('aria-label', isDisabled ? '' : 'Đi đến tầng ' + (targetIndex + 1));
+        $control.find('.home_explore_floor_control_label').text(floorLabel);
+    }
+
+    function syncExploreFloorSelector(floorIndex) {
+        var floorLabel = (floorIndex + 1) + 'F';
+
+        $exploreFloorSelector.attr('data-current-floor', floorIndex + 1);
+        $('.home_explore_sidebar_bottom_item.item1').text(floorLabel);
+        setExploreFloorControl($exploreFloorSelector.find('.item2'), floorIndex - 1);
+        setExploreFloorControl($exploreFloorSelector.find('.item3'), floorIndex + 1);
+    }
 
     function setExploreTabState(targetTab, animate) {
         var $targetContent = $exploreContentTabs.filter('[data-tab="' + targetTab + '"]');
@@ -388,6 +411,7 @@ $(document).ready(function () {
         // Đổi trạng thái tab sidebar
         $('.home_explore_sidebar_tab_item').removeClass('active');
         $('.home_explore_sidebar_tab_item[data-tab="' + targetTab + '"]').addClass('active');
+        syncExploreFloorSelector(newIndex);
 
         // Đổi trạng thái nội dung (wrap)
         $exploreContentTabs.each(function (index) {
@@ -413,6 +437,11 @@ $(document).ready(function () {
     $('.home_explore_sidebar_tab_item').on('click', function () {
         if ($(this).hasClass('active')) return;
         setExploreTabState($(this).attr('data-tab'), true);
+    });
+
+    $exploreFloorControls.on('click', function () {
+        var targetTab = $(this).attr('data-tab');
+        if (targetTab) setExploreTabState(targetTab, true);
     });
 
     $exploreMobileTabs.on('click', function () {
