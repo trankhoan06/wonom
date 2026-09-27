@@ -1,0 +1,195 @@
+.wonom-select {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+    color: #460700;
+    font: inherit;
+}
+
+.wonom-select.is-open {
+    z-index: 100002;
+}
+
+.wonom-select-parent-open {
+    position: relative;
+    z-index: 100001 !important;
+}
+
+.wonom-select__native {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    clip: rect(0 0 0 0) !important;
+    clip-path: inset(50%) !important;
+    border: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    white-space: nowrap !important;
+}
+
+.wonom-select__trigger {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    outline: 0;
+    text-align: left;
+    cursor: pointer;
+    transition: border-color .22s ease, color .22s ease;
+}
+
+.wonom-select__trigger:focus-visible,
+.wonom-select.is-open .wonom-select__trigger {
+    border-bottom-color: #460700 !important;
+}
+
+.wonom-select.has-error .wonom-select__trigger {
+    border-bottom-color: #e41f2f !important;
+}
+
+.wonom-select__value {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.wonom-select__trigger.is-placeholder .wonom-select__value {
+    color: #987e79;
+}
+
+.wonom-select__arrow {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    width: 1rem;
+    height: 1rem;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: translateY(-70%) rotate(45deg);
+    transition: transform .22s ease;
+    pointer-events: none;
+}
+
+.wonom-select.is-open .wonom-select__arrow {
+    transform: translateY(-30%) rotate(225deg);
+}
+
+.wonom-select__menu {
+    position: absolute;
+    top: calc(100% + .8rem);
+    left: 0;
+    z-index: 100003;
+    width: 100%;
+    max-height: min(26rem, 42vh);
+    margin: 0;
+    padding: .6rem;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border: 1.5px solid #460700;
+    border-radius: .8rem;
+    background: #fffdf7;
+    box-shadow: 5px 6px 0 rgba(70, 7, 0, .16), 0 14px 34px rgba(70, 7, 0, .13);
+    list-style: none;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-.6rem) scale(.985);
+    transform-origin: top center;
+    transition: opacity .18s ease, visibility .18s ease, transform .18s ease;
+}
+
+.wonom-select.is-up .wonom-select__menu {
+    top: auto;
+    bottom: calc(100% + .8rem);
+    transform: translateY(.6rem) scale(.985);
+    transform-origin: bottom center;
+}
+
+.wonom-select.is-open .wonom-select__menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+}
+
+.wonom-select__option {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 4.2rem;
+    padding: .9rem 3.8rem .9rem 1.2rem;
+    border: 0;
+    border-radius: .55rem;
+    outline: 0;
+    background: transparent;
+    color: #460700;
+    font: inherit;
+    line-height: 1.35;
+    text-align: left;
+    cursor: pointer;
+    transition: color .16s ease, background-color .16s ease, transform .16s ease;
+}
+
+.wonom-select__option:hover,
+.wonom-select__option:focus-visible {
+    background: #fff0d5;
+    color: #b31521;
+    transform: translateX(.2rem);
+}
+
+.wonom-select__option.is-selected {
+    background: #460700;
+    color: #fff6db;
+    font-weight: 700;
+}
+
+.wonom-select__option.is-selected::after {
+    position: absolute;
+    right: 1.4rem;
+    width: .9rem;
+    height: .5rem;
+    border-left: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    content: '';
+    transform: translateY(-.15rem) rotate(-45deg);
+}
+
+.wonom-select__group {
+    padding: .8rem 1.2rem .4rem;
+    color: #987e79;
+    font-size: .8em;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.wonom-select.is-disabled {
+    opacity: .55;
+}
+
+.wonom-select.is-disabled .wonom-select__trigger {
+    cursor: not-allowed;
+}
+
+.wonom-select-icon-hidden {
+    display: none !important;
+}
+
+@media (max-width: 767px) {
+    .wonom-select__menu {
+        max-height: min(22rem, 38vh);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .wonom-select__trigger,
+    .wonom-select__arrow,
+    .wonom-select__menu,
+    .wonom-select__option {
+        transition: none;
+    }
+}

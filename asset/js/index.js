@@ -3,6 +3,70 @@ $(document).ready(function () {
         return (input / 10) * parseFloat($("html").css("font-size"));
     };
 
+    const customCursor = document.querySelector('.site_cursor');
+    const customCursorCompanions = customCursor?.querySelector('.site_cursor_companions');
+    const customCursorMedia = window.matchMedia('(hover: hover) and (pointer: fine)');
+    let customCursorFrame = 0;
+    let customCursorTargetX = -100;
+    let customCursorTargetY = -100;
+    let customCursorX = -100;
+    let customCursorY = -100;
+    let customCursorStarted = false;
+
+    const syncCustomCursorAvailability = () => {
+        document.documentElement.classList.toggle('has-custom-cursor', customCursorMedia.matches && Boolean(customCursor));
+        if (!customCursorMedia.matches && customCursor) customCursor.classList.remove('is-visible', 'is-interactive');
+    };
+
+    const renderCustomCursor = () => {
+        if (!customCursor || !customCursorMedia.matches) {
+            customCursorFrame = 0;
+            return;
+        }
+
+        customCursorX += (customCursorTargetX - customCursorX) * .22;
+        customCursorY += (customCursorTargetY - customCursorY) * .22;
+        if (customCursorCompanions) {
+            customCursorCompanions.style.transform = 'translate3d(' + (customCursorX - customCursorTargetX) + 'px, ' + (customCursorY - customCursorTargetY) + 'px, 0)';
+        }
+
+        if (Math.abs(customCursorTargetX - customCursorX) > .05 || Math.abs(customCursorTargetY - customCursorY) > .05) {
+            customCursorFrame = window.requestAnimationFrame(renderCustomCursor);
+        } else {
+            customCursorX = customCursorTargetX;
+            customCursorY = customCursorTargetY;
+            if (customCursorCompanions) customCursorCompanions.style.transform = 'translate3d(0, 0, 0)';
+            customCursorFrame = 0;
+        }
+    };
+
+    window.addEventListener('pointermove', function (event) {
+        if (!customCursor || !customCursorMedia.matches) return;
+
+        customCursorTargetX = event.clientX;
+        customCursorTargetY = event.clientY;
+        customCursor.style.transform = 'translate3d(' + customCursorTargetX + 'px, ' + customCursorTargetY + 'px, 0)';
+        if (!customCursorStarted) {
+            customCursorX = customCursorTargetX;
+            customCursorY = customCursorTargetY;
+            customCursorStarted = true;
+        }
+        customCursor.classList.add('is-visible');
+        customCursor.classList.toggle(
+            'is-interactive',
+            event.target instanceof Element && Boolean(event.target.closest('a, button, .btn, [data-explore-tab]'))
+        );
+
+        if (!customCursorFrame) customCursorFrame = window.requestAnimationFrame(renderCustomCursor);
+    }, { passive: true });
+
+    document.addEventListener('mouseleave', function () {
+        if (customCursor) customCursor.classList.remove('is-visible', 'is-interactive');
+    });
+
+    customCursorMedia.addEventListener('change', syncCustomCursorAvailability);
+    syncCustomCursorAvailability();
+
     // Keep the page behind an open popup fixed while allowing each popup's
     // own scrollable content to keep working.
     const popupSelector = '.popup_tour.active, .popup_form.active, .popup_member.active, .workshop_detail_popup.active';
@@ -318,6 +382,15 @@ $(document).ready(function () {
                 if (!isAnimating) currentIndex = nearestSectionIndex();
             };
 
+            const onSectionRequest = (event) => {
+                const targetId = event.detail && event.detail.id;
+                const nextIndex = sections.findIndex((section) => section.id === targetId);
+                if (nextIndex < 0) return;
+
+                event.preventDefault();
+                goToSection(nextIndex);
+            };
+
             html.classList.add("fullpage-scroll");
             currentIndex = nearestSectionIndex();
 
@@ -326,6 +399,7 @@ $(document).ready(function () {
             window.addEventListener("touchstart", onTouchStart, { passive: true });
             window.addEventListener("touchend", onTouchEnd, { passive: true });
             window.addEventListener("scroll", onScroll, { passive: true });
+            window.addEventListener("wonom:go-to-section", onSectionRequest);
 
             const navLinks = document.querySelectorAll('.header-nav a[href^="#"], a[href="/#top"], a[href="#top"]');
             navLinks.forEach((link) => link.addEventListener("click", onNavClick));
@@ -343,6 +417,7 @@ $(document).ready(function () {
                 window.removeEventListener("touchstart", onTouchStart);
                 window.removeEventListener("touchend", onTouchEnd);
                 window.removeEventListener("scroll", onScroll);
+                window.removeEventListener("wonom:go-to-section", onSectionRequest);
                 navLinks.forEach((link) => link.removeEventListener("click", onNavClick));
             };
         });
@@ -364,6 +439,15 @@ $(document).ready(function () {
         $('.header_menu').removeClass('active');
         $('.header-nav').removeClass('active');
         $(this).removeClass('active');
+    });
+
+    // Close the mobile menu before navigating to the selected section.
+    $('.header-nav .nav-item').on('click', function () {
+        if (!window.matchMedia('(max-width: 991px)').matches) return;
+
+        $('.header_menu').removeClass('active');
+        $('.header-nav').removeClass('active');
+        $('.header_overlay').removeClass('active');
     });
 
     // Tab logic cho phần Khám Phá 5 Tầng (Explore)
@@ -435,13 +519,55 @@ $(document).ready(function () {
     }
 
     $('.home_explore_sidebar_tab_item').on('click', function () {
+        var targetTab = $(this).attr('data-tab');
+        var floorMatch = targetTab && targetTab.match(/^tab([1-5])f$/);
+        if (floorMatch) playPianoNote(Number(floorMatch[1]) - 1);
         if ($(this).hasClass('active')) return;
-        setExploreTabState($(this).attr('data-tab'), true);
+        setExploreTabState(targetTab, true);
     });
 
     $exploreFloorControls.on('click', function () {
         var targetTab = $(this).attr('data-tab');
         if (targetTab) setExploreTabState(targetTab, true);
+    });
+
+    $('[data-explore-tab]').on('click keydown', function (event) {
+        if (event.type === 'keydown' && event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+
+        var targetTab = $(this).attr('data-explore-tab');
+        var targetIndex = $exploreContentTabs.index($exploreContentTabs.filter('[data-tab="' + targetTab + '"]'));
+        if (targetIndex < 0) return;
+
+        if (exploreMobileMedia.matches) {
+            $('.home_explore_sidebar_tab_item').removeClass('active');
+            $('.home_explore_sidebar_tab_item[data-tab="' + targetTab + '"]').addClass('active');
+            syncExploreFloorSelector(targetIndex);
+
+            var targetFloor = document.querySelector('.home_explore_floor_section[data-floor-section="' + targetTab + '"]');
+            var mobileHeader = document.querySelector('header');
+            var headerOffset = mobileHeader ? mobileHeader.getBoundingClientRect().height : 0;
+            var targetTop = targetFloor
+                ? targetFloor.getBoundingClientRect().top + window.scrollY - headerOffset
+                : document.getElementById('explore').offsetTop;
+
+            window.history.replaceState(null, '', '#explore');
+            window.scrollTo({ top: targetTop, behavior: 'smooth' });
+            return;
+        }
+
+        setExploreTabState(targetTab, true);
+
+        var sectionRequest = new CustomEvent('wonom:go-to-section', {
+            cancelable: true,
+            detail: { id: 'explore' }
+        });
+        var handledByFullpage = !window.dispatchEvent(sectionRequest);
+
+        if (!handledByFullpage) {
+            document.getElementById('explore').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            window.history.replaceState(null, '', '#explore');
+        }
     });
 
     $exploreMobileTabs.on('click', function () {
@@ -598,7 +724,12 @@ $(document).ready(function () {
     });
     var swiper2 = new Swiper('.home_explore_list', {
         slidesPerView: 'auto',
-        spaceBetween: parseRem(24),
+        spaceBetween: parseRem(16),
+        breakpoints: {
+            992: {
+                spaceBetween: parseRem(24),
+            },
+        },
         on: {
             init: function (swiper) {
                 if (swiper.slides.length > 0) {
@@ -684,16 +815,33 @@ $(document).ready(function () {
         },
     });
 
+    // Repeat each gallery track once so the end and start overlap seamlessly.
+    $('.home_space_right_card_wrap').each(function () {
+        var $track = $(this);
+        var $originalItems = $track.children('.home_space_right_card_item');
+
+        if ($track.attr('data-marquee-ready') === 'true') return;
+
+        $originalItems.clone(false).attr('aria-hidden', 'true').appendTo($track);
+        $track.attr('data-marquee-ready', 'true');
+    });
+
     var swiper4 = new Swiper('.home_space_right_card.card1', {
         direction: 'horizontal',
         slidesPerView: 1.2,
         spaceBetween: parseRem(24),
         mousewheel: false,
         loop: true,
+        loopAdditionalSlides: 4,
         speed: 5000,
+        freeMode: {
+            enabled: true,
+            momentum: false,
+        },
         autoplay: {
             delay: 0,
             disableOnInteraction: false,
+            pauseOnMouseEnter: false,
         },
         breakpoints: {
             768: {
@@ -702,7 +850,7 @@ $(document).ready(function () {
             },
             992: {
                 direction: 'vertical',
-                slidesPerView: 2,
+                slidesPerView: 'auto',
                 spaceBetween: parseRem(24),
             },
         },
@@ -713,10 +861,16 @@ $(document).ready(function () {
         spaceBetween: parseRem(16),
         mousewheel: false,
         loop: true,
+        loopAdditionalSlides: 4,
         speed: 5000,
+        freeMode: {
+            enabled: true,
+            momentum: false,
+        },
         autoplay: {
             delay: 0,
             disableOnInteraction: false,
+            pauseOnMouseEnter: false,
             reverseDirection: true,
         },
         breakpoints: {
@@ -726,7 +880,7 @@ $(document).ready(function () {
             },
             992: {
                 direction: 'vertical',
-                slidesPerView: 2,
+                slidesPerView: 'auto',
                 spaceBetween: parseRem(24),
             },
         },
@@ -766,6 +920,153 @@ $(document).ready(function () {
 
         window.addEventListener('scroll', syncGlobalTopButton, { passive: true });
         syncGlobalTopButton();
+    }
+
+    // Make the hero piano react to the horizontal mouse position.
+    const hero = document.querySelector('.home_banner');
+    const piano = hero && hero.querySelector('.home_piano');
+    const pianoItems = piano ? Array.from(piano.querySelectorAll('.home_piano_item')) : [];
+    const pianoPointerMedia = window.matchMedia('(hover: hover) and (pointer: fine)');
+    const pianoReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const pianoAssetBase = window.wonomHome?.assetUrl || '/asset/';
+    const pianoFrequencies = [261.63, 293.66, 329.63, 349.23, 392];
+    const pianoSounds = [
+        'audio/piano-c4.wav',
+        'audio/piano-d4.wav',
+        'audio/piano-e4.wav',
+        'audio/piano-f4.wav',
+        'audio/piano-g4.wav'
+    ].map(function (file) {
+        const audio = new Audio(pianoAssetBase + file);
+        audio.preload = 'auto';
+        audio.load();
+        return audio;
+    });
+    let pianoAudioContext = null;
+
+    const getPianoAudioContext = () => {
+        if (!pianoAudioContext) {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (AudioContextClass) pianoAudioContext = new AudioContextClass();
+        }
+        return pianoAudioContext;
+    };
+
+    const synthesizePianoNote = (context, frequency) => {
+        const startTime = context.currentTime;
+        const fundamental = context.createOscillator();
+        const fundamentalGain = context.createGain();
+        const harmonic = context.createOscillator();
+        const harmonicGain = context.createGain();
+
+        fundamental.type = 'triangle';
+        fundamental.frequency.setValueAtTime(frequency, startTime);
+        fundamentalGain.gain.setValueAtTime(.4, startTime);
+        fundamentalGain.gain.exponentialRampToValueAtTime(.001, startTime + 1.2);
+
+        harmonic.type = 'sine';
+        harmonic.frequency.setValueAtTime(frequency * 2, startTime);
+        harmonicGain.gain.setValueAtTime(.12, startTime);
+        harmonicGain.gain.exponentialRampToValueAtTime(.001, startTime + .8);
+
+        fundamental.connect(fundamentalGain).connect(context.destination);
+        harmonic.connect(harmonicGain).connect(context.destination);
+        fundamental.start(startTime);
+        fundamental.stop(startTime + 1.2);
+        harmonic.start(startTime);
+        harmonic.stop(startTime + .8);
+    };
+
+    const playPianoNote = (index) => {
+        const context = getPianoAudioContext();
+        const frequency = pianoFrequencies[index];
+        if (!context || !frequency) return;
+
+        const play = () => synthesizePianoNote(context, frequency);
+        if (context.state === 'suspended') {
+            context.resume().then(play).catch(function () {
+                const fallbackSound = pianoSounds[index];
+                if (!fallbackSound) return;
+                fallbackSound.currentTime = 0;
+                fallbackSound.play().catch(function () {});
+            });
+        } else {
+            play();
+        }
+    };
+
+    const unlockPianoAudio = () => {
+        const context = getPianoAudioContext();
+        if (context && context.state === 'suspended') context.resume().catch(function () {});
+    };
+
+    document.addEventListener('pointerdown', unlockPianoAudio, { once: true, capture: true });
+    document.addEventListener('keydown', unlockPianoAudio, { once: true, capture: true });
+
+    if (hero && piano && pianoItems.length) {
+        let pianoFrame = 0;
+        let pointerClientX = 0;
+        let pianoBaseHeight = 0;
+        let pianoMaxHeight = 0;
+
+        const measurePiano = () => {
+            pianoItems.forEach((item) => item.style.removeProperty('--piano-height'));
+            pianoBaseHeight = parseFloat(window.getComputedStyle(pianoItems[0]).height) || 24;
+            pianoMaxHeight = Math.max(
+                pianoBaseHeight,
+                Math.min(parseRem(64), window.innerHeight * 0.064)
+            );
+        };
+
+        const resetPiano = () => {
+            if (pianoFrame) window.cancelAnimationFrame(pianoFrame);
+            pianoFrame = 0;
+            pianoItems.forEach((item) => item.style.removeProperty('--piano-height'));
+        };
+
+        const renderPiano = () => {
+            pianoFrame = 0;
+            const bounds = piano.getBoundingClientRect();
+            const itemWidth = bounds.width / pianoItems.length;
+            const pointerX = Math.max(0, Math.min(bounds.width, pointerClientX - bounds.left));
+            const influenceRadius = 2.2;
+
+            pianoItems.forEach((item, index) => {
+                const itemCenter = (index + 0.5) * itemWidth;
+                const distance = Math.abs(pointerX - itemCenter) / itemWidth;
+                const normalizedDistance = Math.min(distance / influenceRadius, 1);
+                const influence = (1 + Math.cos(Math.PI * normalizedDistance)) / 2;
+                const height = pianoBaseHeight + ((pianoMaxHeight - pianoBaseHeight) * influence);
+
+                item.style.setProperty('--piano-height', height.toFixed(2) + 'px');
+            });
+        };
+
+        const handlePianoPointerMove = (event) => {
+            if (!pianoPointerMedia.matches || pianoReducedMotion.matches) return;
+            pointerClientX = event.clientX;
+            if (!pianoFrame) pianoFrame = window.requestAnimationFrame(renderPiano);
+        };
+
+        pianoItems.forEach(function (item, index) {
+            item.addEventListener('mouseenter', function () {
+                if (!pianoPointerMedia.matches) return;
+                playPianoNote(index);
+            });
+            item.addEventListener('click', function () {
+                playPianoNote(index);
+            });
+        });
+
+        measurePiano();
+        hero.addEventListener('pointermove', handlePianoPointerMove, { passive: true });
+        hero.addEventListener('pointerleave', resetPiano);
+        window.addEventListener('resize', function () {
+            resetPiano();
+            measurePiano();
+        }, { passive: true });
+        pianoPointerMedia.addEventListener('change', resetPiano);
+        pianoReducedMotion.addEventListener('change', resetPiano);
     }
 
     $('.global_btn_list_item').hover(
@@ -808,11 +1109,39 @@ $(document).ready(function () {
 
     // Xử lý đóng/mở popup_tour.tour
     $('.home_tour_card_detail_see ').click(function () {
-        $('.popup_tour.tour').addClass('active');
+        var $tourPopup = $('.popup_tour.tour');
+        var tourName = $tourPopup.find('.popup_tour_content_title').first().text().replace(/\s+/g, ' ').trim();
+
+        $tourPopup.find('.tour_detail_form [name="tour_name"]').val(tourName);
+        $tourPopup.addClass('active');
     });
 
     $('.tour .popup_tour_close').click(function () {
         $('.popup_tour.tour').removeClass('active');
+    });
+
+    $('.popup_tour.tour .popup_tour_sidebar_card_button').click(function () {
+        var $tourPopup = $(this).closest('.popup_tour.tour');
+        var $content = $tourPopup.find('.popup_tour_content');
+        var $form = $tourPopup.find('.tour_detail_form');
+        var $scrollContainer = $content;
+        var tourName = $tourPopup.find('.popup_tour_content_title').first().text().replace(/\s+/g, ' ').trim();
+
+        if (!$content.length || !$form.length) return;
+
+        if ($content.css('overflow-y') === 'visible') {
+            $scrollContainer = $tourPopup;
+        }
+
+        $form.find('[name="tour_name"]').val(tourName);
+        $scrollContainer.stop().animate({
+            scrollTop: $scrollContainer.scrollTop() + $form.offset().top - $scrollContainer.offset().top
+        }, 500);
+    });
+
+    $('.popup_tour.tour .tour_detail_form').on('submit', function (event) {
+        // Giữ dữ liệu form để kết nối API/Zalo ở bước backend.
+        event.preventDefault();
     });
 
     var eventPopupData = [
