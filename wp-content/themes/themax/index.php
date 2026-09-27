@@ -1,34 +1,24 @@
 <?php
 /**
- * The main template file.
- *
- * This is the most generic template file in a WordPress theme
- * and one of the two required files for a theme (the other being style.css).
- * It is used to display a page when nothing more specific matches a query.
- * E.g., it puts together the home page when no home.php file exists.
- * Learn more: http://codex.wordpress.org/Template_Hierarchy
+ * Minimal fallback template. The production homepage uses front-page.php.
  */
-
-get_header();
-
-
-
-while ( have_posts() ) : the_post(); 
-
-$cur_post_id= get_the_ID();
-$cur_post_type= get_post_type();
-$cur_post_title =get_the_title();
-$cur_post_content =get_the_content();
-
-endwhile; 
-?>
-
-
-?>
-
-
-
-
-<?php
-
-get_footer();
+?><!doctype html>
+<html <?php language_attributes(); ?>>
+<head>
+    <meta charset="<?php bloginfo('charset'); ?>">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <?php wp_head(); ?>
+</head>
+<body <?php body_class(); ?>>
+<?php wp_body_open(); ?>
+<main>
+    <?php while (have_posts()) : the_post(); ?>
+        <article>
+            <h1><?php the_title(); ?></h1>
+            <?php the_content(); ?>
+        </article>
+    <?php endwhile; ?>
+</main>
+<?php wp_footer(); ?>
+</body>
+</html>
