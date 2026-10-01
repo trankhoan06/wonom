@@ -39,6 +39,92 @@ $(document).ready(function () {
         }
     };
 
+    const popupRootSelector = '.popup_tour, .popup_form, .popup_member, .workshop_detail_popup';
+
+    const watchPopupImage = (image) => {
+        if (!image || !image.matches('img')) return;
+
+        image.dataset.wonomPopupImage = 'pending';
+        image.dataset.wonomImageReady = 'false';
+
+        const reveal = () => {
+            if (image.complete && image.naturalWidth > 0) {
+                image.dataset.wonomImageReady = 'true';
+                image.dataset.wonomPopupImage = 'loaded';
+            }
+        };
+
+        image.addEventListener('load', reveal, { once: true });
+        image.addEventListener('error', () => {
+            image.dataset.wonomPopupImage = 'error';
+        }, { once: true });
+
+        const deferredSrcset = image.getAttribute('data-wonom-srcset');
+        const deferredSrc = image.getAttribute('data-wonom-src');
+        if (deferredSrcset) {
+            image.setAttribute('srcset', deferredSrcset);
+            image.removeAttribute('data-wonom-srcset');
+        }
+        if (!image.getAttribute('src') && deferredSrc) {
+            image.setAttribute('src', deferredSrc);
+        }
+        if (image.getAttribute('src')) {
+            image.removeAttribute('data-wonom-src');
+        }
+
+        reveal();
+    };
+
+    const hydratePopupImages = (root = document) => {
+        if (root.matches && root.matches('img')) {
+            watchPopupImage(root);
+            return;
+        }
+        root.querySelectorAll?.('img').forEach(watchPopupImage);
+    };
+
+    const setPopupImageSource = (image, src) => {
+        if (!image || !src) return;
+        image.dataset.wonomPopupImage = 'pending';
+        image.dataset.wonomImageReady = 'false';
+        image.removeAttribute('data-wonom-src');
+        image.removeAttribute('srcset');
+        image.removeAttribute('data-wonom-srcset');
+        image.setAttribute('src', src);
+        watchPopupImage(image);
+    };
+
+    const popupObserver = new MutationObserver((records) => {
+        records.forEach((record) => {
+            if (record.type === 'attributes') {
+                const popup = record.target;
+                if (popup.matches(popupRootSelector) && popup.classList.contains('active')) {
+                    hydratePopupImages(popup);
+                }
+                return;
+            }
+
+            record.addedNodes.forEach((node) => {
+                if (node.nodeType !== 1) return;
+                const popup = node.closest?.(popupRootSelector);
+                if (popup && popup.classList.contains('active')) hydratePopupImages(node);
+            });
+        });
+    });
+    popupObserver.observe(document.body, {
+        subtree: true,
+        childList: true,
+        attributes: true,
+        attributeFilter: ['class']
+    });
+
+    const hydrateDeferredPopupImages = () => runWhenIdle(() => {
+        document.querySelectorAll(popupRootSelector).forEach(hydratePopupImages);
+    }, 1200);
+
+    if (document.readyState === 'complete') hydrateDeferredPopupImages();
+    else window.addEventListener('load', hydrateDeferredPopupImages, { once: true });
+
     const parseRem = (input) => {
         return (input / 10) * parseFloat($("html").css("font-size"));
     };
@@ -893,7 +979,13 @@ $(document).ready(function () {
                 'data-tour-index': suggestionIndex
             });
             $('<span>', { class: 'popup_tour_sidebar_suggest_item_img img_full' })
-                .append($('<img>', { src: suggestion.image || '', alt: suggestion.imageAlt || suggestion.title || '' }))
+                .append($('<img>', {
+                    src: suggestion.image || '',
+                    alt: suggestion.imageAlt || suggestion.title || '',
+                    loading: 'lazy',
+                    decoding: 'async',
+                    'data-wonom-popup-image': 'pending'
+                }))
                 .appendTo($button);
             $('<span>', { class: 'popup_tour_sidebar_suggest_item_title txt_bold txt_16 cl_dark_brown' })
                 .text(suggestion.title || '')
@@ -1063,18 +1155,23 @@ $(document).ready(function () {
     const pianoReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const pianoAssetBase = window.wonomHome?.assetUrl || '/asset/';
     const pianoFrequencies = [261.63, 293.66, 329.63, 349.23, 392];
-    const pianoSounds = [
+    const pianoSoundFiles = [
         'audio/piano-c4.wav',
         'audio/piano-d4.wav',
         'audio/piano-e4.wav',
         'audio/piano-f4.wav',
         'audio/piano-g4.wav'
-    ].map(function (file) {
-        const audio = new Audio(pianoAssetBase + file);
-        audio.preload = 'auto';
-        audio.load();
-        return audio;
-    });
+    ];
+    const pianoSounds = new Map();
+    const getPianoFallbackSound = (index) => {
+        if (!pianoSoundFiles[index]) return null;
+        if (!pianoSounds.has(index)) {
+            const audio = new Audio(pianoAssetBase + pianoSoundFiles[index]);
+            audio.preload = 'none';
+            pianoSounds.set(index, audio);
+        }
+        return pianoSounds.get(index);
+    };
     let pianoAudioContext = null;
 
     const getPianoAudioContext = () => {
@@ -1118,7 +1215,7 @@ $(document).ready(function () {
         const play = () => synthesizePianoNote(context, frequency);
         if (context.state === 'suspended') {
             context.resume().then(play).catch(function () {
-                const fallbackSound = pianoSounds[index];
+                const fallbackSound = getPianoFallbackSound(index);
                 if (!fallbackSound) return;
                 fallbackSound.currentTime = 0;
                 fallbackSound.play().catch(function () {});
@@ -1302,7 +1399,13 @@ $(document).ready(function () {
                 'data-event-index': index
             });
             $('<span>', { class: 'popup_tour_sidebar_suggest_item_img img_full' })
-                .append($('<img>', { src: item.image || '', alt: item.imageAlt || item.title || '' }))
+                .append($('<img>', {
+                    src: item.image || '',
+                    alt: item.imageAlt || item.title || '',
+                    loading: 'lazy',
+                    decoding: 'async',
+                    'data-wonom-popup-image': 'pending'
+                }))
                 .appendTo($button);
             $('<span>', { class: 'popup_tour_sidebar_suggest_item_title txt_bold' })
                 .text(item.title || '')
@@ -1320,7 +1423,9 @@ $(document).ready(function () {
         $popup.find('.event_popup_apply').text(item.apply);
         $popup.find('.event_popup_category').text(item.category);
         $popup.find('.event_popup_condition').text(item.condition);
-        $popup.find('.event_popup_content_img img').attr('src', item.popupImage || item.image || '').attr('alt', item.popupImageAlt || item.title || '');
+        var eventImage = $popup.find('.event_popup_content_img img').get(0);
+        setPopupImageSource(eventImage, item.popupImage || item.image || '');
+        if (eventImage) eventImage.alt = item.popupImageAlt || item.title || '';
         $popup.find('.event_popup_content_title').text(item.title);
         $popup.find('.event_popup_content_subtitle').text(item.subtitle);
         $popup.find('.popup_tour_content_des').html(item.content || '');
@@ -1527,7 +1632,7 @@ $(document).ready(function () {
             $thumbs.append(
                 '<button class="restaurant_menu_thumb' + (index < 2 ? ' active' : '') + '" type="button"' +
                 ' data-menu-page="' + index + '" aria-label="Trang ' + pageNumber + '">' +
-                '<span class="restaurant_menu_thumb_img"><img src="' + src + '" alt="Nội dung tầng - trang ' + pageNumber + '"></span>' +
+                '<span class="restaurant_menu_thumb_img"><img data-wonom-popup-image="pending" loading="lazy" decoding="async" src="' + escapeExploreHtml(src) + '" alt="Nội dung tầng - trang ' + pageNumber + '"></span>' +
                 '<span class="restaurant_menu_thumb_number txt_14 txt_bold">' + pageNumber + '</span></button>'
             );
         });
@@ -1546,7 +1651,7 @@ $(document).ready(function () {
                 '<div class="popup_tour_seeall_list_item_img" data-gallery-category="' + escapeExploreHtml(category || 'all') + '">' +
                 '<div class="popup_tour_seeall_list_item_img_inner img_abs">' +
                 '<div class="popup_tour_seeall_list_item_img_block"></div>' +
-                '<img src="' + escapeExploreHtml(src) + '" alt="' + escapeExploreHtml(alt) + '"></div>' +
+                '<img data-wonom-popup-image="pending" loading="lazy" decoding="async" src="' + escapeExploreHtml(src) + '" alt="' + escapeExploreHtml(alt) + '"></div>' +
                 '<div class="popup_tour_seeall_list_item_img_tag txt_14 txt_bold">' + escapeExploreHtml(tag) + '</div></div>'
             );
         });
@@ -1574,6 +1679,9 @@ $(document).ready(function () {
 
             page.className = 'restaurant_flipbook_page';
             page.setAttribute('data-density', 'soft');
+            image.dataset.wonomPopupImage = 'pending';
+            image.loading = 'lazy';
+            image.decoding = 'async';
             image.src = src;
             image.alt = 'Nội dung tầng - trang ' + (index + 1);
             image.draggable = false;
@@ -1601,7 +1709,7 @@ $(document).ready(function () {
             $('.restaurant_menu_page_count').text('1–2 / ' + restaurantMenuPages.length);
             var bookElement = document.getElementById('restaurant-flipbook');
             if (!bookElement) return false;
-            bookElement.innerHTML = '<img class="restaurant_flipbook_fallback" src="' + restaurantMenuPages[0] + '" alt="Nội dung tầng">';
+            bookElement.innerHTML = '<img class="restaurant_flipbook_fallback" data-wonom-popup-image="pending" decoding="async" src="' + escapeExploreHtml(restaurantMenuPages[0]) + '" alt="Nội dung tầng">';
         }
 
         return true;
@@ -1826,7 +1934,10 @@ $(document).ready(function () {
         if (!workshopDetailImages.length) return;
 
         workshopDetailImageIndex = (index + workshopDetailImages.length) % workshopDetailImages.length;
-        $('.workshop_detail_main_image > img').attr('src', workshopDetailImages[workshopDetailImageIndex]);
+        setPopupImageSource(
+            document.querySelector('.workshop_detail_main_image > img'),
+            workshopDetailImages[workshopDetailImageIndex]
+        );
         $('.workshop_detail_thumb').removeClass('active')
             .filter('[data-detail-image="' + workshopDetailImageIndex + '"]').addClass('active');
         if (workshopDetailThumbSwiper) {
@@ -1843,7 +1954,7 @@ $(document).ready(function () {
         workshopDetailImages.forEach(function (src, index) {
             $thumbs.append(
                 '<button class="workshop_detail_thumb swiper-slide' + (index === 0 ? ' active' : '') + '" type="button" data-detail-image="' + index + '" aria-label="Xem ảnh ' + (index + 1) + '">' +
-                '<img src="' + src + '" alt="Ảnh workshop ' + (index + 1) + '"></button>'
+                '<img data-wonom-popup-image="pending" loading="lazy" decoding="async" src="' + escapeExploreHtml(src) + '" alt="Ảnh workshop ' + (index + 1) + '"></button>'
             );
         });
 

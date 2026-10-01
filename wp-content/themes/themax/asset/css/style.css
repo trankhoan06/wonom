@@ -6145,3 +6145,13 @@ button.is-loading {
         width: calc((100% - 2.88rem) / 2.2);
     }
 }
+
+/* Popup media is requested after the main page has loaded. Keep each image
+   out of paint until its own load event fires. */
+[data-wonom-popup-image]:not([data-wonom-image-ready="true"]) {
+    display: none !important;
+}
+
+[data-wonom-popup-image][data-wonom-image-ready="true"] {
+    display: block;
+}

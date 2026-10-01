@@ -3,6 +3,7 @@
 include 'typerocket/init.php';
 
 require dirname(__FILE__) . '/inc/cleanup.php';
+require dirname(__FILE__) . '/inc/frontend-performance.php';
 require dirname(__FILE__) . '/inc/homepage-settings.php';
 require dirname(__FILE__) . '/inc/home-tour-data.php';
 require dirname(__FILE__) . '/inc/home-event-data.php';
@@ -139,4 +140,3 @@ function wonom_disable_cache_for_zalo()
     }
 }
 add_action('send_headers', 'wonom_disable_cache_for_zalo');
-

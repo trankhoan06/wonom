@@ -42,12 +42,21 @@ RewriteRule . /index.php [L]
     # Caching Media (1 year)
     ExpiresByType video/mp4 "access plus 1 year"
     ExpiresByType video/webm "access plus 1 year"
+    ExpiresByType audio/wav "access plus 1 year"
+    ExpiresByType audio/ogg "access plus 1 year"
 </IfModule>
 
 <IfModule mod_headers.c>
-    <FilesMatch "\.(ico|jpe?g|png|gif|webp|css|js|woff|woff2|ttf|otf|svg|mp4)$">
+    <FilesMatch "\.(ico|jpe?g|png|gif|webp|css|js|woff|woff2|ttf|otf|svg|mp4|webm|wav|ogg)$">
         Header set Cache-Control "max-age=31536000, public, immutable"
     </FilesMatch>
+</IfModule>
+
+# Prefer Brotli when the host supports it; Apache falls back to Gzip below.
+<IfModule mod_brotli.c>
+    AddOutputFilterByType BROTLI_COMPRESS text/plain text/html text/xml text/css
+    AddOutputFilterByType BROTLI_COMPRESS application/xml application/xhtml+xml application/rss+xml
+    AddOutputFilterByType BROTLI_COMPRESS application/javascript application/json image/svg+xml
 </IfModule>
 
 # Gzip Compression
@@ -61,6 +70,8 @@ RewriteRule . /index.php [L]
     AddOutputFilterByType DEFLATE application/rss+xml
     AddOutputFilterByType DEFLATE application/javascript
     AddOutputFilterByType DEFLATE application/x-javascript
+    AddOutputFilterByType DEFLATE application/json
+    AddOutputFilterByType DEFLATE image/svg+xml
     AddOutputFilterByType DEFLATE font/woff2
     AddOutputFilterByType DEFLATE font/woff
 </IfModule>

@@ -8,7 +8,11 @@
 
 $homepage_file = get_theme_file_path('/homepage.html');
 $homepage_template_files = array_merge(
-    array($homepage_file),
+    array(
+        $homepage_file,
+        __FILE__,
+        get_theme_file_path('/inc/frontend-performance.php'),
+    ),
     glob(get_theme_file_path('/template-parts/home-*.php')) ?: array()
 );
 $homepage_cache_version = 0;
@@ -184,6 +188,11 @@ if ($footer_markup) {
     );
 }
 
+// Add intrinsic dimensions and responsive Media Library sources once while
+// building the cached fragment, before applying loading priorities.
+$homepage_body = wonom_optimize_homepage_image_markup($homepage_body);
+$homepage_body = wonom_defer_homepage_popup_images($homepage_body);
+
 // Images after the hero must not compete with the LCP image. Keep header and
 // hero assets eager, then make every later image lazy and asynchronously
 // decoded, including images coming from dynamic template parts.
@@ -208,13 +217,13 @@ if (false !== $first_section_end) {
 }
 
     if ($homepage_cacheable && $homepage_body) {
-        // A short fragment cache skips repeated option lookups and the regex
-        // assembly of the 180KB homepage while keeping CMS edits responsive.
-        set_transient($homepage_cache_key, $homepage_body, 5 * MINUTE_IN_SECONDS);
+        // The cache key changes whenever homepage settings or template files
+        // change, so a longer TTL safely avoids repeated 180KB DOM assembly.
+        set_transient($homepage_cache_key, $homepage_body, 12 * HOUR_IN_SECONDS);
         set_transient(
             $homepage_lcp_cache_key,
             isset($GLOBALS['wonom_home_lcp_image']) ? $GLOBALS['wonom_home_lcp_image'] : '',
-            5 * MINUTE_IN_SECONDS
+            12 * HOUR_IN_SECONDS
         );
     }
 }
@@ -226,7 +235,13 @@ if (false !== $first_section_end) {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
     <?php if (!empty($GLOBALS['wonom_home_lcp_image'])) : ?>
-        <link rel="preload" as="image" href="<?php echo esc_url($GLOBALS['wonom_home_lcp_image']); ?>" fetchpriority="high">
+        <?php $wonom_lcp_data = wonom_get_image_performance_data($GLOBALS['wonom_home_lcp_image']); ?>
+        <link rel="preload" as="image" href="<?php echo esc_url($GLOBALS['wonom_home_lcp_image']); ?>"<?php
+        if (!empty($wonom_lcp_data['srcset'])) {
+            echo ' imagesrcset="' . esc_attr($wonom_lcp_data['srcset']) . '"';
+            echo ' imagesizes="' . esc_attr($wonom_lcp_data['sizes']) . '"';
+        }
+        ?> fetchpriority="high">
     <?php endif; ?>
     <?php wp_head(); ?>
 </head>
