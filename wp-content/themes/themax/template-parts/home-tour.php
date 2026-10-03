@@ -1,12 +1,8 @@
 <?php
 
-$tour_source_file = get_theme_file_path('/homepage.html');
-$tour_source = is_readable($tour_source_file) ? file_get_contents($tour_source_file) : '';
-$tour_markup = '';
-
-if ($tour_source && preg_match('/(<section id="tour" class="home_tour pa_section relative">.*?<\/section>)\s*(?=<section id="event")/is', $tour_source, $tour_match)) {
-    $tour_markup = $tour_match[1];
-}
+ob_start();
+get_template_part('template-parts/layouts/home', 'tour');
+$tour_markup = ob_get_clean();
 
 $tours = wonom_get_home_tours();
 if (!$tour_markup || !$tours || !class_exists('DOMDocument')) {

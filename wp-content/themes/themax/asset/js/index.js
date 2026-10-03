@@ -122,8 +122,13 @@ $(document).ready(function () {
         document.querySelectorAll(popupRootSelector).forEach(hydratePopupImages);
     }, 1200);
 
-    if (document.readyState === 'complete') hydrateDeferredPopupImages();
-    else window.addEventListener('load', hydrateDeferredPopupImages, { once: true });
+    const finishPopupImageDeferral = () => {
+        document.documentElement.classList.add('wonom-page-loaded');
+        hydrateDeferredPopupImages();
+    };
+
+    if (document.readyState === 'complete') finishPopupImageDeferral();
+    else window.addEventListener('load', finishPopupImageDeferral, { once: true });
 
     const parseRem = (input) => {
         return (input / 10) * parseFloat($("html").css("font-size"));
@@ -186,7 +191,7 @@ $(document).ready(function () {
         customCursor.classList.add('is-visible');
         customCursor.classList.toggle(
             'is-interactive',
-            event.target instanceof Element && Boolean(event.target.closest('a, button, .btn, input:not([type="hidden"]), textarea, select, [contenteditable="true"], [data-explore-tab], [data-footer-href]'))
+            event.target instanceof Element && Boolean(event.target.closest('a, button, .btn, .workshop_card, input:not([type="hidden"]), textarea, select, [contenteditable="true"], [data-explore-tab], [data-footer-href]'))
         );
 
         if (!customCursorFrame) customCursorFrame = window.requestAnimationFrame(renderCustomCursor);
@@ -1162,17 +1167,33 @@ $(document).ready(function () {
         'audio/piano-f4.wav',
         'audio/piano-g4.wav'
     ];
+    const pianoAudioNotice = document.querySelector('[data-piano-audio-notice]');
+    const pianoAudioNoticeClose = pianoAudioNotice?.querySelector('[data-piano-audio-notice-close]');
     const pianoSounds = new Map();
     const getPianoFallbackSound = (index) => {
         if (!pianoSoundFiles[index]) return null;
         if (!pianoSounds.has(index)) {
             const audio = new Audio(pianoAssetBase + pianoSoundFiles[index]);
-            audio.preload = 'none';
+            audio.preload = 'auto';
             pianoSounds.set(index, audio);
         }
         return pianoSounds.get(index);
     };
     let pianoAudioContext = null;
+
+    const showPianoAudioNotice = () => {
+        if (!pianoAudioNotice || !pianoPointerMedia.matches) return;
+        pianoAudioNotice.classList.add('is-visible');
+        pianoAudioNotice.setAttribute('aria-hidden', 'false');
+    };
+
+    const hidePianoAudioNotice = () => {
+        if (!pianoAudioNotice) return;
+        pianoAudioNotice.classList.remove('is-visible');
+        pianoAudioNotice.setAttribute('aria-hidden', 'true');
+    };
+
+    pianoAudioNoticeClose?.addEventListener('click', hidePianoAudioNotice);
 
     const getPianoAudioContext = () => {
         if (!pianoAudioContext) {
@@ -1213,13 +1234,18 @@ $(document).ready(function () {
         if (!context || !frequency) return;
 
         const play = () => synthesizePianoNote(context, frequency);
-        if (context.state === 'suspended') {
-            context.resume().then(play).catch(function () {
-                const fallbackSound = getPianoFallbackSound(index);
-                if (!fallbackSound) return;
-                fallbackSound.currentTime = 0;
-                fallbackSound.play().catch(function () {});
-            });
+        const playFallback = () => {
+            const fallbackSound = getPianoFallbackSound(index);
+            if (!fallbackSound) return;
+            fallbackSound.currentTime = 0;
+            fallbackSound.play().catch(function () {});
+        };
+
+        if (context.state !== 'running') {
+            context.resume().then(function () {
+                if (context.state === 'running') play();
+                else playFallback();
+            }).catch(playFallback);
         } else {
             play();
         }
@@ -1227,11 +1253,49 @@ $(document).ready(function () {
 
     const unlockPianoAudio = () => {
         const context = getPianoAudioContext();
-        if (context && context.state === 'suspended') context.resume().catch(function () {});
+        if (!context) return Promise.resolve(false);
+        if (context.state === 'running') {
+            hidePianoAudioNotice();
+            return Promise.resolve(true);
+        }
+        return context.resume().then(function () {
+            const unlocked = context.state === 'running';
+            if (unlocked) hidePianoAudioNotice();
+            return unlocked;
+        }).catch(function () {
+            return false;
+        });
     };
 
-    document.addEventListener('pointerdown', unlockPianoAudio, { once: true, capture: true });
-    document.addEventListener('keydown', unlockPianoAudio, { once: true, capture: true });
+    const preparePianoAudio = () => {
+        pianoSoundFiles.forEach(function (_, index) {
+            const audio = getPianoFallbackSound(index);
+            if (audio) audio.load();
+        });
+        unlockPianoAudio();
+    };
+
+    const checkPianoAudioAfterLoad = () => {
+        preparePianoAudio();
+        window.setTimeout(function () {
+            const context = getPianoAudioContext();
+            if (context && context.state !== 'running') showPianoAudioNotice();
+        }, 400);
+    };
+
+    if (document.readyState === 'complete') checkPianoAudioAfterLoad();
+    else window.addEventListener('load', checkPianoAudioAfterLoad, { once: true });
+
+    const handlePianoAudioActivation = () => {
+        unlockPianoAudio().then(function (unlocked) {
+            if (!unlocked) return;
+            document.removeEventListener('pointerdown', handlePianoAudioActivation, true);
+            document.removeEventListener('keydown', handlePianoAudioActivation, true);
+        });
+    };
+
+    document.addEventListener('pointerdown', handlePianoAudioActivation, true);
+    document.addEventListener('keydown', handlePianoAudioActivation, true);
 
     if (hero && piano && pianoItems.length) {
         let pianoFrame = 0;
@@ -1966,7 +2030,12 @@ $(document).ready(function () {
                 grabCursor: true,
                 watchOverflow: true,
                 observer: true,
-                observeParents: true
+                observeParents: true,
+                scrollbar: {
+                    el: '.workshop_detail_thumbs_scrollbar',
+                    draggable: true,
+                    hide: false
+                }
             });
         } else {
             workshopDetailThumbSwiper.update();
@@ -1974,8 +2043,7 @@ $(document).ready(function () {
         }
     }
 
-    $('.workshop_card_action').click(function () {
-        var $card = $(this).closest('.workshop_card');
+    function openWorkshopDetail($card) {
         var productId = $card.attr('data-product-id');
         var productName = $card.find('.workshop_card_title').text().trim();
         var mainImage = $card.find('.workshop_card_image img').attr('src');
@@ -2028,6 +2096,22 @@ $(document).ready(function () {
             }
             initWorkshopDetailImageTransition();
         });
+    }
+
+    $('.workshop_card').each(function () {
+        var $card = $(this);
+        var productName = $card.find('.workshop_card_title').text().trim();
+        $card.attr({
+            role: 'button',
+            tabindex: '0',
+            'aria-label': 'Xem chi tiết ' + productName
+        });
+    }).on('click', function () {
+        openWorkshopDetail($(this));
+    }).on('keydown', function (event) {
+        if (event.target !== this || (event.key !== 'Enter' && event.key !== ' ')) return;
+        event.preventDefault();
+        openWorkshopDetail($(this));
     });
 
     $('.workshop_detail_thumbs').on('click', '.workshop_detail_thumb', function () {

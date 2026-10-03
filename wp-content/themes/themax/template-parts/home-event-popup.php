@@ -1,11 +1,8 @@
 <?php
 
-$event_popup_source_file = get_theme_file_path('/homepage.html');
-$event_popup_source = is_readable($event_popup_source_file) ? file_get_contents($event_popup_source_file) : '';
-$event_popup_markup = '';
-if ($event_popup_source && preg_match('/(<section class="popup_tour event"[^>]*>.*?<\/section>)\s*(?=<section class="popup_tour policy")/is', $event_popup_source, $event_popup_match)) {
-    $event_popup_markup = $event_popup_match[1];
-}
+ob_start();
+get_template_part('template-parts/layouts/home', 'event-popup');
+$event_popup_markup = ob_get_clean();
 $events = wonom_get_home_events();
 if (!$event_popup_markup || !$events || !class_exists('DOMDocument')) {
     echo $event_popup_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped

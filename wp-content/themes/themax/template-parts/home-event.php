@@ -1,11 +1,8 @@
 <?php
 
-$event_source_file = get_theme_file_path('/homepage.html');
-$event_source = is_readable($event_source_file) ? file_get_contents($event_source_file) : '';
-$event_markup = '';
-if ($event_source && preg_match('/(<section id="event" class="home_event pa_section">.*?<\/section>)\s*(?=<section id="library")/is', $event_source, $event_match)) {
-    $event_markup = $event_match[1];
-}
+ob_start();
+get_template_part('template-parts/layouts/home', 'event');
+$event_markup = ob_get_clean();
 $events = wonom_get_home_events();
 if (!$event_markup || !$events || !class_exists('DOMDocument')) {
     echo $event_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped

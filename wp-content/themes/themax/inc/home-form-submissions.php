@@ -16,11 +16,53 @@ function wonom_register_submission_post_type()
         'supports' => array('title'),
         'capability_type' => 'post',
         'map_meta_cap' => true,
+        'capabilities' => array(
+            'create_posts' => 'do_not_allow',
+        ),
         'menu_icon' => 'dashicons-email-alt',
         'menu_position' => 25,
     ));
 }
 add_action('init', 'wonom_register_submission_post_type');
+
+function wonom_submission_type_labels()
+{
+    return array(
+        'booking' => 'Đặt chỗ',
+        'tour' => 'Đặt Tour',
+        'membership' => 'Đăng ký thành viên',
+    );
+}
+
+function wonom_submission_status_labels()
+{
+    return array(
+        'new' => 'Mới',
+        'contacted' => 'Đã liên hệ',
+        'completed' => 'Hoàn thành',
+        'cancelled' => 'Đã hủy',
+    );
+}
+
+function wonom_submission_notification_emails()
+{
+    $configured = (string) tr_options_field('tr_theme_options.receive_email');
+    $candidates = preg_split('/[\s,;]+/', $configured, -1, PREG_SPLIT_NO_EMPTY);
+    $emails = array();
+
+    foreach ($candidates as $candidate) {
+        $email = sanitize_email($candidate);
+        if ($email && is_email($email)) {
+            $emails[] = $email;
+        }
+    }
+
+    if (!$emails) {
+        $emails[] = get_option('admin_email');
+    }
+
+    return array_values(array_unique($emails));
+}
 
 function wonom_submission_normalize_phone($phone)
 {
@@ -34,13 +76,24 @@ function wonom_submission_valid_phone($phone)
 
 function wonom_submission_valid_date($date)
 {
-    if (!preg_match('/^(\d{2})\/(\d{2})\/(\d{4})$/', (string) $date, $matches)) {
+    $date = (string) $date;
+    if (preg_match('/^(\d{2})\/(\d{2})\/(\d{4})$/', $date, $matches)) {
+        $day = (int) $matches[1];
+        $month = (int) $matches[2];
+        $year = (int) $matches[3];
+        $format = '!d/m/Y';
+    } elseif (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $date, $matches)) {
+        $year = (int) $matches[1];
+        $month = (int) $matches[2];
+        $day = (int) $matches[3];
+        $format = '!Y-m-d';
+    } else {
         return false;
     }
-    if (!checkdate((int) $matches[2], (int) $matches[1], (int) $matches[3])) {
+    if (!checkdate($month, $day, $year)) {
         return false;
     }
-    $submitted = DateTimeImmutable::createFromFormat('!d/m/Y', $date, wp_timezone());
+    $submitted = DateTimeImmutable::createFromFormat($format, $date, wp_timezone());
     $today = new DateTimeImmutable('today', wp_timezone());
     return $submitted && $submitted >= $today;
 }
@@ -129,7 +182,7 @@ function wonom_handle_home_form_submission()
         wp_send_json_error(array('message' => 'Vui lòng kiểm tra lại các thông tin.', 'fields' => $errors), 422);
     }
 
-    $labels = array('booking' => 'Đặt lịch', 'tour' => 'Đặt Tour', 'membership' => 'Thành viên');
+    $labels = wonom_submission_type_labels();
     $post_id = wp_insert_post(array(
         'post_type' => 'wonom_submission',
         'post_status' => 'private',
@@ -151,12 +204,14 @@ function wonom_handle_home_form_submission()
     foreach ($data as $key => $value) {
         $mail_lines[] = $key . ': ' . (is_bool($value) ? ($value ? 'yes' : 'no') : $value);
     }
-    wp_mail(
-        get_option('admin_email'),
+    $mail_sent = wp_mail(
+        wonom_submission_notification_emails(),
         sprintf('[WONOM] Yêu cầu mới từ %s', $name),
         implode("\n", $mail_lines),
         array('Content-Type: text/plain; charset=UTF-8')
     );
+    update_post_meta($post_id, '_wonom_email_status', $mail_sent ? 'sent' : 'failed');
+    update_post_meta($post_id, '_wonom_email_sent_at', $mail_sent ? current_time('mysql') : '');
 
     wp_send_json_success(array(
         'message' => 'Gửi yêu cầu thành công! WONOM sẽ liên hệ với bạn trong thời gian sớm nhất.',
@@ -174,6 +229,7 @@ function wonom_submission_admin_columns($columns)
         'wonom_phone' => 'Điện thoại',
         'wonom_type' => 'Loại',
         'wonom_status' => 'Trạng thái',
+        'wonom_email' => 'Email',
         'date' => 'Ngày gửi',
     );
 }
@@ -182,10 +238,95 @@ add_filter('manage_wonom_submission_posts_columns', 'wonom_submission_admin_colu
 function wonom_submission_admin_column($column, $post_id)
 {
     if ('wonom_phone' === $column) echo esc_html(get_post_meta($post_id, '_wonom_phone', true));
-    if ('wonom_type' === $column) echo esc_html(get_post_meta($post_id, '_wonom_form_type', true));
-    if ('wonom_status' === $column) echo esc_html(get_post_meta($post_id, '_wonom_status', true));
+    if ('wonom_type' === $column) {
+        $type = get_post_meta($post_id, '_wonom_form_type', true);
+        $labels = wonom_submission_type_labels();
+        echo esc_html(isset($labels[$type]) ? $labels[$type] : $type);
+    }
+    if ('wonom_status' === $column) {
+        $status = get_post_meta($post_id, '_wonom_status', true) ?: 'new';
+        $labels = wonom_submission_status_labels();
+        echo '<span class="wonom-status wonom-status-' . esc_attr($status) . '">';
+        echo esc_html(isset($labels[$status]) ? $labels[$status] : $status);
+        echo '</span>';
+    }
+    if ('wonom_email' === $column) {
+        $email_status = get_post_meta($post_id, '_wonom_email_status', true);
+        echo 'sent' === $email_status
+            ? '<span class="wonom-mail-sent">Đã gửi</span>'
+            : ('failed' === $email_status ? '<span class="wonom-mail-failed">Gửi lỗi</span>' : '—');
+    }
 }
 add_action('manage_wonom_submission_posts_custom_column', 'wonom_submission_admin_column', 10, 2);
+
+function wonom_submission_admin_filters($post_type)
+{
+    if ('wonom_submission' !== $post_type) return;
+
+    $selected_type = isset($_GET['wonom_form_type']) ? sanitize_key(wp_unslash($_GET['wonom_form_type'])) : '';
+    $selected_status = isset($_GET['wonom_status']) ? sanitize_key(wp_unslash($_GET['wonom_status'])) : '';
+
+    echo '<select name="wonom_form_type">';
+    echo '<option value="">Tất cả loại form</option>';
+    foreach (wonom_submission_type_labels() as $value => $label) {
+        echo '<option value="' . esc_attr($value) . '" ' . selected($selected_type, $value, false) . '>' . esc_html($label) . '</option>';
+    }
+    echo '</select>';
+
+    echo '<select name="wonom_status">';
+    echo '<option value="">Tất cả trạng thái</option>';
+    foreach (wonom_submission_status_labels() as $value => $label) {
+        echo '<option value="' . esc_attr($value) . '" ' . selected($selected_status, $value, false) . '>' . esc_html($label) . '</option>';
+    }
+    echo '</select>';
+}
+add_action('restrict_manage_posts', 'wonom_submission_admin_filters');
+
+function wonom_submission_filter_admin_query($query)
+{
+    if (!is_admin() || !$query->is_main_query() || 'wonom_submission' !== $query->get('post_type')) return;
+
+    $meta_query = array();
+    $form_type = isset($_GET['wonom_form_type']) ? sanitize_key(wp_unslash($_GET['wonom_form_type'])) : '';
+    $status = isset($_GET['wonom_status']) ? sanitize_key(wp_unslash($_GET['wonom_status'])) : '';
+
+    if (isset(wonom_submission_type_labels()[$form_type])) {
+        $meta_query[] = array('key' => '_wonom_form_type', 'value' => $form_type);
+    }
+    if (isset(wonom_submission_status_labels()[$status])) {
+        $meta_query[] = array('key' => '_wonom_status', 'value' => $status);
+    }
+    if ($meta_query) {
+        $query->set('meta_query', $meta_query);
+    }
+}
+add_action('pre_get_posts', 'wonom_submission_filter_admin_query');
+
+function wonom_submission_admin_views($views)
+{
+    $base_url = admin_url('edit.php?post_type=wonom_submission');
+    $current = isset($_GET['wonom_form_type']) ? sanitize_key(wp_unslash($_GET['wonom_form_type'])) : '';
+    $links = array(
+        'all' => '<a href="' . esc_url($base_url) . '"' . ('' === $current ? ' class="current"' : '') . '>Tất cả</a>',
+    );
+
+    foreach (wonom_submission_type_labels() as $type => $label) {
+        $count_query = new WP_Query(array(
+            'post_type' => 'wonom_submission',
+            'post_status' => 'private',
+            'posts_per_page' => 1,
+            'fields' => 'ids',
+            'meta_key' => '_wonom_form_type',
+            'meta_value' => $type,
+        ));
+        $url = add_query_arg('wonom_form_type', $type, $base_url);
+        $links[$type] = '<a href="' . esc_url($url) . '"' . ($current === $type ? ' class="current"' : '') . '>'
+            . esc_html($label) . ' <span class="count">(' . number_format_i18n($count_query->found_posts) . ')</span></a>';
+    }
+
+    return $links;
+}
+add_filter('views_edit-wonom_submission', 'wonom_submission_admin_views');
 
 function wonom_submission_add_meta_box()
 {
@@ -216,7 +357,8 @@ function wonom_submission_render_meta_box($post)
         'product_name' => 'Tên sản phẩm',
         'tour_name' => 'Tên Tour',
         'consent' => 'Đồng ý nhận ưu đãi',
-        'status' => 'Trạng thái',
+        'email_status' => 'Trạng thái gửi email',
+        'email_sent_at' => 'Thời gian gửi email',
         'source_url' => 'Trang gửi yêu cầu',
     );
     echo '<table class="widefat striped"><tbody>';
@@ -226,4 +368,46 @@ function wonom_submission_render_meta_box($post)
         echo '<tr><th style="width:180px">' . esc_html($label) . '</th><td>' . esc_html($value) . '</td></tr>';
     }
     echo '</tbody></table>';
+
+    $current_status = get_post_meta($post->ID, '_wonom_status', true) ?: 'new';
+    wp_nonce_field('wonom_save_submission_status', 'wonom_submission_status_nonce');
+    echo '<p><label for="wonom-submission-status"><strong>Trạng thái xử lý</strong></label></p>';
+    echo '<select id="wonom-submission-status" name="wonom_submission_status" style="min-width:220px">';
+    foreach (wonom_submission_status_labels() as $value => $label) {
+        echo '<option value="' . esc_attr($value) . '" ' . selected($current_status, $value, false) . '>' . esc_html($label) . '</option>';
+    }
+    echo '</select>';
 }
+
+function wonom_submission_save_status($post_id)
+{
+    if (
+        empty($_POST['wonom_submission_status_nonce'])
+        || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['wonom_submission_status_nonce'])), 'wonom_save_submission_status')
+        || !current_user_can('edit_post', $post_id)
+        || (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE)
+    ) {
+        return;
+    }
+
+    $status = isset($_POST['wonom_submission_status'])
+        ? sanitize_key(wp_unslash($_POST['wonom_submission_status']))
+        : '';
+    if (isset(wonom_submission_status_labels()[$status])) {
+        update_post_meta($post_id, '_wonom_status', $status);
+    }
+}
+add_action('save_post_wonom_submission', 'wonom_submission_save_status');
+
+function wonom_submission_admin_styles()
+{
+    $screen = get_current_screen();
+    if (!$screen || 'wonom_submission' !== $screen->post_type) return;
+    echo '<style>
+        .wonom-status,.wonom-mail-sent,.wonom-mail-failed{display:inline-block;padding:3px 8px;border-radius:999px;font-weight:600}
+        .wonom-status-new{background:#e8f1ff;color:#145db2}.wonom-status-contacted{background:#fff4d6;color:#8a5a00}
+        .wonom-status-completed,.wonom-mail-sent{background:#e7f7ed;color:#176b3a}
+        .wonom-status-cancelled,.wonom-mail-failed{background:#fdebec;color:#a51d2d}
+    </style>';
+}
+add_action('admin_head', 'wonom_submission_admin_styles');

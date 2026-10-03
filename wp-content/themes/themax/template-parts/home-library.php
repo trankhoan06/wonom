@@ -1,11 +1,8 @@
 <?php
 
-$library_source_file = get_theme_file_path('/homepage.html');
-$library_source = is_readable($library_source_file) ? file_get_contents($library_source_file) : '';
-$library_markup = '';
-if ($library_source && preg_match('/(<section id="library" class="home_space pa_section relative">.*?<\/section>)\s*(?=<footer id="contact")/is', $library_source, $library_match)) {
-    $library_markup = $library_match[1];
-}
+ob_start();
+get_template_part('template-parts/layouts/home', 'library');
+$library_markup = ob_get_clean();
 $library_images = wonom_get_home_library_images();
 if (!$library_markup || !$library_images || !class_exists('DOMDocument')) {
     echo $library_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped

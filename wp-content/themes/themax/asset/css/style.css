@@ -54,6 +54,7 @@ html {
     a:hover,
     button:hover,
     .btn:hover,
+    .workshop_card:hover,
     [data-explore-tab]:hover {
         cursor: url('../img/cursor-default.svg') 3 3, pointer !important;
     }
@@ -63,6 +64,78 @@ html {
     display: none;
 }
 
+.piano_audio_notice {
+    display: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .piano_audio_notice {
+        position: fixed;
+        top: clamp(7.2rem, 9vh, 9.6rem);
+        right: 2.4rem;
+        z-index: 1000001;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        max-width: min(34rem, calc(100vw - 4.8rem));
+        padding: 1.2rem 1.6rem;
+        color: #fff6db;
+        background: #460700;
+        border: 1px solid #fff6db;
+        border-radius: 999px;
+        box-shadow: 0 .8rem 2.4rem rgba(30, 20, 19, .18);
+        font-size: 1.3rem;
+        font-weight: 700;
+        line-height: 1.25;
+        pointer-events: auto;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(1rem);
+        transition: opacity .25s ease, visibility .25s ease, transform .25s ease;
+    }
+
+    .piano_audio_notice.is-visible {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
+
+    .piano_audio_notice svg {
+        flex: 0 0 auto;
+        width: 2rem;
+        height: 2rem;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .piano_audio_notice_close {
+        display: grid;
+        flex: 0 0 auto;
+        width: 2.8rem;
+        height: 2.8rem;
+        margin: -.4rem -.8rem -.4rem 0;
+        padding: 0;
+        place-items: center;
+        color: inherit;
+        background: transparent;
+        border: 0;
+        border-radius: 50%;
+        cursor: pointer;
+    }
+
+    .piano_audio_notice_close:hover {
+        color: #ffce56;
+    }
+
+    .piano_audio_notice_close svg {
+        width: 1.6rem;
+        height: 1.6rem;
+    }
+}
+
 @media (hover: hover) and (pointer: fine) {
 
     html.has-custom-cursor,
@@ -70,6 +143,7 @@ html {
     html.has-custom-cursor a,
     html.has-custom-cursor button,
     html.has-custom-cursor .btn,
+    html.has-custom-cursor .workshop_card,
     html.has-custom-cursor input:not([type="hidden"]),
     html.has-custom-cursor textarea,
     html.has-custom-cursor select,
@@ -567,10 +641,13 @@ h2 {
 .img_full img {
     width: 100%;
     object-fit: cover;
+    height: 100%;
+
 }
 
 .img_height img {
     height: 100%;
+    width: auto;
 }
 
 .img_fullfill img {
@@ -761,8 +838,13 @@ h2 {
 }
 
 .lang-selector svg {
-    width: 2rem;
-    height: 2rem;
+    width: 1rem;
+    height: .6rem;
+}
+
+.lang-selector img {
+    width: 2.4rem;
+    height: auto;
 }
 
 .lang-selector-wrapper .btn::before {
@@ -1353,7 +1435,7 @@ h2 {
     gap: 1.6rem;
 }
 
-.home_intro_richtext > * + * {
+.home_intro_richtext>*+* {
     margin-top: 1.6rem;
 }
 
@@ -1551,7 +1633,7 @@ h2 {
         gap: .8rem;
     }
 
-    .home_intro_richtext > * + * {
+    .home_intro_richtext>*+* {
         margin-top: .8rem;
     }
 
@@ -2403,7 +2485,7 @@ h2 {
 }
 
 .home_explore_list_button_next {
-    right: 19%;
+    right: 0;
 }
 
 .home_explore_list_button_prev {
@@ -2425,7 +2507,7 @@ h2 {
 
 .home_explore_list_button_wrap {
     position: absolute;
-    width: calc(100% + 7.2rem);
+    width: calc(min(45rem, 52vh) + 8.4rem);
     left: -4.2rem;
     display: flex;
     justify-content: space-between;
@@ -2570,6 +2652,14 @@ h2 {
     align-items: center;
     padding-block: 1.6rem;
     border-bottom: 1px solid rgba(70, 7, 0, .2);
+    cursor: pointer;
+    transition: background-color .2s ease;
+}
+
+
+.workshop_card:focus-visible {
+    outline: 2px solid #E41F2F;
+    outline-offset: -2px;
 }
 
 .workshop_card[hidden] {
@@ -2618,7 +2708,7 @@ h2 {
     background-color: #E41F2F;
 }
 
-.workshop_card_action.btn:hover {
+.workshop_card:hover .btn {
     color: #FFCE56;
     background-color: #460700;
 }
@@ -2632,7 +2722,7 @@ h2 {
     transition: stroke .2s ease-in-out;
 }
 
-.workshop_card_action:hover svg path {
+.workshop_card:hover svg path {
     stroke: #FFCE56;
 }
 
@@ -2680,6 +2770,10 @@ h2 {
 
 .workshop_detail_popup.active .workshop_detail_dialog {
     transform: translateY(0) scale(1);
+}
+
+.workshop-detail-tag {
+    background-color: #FFF6DB;
 }
 
 .workshop_detail_media {
@@ -2752,8 +2846,9 @@ h2 {
 }
 
 .workshop_detail_thumbs {
-    flex: 0 0 10rem;
-    padding: 1.2rem;
+    position: relative;
+    flex: 0 0 14rem;
+    padding: 1.6rem 1.6rem 2.8rem;
     width: 100%;
     overflow: hidden;
     background-color: #FFF6DB;
@@ -2765,20 +2860,61 @@ h2 {
 
 .workshop_detail_thumb {
     position: relative;
-    width: 7.6rem;
-    height: 7.6rem;
-    flex: 0 0 7.6rem;
+    width: 10rem;
+    height: 10rem;
+    flex: 0 0 10rem;
     padding: 0;
     overflow: hidden;
     border: 2px solid #460700;
-    border-radius: 1rem;
-    opacity: .55;
+    border-radius: 1.2rem;
+    background: none;
     cursor: pointer;
 }
 
-.workshop_detail_thumb.active {
-    opacity: 1;
+.workshop_detail_thumb::before {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    background-color: rgba(0, 0, 0, .4);
+    pointer-events: none;
+    transition: opacity .25s ease;
+}
+
+.workshop_detail_thumb::after {
+    content: "ĐANG XEM";
+    position: absolute;
+    z-index: 2;
+    left: 50%;
+    bottom: .8rem;
+    padding: .5rem 1rem;
+    border: 2px solid #460700;
+    border-radius: 10rem;
+    opacity: 0;
+    color: #460700;
+    background-color: #FFF6DB;
     box-shadow: 2px 2px 0 #460700;
+    font-size: 1.2rem;
+    font-weight: 800;
+    line-height: 1;
+    white-space: nowrap;
+    pointer-events: none;
+    transform: translateX(-50%) translateY(.4rem);
+    transition: opacity .25s ease, transform .25s ease;
+}
+
+.workshop_detail_thumb.active {
+    box-shadow: 3px 3px 0 #460700;
+}
+
+.workshop_detail_thumb.active::before,
+.workshop_detail_thumb:hover::before {
+    opacity: 0;
+}
+
+.workshop_detail_thumb.active::after {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
 }
 
 .workshop_detail_thumb img {
@@ -2786,6 +2922,27 @@ h2 {
     width: 100%;
     height: 100%;
     object-fit: cover;
+}
+
+.workshop_detail_thumbs_scrollbar.swiper-scrollbar-horizontal {
+    left: 1.6rem;
+    right: 1.6rem;
+    bottom: .8rem;
+    width: auto;
+    height: 1.1rem;
+    box-sizing: border-box;
+    overflow: hidden;
+    border: 2px solid #460700;
+    border-radius: 10rem;
+    background-color: #fff;
+}
+
+.workshop_detail_thumbs_scrollbar .swiper-scrollbar-drag {
+    top: 0;
+    height: 100%;
+    max-width: 100%;
+    border-radius: 10rem;
+    background-color: #FFCE56;
 }
 
 .workshop_detail_info {
@@ -3810,18 +3967,40 @@ h2 {
 }
 
 @keyframes marquee-up {
-    0% { transform: translateY(0); }
-    100% { transform: translateY(calc(-100% - 2.4rem)); }
-}
-@keyframes marquee-down {
-    0% { transform: translateY(calc(-100% - 2.4rem)); }
-    100% { transform: translateY(0); }
+    0% {
+        transform: translateY(0);
+    }
+
+    100% {
+        transform: translateY(calc(-100% - 2.4rem));
+    }
 }
 
-.anim.marquee-up { animation-name: marquee-up; }
-.anim.marquee-down { animation-name: marquee-down; }
-.anim.marquee-left { animation-name: marquee-left; }
-.anim.marquee-right { animation-name: marquee-right; }
+@keyframes marquee-down {
+    0% {
+        transform: translateY(calc(-100% - 2.4rem));
+    }
+
+    100% {
+        transform: translateY(0);
+    }
+}
+
+.anim.marquee-up {
+    animation-name: marquee-up;
+}
+
+.anim.marquee-down {
+    animation-name: marquee-down;
+}
+
+.anim.marquee-left {
+    animation-name: marquee-left;
+}
+
+.anim.marquee-right {
+    animation-name: marquee-right;
+}
 
 .home_space_right_card_item_img {
     height: 100%;
@@ -5709,8 +5888,32 @@ h2 {
     padding: min(1.6rem, 1.8vh) 0;
     outline: none;
     font-family: inherit;
+    font-size: max(1.4rem, 14px);
+    line-height: 1.35;
     background: transparent;
     color: #460700;
+}
+
+.popup_form .wonom-select {
+    font-size: max(1.4rem, 14px);
+}
+
+.popup_form_input[type="date"],
+.popup_form_input[type="time"] {
+    position: relative;
+    padding-right: 2.8rem;
+    cursor: pointer;
+}
+
+.popup_form_input[type="date"]::-webkit-calendar-picker-indicator,
+.popup_form_input[type="time"]::-webkit-calendar-picker-indicator {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
 }
 
 .popup_form_input::placeholder {
@@ -5734,7 +5937,7 @@ h2 {
 }
 
 .popup_form_input.is-invalid,
-.popup_member_checkbox.is-invalid + .popup_member_checkbox_custom {
+.popup_member_checkbox.is-invalid+.popup_member_checkbox_custom {
     border-color: #e41f2f !important;
 }
 
@@ -5791,7 +5994,9 @@ button.is-loading {
     cursor: pointer;
     text-align: center;
     box-shadow: 2px 2px 0 0 #460700;
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-family: inherit;
     transition: all .3s ease-in-out;
 
@@ -5799,6 +6004,11 @@ button.is-loading {
 
 .popup_form_btn.btn {
     background-color: #1A66FF;
+}
+
+.popup_form_btn.btn:not(.btn2) {
+    font-size: max(1.5rem, 15px);
+    line-height: 1.2;
 }
 
 .popup_form_btn.btn.btn2 {
@@ -5892,6 +6102,8 @@ button.is-loading {
 
 .popup_form_booking .popup_form_divider {
     margin: 1.6rem 0;
+    font-size: 13px;
+    line-height: 1.38;
 }
 
 @media only screen and (max-width: 767px) {
@@ -6128,30 +6340,51 @@ button.is-loading {
     .home_space_right_card_wrap {
         flex-direction: row;
     }
+
     @keyframes marquee-left {
-        0% { transform: translateX(0); }
-        100% { transform: translateX(calc(-100% - 2.4rem)); }
+        0% {
+            transform: translateX(0);
+        }
+
+        100% {
+            transform: translateX(calc(-100% - 2.4rem));
+        }
     }
+
     @keyframes marquee-right {
-        0% { transform: translateX(calc(-100% - 2.4rem)); }
-        100% { transform: translateX(0); }
+        0% {
+            transform: translateX(calc(-100% - 2.4rem));
+        }
+
+        100% {
+            transform: translateX(0);
+        }
     }
+
     .home_space_right_card_item {
         width: calc((100% - 0.48rem) / 1.2);
     }
 }
+
 @media only screen and (min-width: 768px) and (max-width: 991px) {
     .home_space_right_card .home_space_right_card_item {
         width: calc((100% - 2.88rem) / 2.2);
     }
 }
 
-/* Popup media is requested after the main page has loaded. Keep each image
-   out of paint until its own load event fires. */
-[data-wonom-popup-image]:not([data-wonom-image-ready="true"]) {
+/* Keep popup media out of layout only while the main page is loading. Once
+   window.load fires it must participate in layout so native lazy-loading can
+   request every image instead of deadlocking on display:none. */
+html:not(.wonom-page-loaded) [data-wonom-popup-image] {
     display: none !important;
 }
 
-[data-wonom-popup-image][data-wonom-image-ready="true"] {
+html.wonom-page-loaded [data-wonom-popup-image] {
     display: block;
+    opacity: 0;
+    transition: opacity .2s ease;
+}
+
+html.wonom-page-loaded [data-wonom-popup-image][data-wonom-image-ready="true"] {
+    opacity: 1;
 }

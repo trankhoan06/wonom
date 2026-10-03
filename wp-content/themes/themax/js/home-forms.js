@@ -18,11 +18,22 @@
     }
 
     function isValidDate(value) {
-        var match = String(value || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-        if (!match) return false;
-        var day = Number(match[1]);
-        var month = Number(match[2]);
-        var year = Number(match[3]);
+        var input = String(value || '').trim();
+        var match = input.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        var day;
+        var month;
+        var year;
+        if (match) {
+            day = Number(match[1]);
+            month = Number(match[2]);
+            year = Number(match[3]);
+        } else {
+            match = input.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+            if (!match) return false;
+            year = Number(match[1]);
+            month = Number(match[2]);
+            day = Number(match[3]);
+        }
         var date = new Date(year, month - 1, day);
         var today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -256,6 +267,15 @@
     }
 
     function boot() {
+        var today = new Date();
+        var minimumDate = [
+            today.getFullYear(),
+            String(today.getMonth() + 1).padStart(2, '0'),
+            String(today.getDate()).padStart(2, '0')
+        ].join('-');
+        document.querySelectorAll('.popup_form_input[type="date"]').forEach(function (input) {
+            input.min = minimumDate;
+        });
         bindForm(document.querySelector('.popup_form_booking_form'), 'booking', validateBooking);
         bindForm(document.querySelector('.tour_detail_form'), 'tour', validateTour);
         bindMembership();

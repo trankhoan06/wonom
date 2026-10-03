@@ -108,26 +108,82 @@ add_action('wp_enqueue_scripts', 'wonom_enqueue_assets');
  */
 function wonom_configure_phpmailer($phpmailer)
 {
-    $host = tr_options_field('tr_theme_options.smtp_host');
+    $host = sanitize_text_field((string) tr_options_field('tr_theme_options.smtp_host'));
     if (!$host) {
         return;
+    }
+
+    $encryption = sanitize_key((string) tr_options_field('tr_theme_options.encryption'));
+    if (!in_array($encryption, array('ssl', 'tls'), true)) {
+        $encryption = '';
+    }
+    $port = absint(tr_options_field('tr_theme_options.smtp_port'));
+    if (!$port) {
+        $port = 'ssl' === $encryption ? 465 : 587;
     }
 
     $phpmailer->isSMTP();
     $phpmailer->Host = $host;
     $phpmailer->SMTPAuth = (bool) tr_options_field('tr_theme_options.authentication');
-    $phpmailer->Port = tr_options_field('tr_theme_options.smtp_port');
-    $phpmailer->Username = tr_options_field('tr_theme_options.username');
-    $phpmailer->Password = tr_options_field('tr_theme_options.smtp_password');
-    $phpmailer->SMTPSecure = tr_options_field('tr_theme_options.encryption');
-    $phpmailer->From = tr_options_field('tr_theme_options.from_email');
-    $phpmailer->FromName = get_bloginfo('name');
+    $phpmailer->Port = $port;
+    $phpmailer->Username = sanitize_text_field((string) tr_options_field('tr_theme_options.username'));
+    $phpmailer->Password = (string) tr_options_field('tr_theme_options.smtp_password');
+    $phpmailer->SMTPSecure = $encryption;
+    $phpmailer->Timeout = 15;
+
+    $from_email = sanitize_email((string) tr_options_field('tr_theme_options.from_email'));
+    $from_name = sanitize_text_field((string) tr_options_field('tr_theme_options.from_name')) ?: get_bloginfo('name');
+    if ($from_email && is_email($from_email)) {
+        $phpmailer->setFrom($from_email, $from_name, false);
+    }
 
     if (!$phpmailer->SMTPSecure) {
         $phpmailer->SMTPAutoTLS = false;
     }
 }
 add_action('phpmailer_init', 'wonom_configure_phpmailer');
+
+function wonom_capture_mail_error($error)
+{
+    if (get_current_user_id()) {
+        set_transient('wonom_mail_error_' . get_current_user_id(), $error->get_error_message(), MINUTE_IN_SECONDS);
+    }
+}
+add_action('wp_mail_failed', 'wonom_capture_mail_error');
+
+function wonom_handle_smtp_test()
+{
+    if (!current_user_can('manage_options')) {
+        wp_die(esc_html__('Bạn không có quyền thực hiện thao tác này.', 'wonom'));
+    }
+    check_admin_referer('wonom_test_smtp');
+
+    $error_key = 'wonom_mail_error_' . get_current_user_id();
+    delete_transient($error_key);
+    $recipients = function_exists('wonom_submission_notification_emails')
+        ? wonom_submission_notification_emails()
+        : array(get_option('admin_email'));
+    $sent = wp_mail(
+        $recipients,
+        '[WONOM] Kiểm tra cấu hình SMTP',
+        "Email kiểm tra SMTP đã được gửi thành công từ website " . home_url('/') . " vào " . current_time('d/m/Y H:i:s') . '.',
+        array('Content-Type: text/plain; charset=UTF-8')
+    );
+
+    $redirect_args = array(
+        'page' => 'theme_options',
+        'wonom_smtp_test' => $sent ? 'success' : 'error',
+    );
+    $error_message = get_transient($error_key);
+    if (!$sent && $error_message) {
+        $redirect_args['wonom_smtp_error'] = $error_message;
+    }
+    delete_transient($error_key);
+
+    wp_safe_redirect(add_query_arg($redirect_args, admin_url('themes.php')));
+    exit;
+}
+add_action('admin_post_wonom_test_smtp', 'wonom_handle_smtp_test');
 
 function wonom_disable_cache_for_zalo()
 {

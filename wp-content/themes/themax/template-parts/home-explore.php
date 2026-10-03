@@ -1,12 +1,8 @@
 <?php
 
-$explore_source_file = get_theme_file_path('/homepage.html');
-$explore_source = is_readable($explore_source_file) ? file_get_contents($explore_source_file) : '';
-$explore_markup = '';
-
-if ($explore_source && preg_match('/(<section id="explore" class="home_explore pa_section">.*?<\/section>)\s*(?=<section id="tour")/is', $explore_source, $explore_match)) {
-    $explore_markup = $explore_match[1];
-}
+ob_start();
+get_template_part('template-parts/layouts/home', 'explore');
+$explore_markup = ob_get_clean();
 
 if (!$explore_markup || !class_exists('DOMDocument')) {
     echo $explore_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped

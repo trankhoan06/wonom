@@ -1,11 +1,8 @@
 <?php
 
-$footer_source_file = get_theme_file_path('/homepage.html');
-$footer_source = is_readable($footer_source_file) ? file_get_contents($footer_source_file) : '';
-$footer_markup = '';
-if ($footer_source && preg_match('/(<footer id="contact" class="footer pa_section">.*?<\/footer>)/is', $footer_source, $footer_match)) {
-    $footer_markup = $footer_match[1];
-}
+ob_start();
+get_template_part('template-parts/layouts/home', 'footer');
+$footer_markup = ob_get_clean();
 if (!$footer_markup || !class_exists('DOMDocument')) {
     echo $footer_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
     return;

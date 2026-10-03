@@ -1,11 +1,8 @@
 <?php
 
-$popup_source_file = get_theme_file_path('/homepage.html');
-$popup_source = is_readable($popup_source_file) ? file_get_contents($popup_source_file) : '';
-$popup_markup = '';
-if ($popup_source && preg_match('/(<section class="popup_tour tour">.*?<\/section>)\s*(?=<section class="popup_tour event")/is', $popup_source, $popup_match)) {
-    $popup_markup = $popup_match[1];
-}
+ob_start();
+get_template_part('template-parts/layouts/home', 'tour-popup');
+$popup_markup = ob_get_clean();
 
 $tours = wonom_get_home_tours();
 if (!$popup_markup || !$tours || !class_exists('DOMDocument')) {
