@@ -2,7 +2,12 @@
     'use strict';
 
     var config = window.wonomHome || {};
+    var i18n = config.i18n || {};
     var submitting = new WeakSet();
+
+    function t(key, fallback) {
+        return i18n[key] || fallback;
+    }
 
     function normalizePhone(value) {
         return String(value || '').replace(/[^0-9+]/g, '');
@@ -112,13 +117,13 @@
         var bookingType = form.querySelector('[name="booking_type"]');
         var floor = form.querySelector('[data-booking-floor-select]');
 
-        if (!isValidName(name.value)) { showFieldError(name, 'Vui lòng nhập họ tên hợp lệ.'); errors++; }
-        if (!isValidPhone(phone.value)) { showFieldError(phone, 'Vui lòng nhập đúng số điện thoại Việt Nam.'); errors++; }
-        if (!guests.value) { showFieldError(guests, 'Vui lòng chọn số người.'); errors++; }
-        if (!isValidDate(date.value)) { showFieldError(date, 'Vui lòng chọn ngày hợp lệ, không sớm hơn hôm nay.'); errors++; }
-        if (!isValidTime(time.value)) { showFieldError(time, 'Nhập thời gian theo định dạng HH:mm.'); errors++; }
+        if (!isValidName(name.value)) { showFieldError(name, t('invalid_name', 'Vui lòng nhập họ tên hợp lệ.')); errors++; }
+        if (!isValidPhone(phone.value)) { showFieldError(phone, t('invalid_phone', 'Vui lòng nhập đúng số điện thoại Việt Nam.')); errors++; }
+        if (!guests.value) { showFieldError(guests, t('required_guests', 'Vui lòng chọn số người.')); errors++; }
+        if (!isValidDate(date.value)) { showFieldError(date, t('invalid_date', 'Vui lòng chọn ngày hợp lệ, không sớm hơn hôm nay.')); errors++; }
+        if (!isValidTime(time.value)) { showFieldError(time, t('invalid_time_short', 'Nhập thời gian theo định dạng HH:mm.')); errors++; }
         if (bookingType && 'general' === bookingType.value && floor && !floor.value) {
-            showFieldError(floor, 'Vui lòng chọn tầng bạn muốn đến.'); errors++;
+            showFieldError(floor, t('required_floor', 'Vui lòng chọn tầng bạn muốn đến.')); errors++;
         }
         if (errors) focusFirstError(form);
         return 0 === errors;
@@ -132,11 +137,11 @@
         var guests = form.querySelector('[name="guests"]');
         var date = form.querySelector('[name="date"]');
         var time = form.querySelector('[name="time"]');
-        if (!isValidName(name.value)) { showFieldError(name, 'Vui lòng nhập họ tên hợp lệ.'); errors++; }
-        if (!isValidPhone(phone.value)) { showFieldError(phone, 'Vui lòng nhập đúng số điện thoại Việt Nam.'); errors++; }
-        if (!guests.value) { showFieldError(guests, 'Vui lòng chọn số người.'); errors++; }
-        if (!isValidDate(date.value)) { showFieldError(date, 'Vui lòng chọn ngày hợp lệ, không sớm hơn hôm nay.'); errors++; }
-        if (!isValidTime(time.value)) { showFieldError(time, 'Nhập thời gian theo định dạng HH:mm.'); errors++; }
+        if (!isValidName(name.value)) { showFieldError(name, t('invalid_name', 'Vui lòng nhập họ tên hợp lệ.')); errors++; }
+        if (!isValidPhone(phone.value)) { showFieldError(phone, t('invalid_phone', 'Vui lòng nhập đúng số điện thoại Việt Nam.')); errors++; }
+        if (!guests.value) { showFieldError(guests, t('required_guests', 'Vui lòng chọn số người.')); errors++; }
+        if (!isValidDate(date.value)) { showFieldError(date, t('invalid_date', 'Vui lòng chọn ngày hợp lệ, không sớm hơn hôm nay.')); errors++; }
+        if (!isValidTime(time.value)) { showFieldError(time, t('invalid_time_short', 'Nhập thời gian theo định dạng HH:mm.')); errors++; }
         if (errors) focusFirstError(form);
         return 0 === errors;
     }
@@ -148,10 +153,11 @@
         button.disabled = true;
         button.classList.add('is-loading');
         button.setAttribute('aria-busy', 'true');
-        button.textContent = 'ĐANG GỬI...';
+        button.textContent = t('submitting', 'ĐANG GỬI...');
         setStatus(scope, button, '', '');
         data.append('action', 'wonom_submit_form');
         data.append('nonce', config.submitNonce || '');
+        data.append('lang', config.language || 'vi');
         data.append('website', '');
 
         fetch(config.ajaxUrl || '/wp-admin/admin-ajax.php', {
@@ -174,12 +180,12 @@
                     });
                     focusFirstError(scope);
                 }
-                throw new Error(payload.message || 'Không thể gửi yêu cầu. Vui lòng thử lại.');
+                throw new Error(payload.message || t('cannot_send', 'Không thể gửi yêu cầu. Vui lòng thử lại.'));
             }
             setStatus(scope, button, 'success', result.body.data.message);
             if (onSuccess) onSuccess();
         }).catch(function (error) {
-            setStatus(scope, button, 'error', error.message || 'Không thể kết nối máy chủ. Vui lòng thử lại.');
+            setStatus(scope, button, 'error', error.message || t('cannot_connect', 'Không thể kết nối máy chủ. Vui lòng thử lại.'));
         }).finally(function () {
             submitting.delete(scope);
             button.disabled = false;
@@ -207,7 +213,7 @@
         form.addEventListener('submit', function (event) {
             event.preventDefault();
             if (!validator(form)) {
-                setStatus(form, button, 'error', 'Vui lòng kiểm tra lại các thông tin đã nhập.');
+                setStatus(form, button, 'error', t('check_fields', 'Vui lòng kiểm tra lại các thông tin đã nhập.'));
                 return;
             }
             var data = new FormData(form);
@@ -238,11 +244,11 @@
             event.preventDefault();
             clearErrors(scope);
             var errors = 0;
-            if (!isValidName(name.value)) { showFieldError(name, 'Vui lòng nhập họ tên hợp lệ.'); errors++; }
-            if (!isValidPhone(phone.value)) { showFieldError(phone, 'Vui lòng nhập đúng số điện thoại Việt Nam.'); errors++; }
-            if (!consent.checked) { showFieldError(consent, 'Bạn cần đồng ý điều khoản để đăng ký.'); errors++; }
+            if (!isValidName(name.value)) { showFieldError(name, t('invalid_name', 'Vui lòng nhập họ tên hợp lệ.')); errors++; }
+            if (!isValidPhone(phone.value)) { showFieldError(phone, t('invalid_phone', 'Vui lòng nhập đúng số điện thoại Việt Nam.')); errors++; }
+            if (!consent.checked) { showFieldError(consent, t('required_consent', 'Bạn cần đồng ý điều khoản để đăng ký.')); errors++; }
             if (errors) {
-                setStatus(scope, button, 'error', 'Vui lòng kiểm tra lại các thông tin đã nhập.');
+                setStatus(scope, button, 'error', t('check_fields', 'Vui lòng kiểm tra lại các thông tin đã nhập.'));
                 focusFirstError(scope);
                 return;
             }

@@ -29,7 +29,7 @@ $homepage_parts = array(
 );
 
 $homepage_template_files = array_merge(
-    array(__FILE__, get_theme_file_path('/inc/frontend-performance.php')),
+    array(__FILE__, get_theme_file_path('/inc/frontend-performance.php'), get_theme_file_path('/inc/home-i18n.php')),
     glob(get_theme_file_path('/template-parts/home-*.php')) ?: array(),
     glob(get_theme_file_path('/template-parts/layouts/home-*.php')) ?: array()
 );
@@ -47,7 +47,7 @@ $homepage_cacheable = !is_user_logged_in()
 $homepage_cache_generation = (string) get_option('wonom_home_cache_generation', '1');
 $homepage_cache_schema = 'direct-parts-v2-assets';
 $homepage_cache_key = 'wonom_home_markup_' . md5(
-    get_locale() . '|' . $homepage_cache_schema . '|' . $homepage_cache_version . '|' . $homepage_cache_generation
+    wonom_home_current_language() . '|' . get_locale() . '|' . $homepage_cache_schema . '|' . $homepage_cache_version . '|' . $homepage_cache_generation
 );
 $homepage_lcp_cache_key = $homepage_cache_key . '_lcp';
 $homepage_body = $homepage_cacheable ? get_transient($homepage_cache_key) : false;
@@ -62,6 +62,7 @@ if (false === $homepage_body) {
         get_template_part($homepage_part[0], $homepage_part[1]);
     }
     $homepage_body = ob_get_clean();
+    $homepage_body = wonom_translate_homepage_markup($homepage_body);
 
     $asset_url = trailingslashit(get_template_directory_uri()) . 'asset/';
     $homepage_body = preg_replace_callback(

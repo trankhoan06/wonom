@@ -4,6 +4,7 @@ include 'typerocket/init.php';
 
 require dirname(__FILE__) . '/inc/cleanup.php';
 require dirname(__FILE__) . '/inc/frontend-performance.php';
+require dirname(__FILE__) . '/inc/home-i18n.php';
 require dirname(__FILE__) . '/inc/homepage-settings.php';
 require dirname(__FILE__) . '/inc/home-tour-data.php';
 require dirname(__FILE__) . '/inc/home-event-data.php';
@@ -79,6 +80,8 @@ function wonom_enqueue_assets()
         'ajaxUrl' => admin_url('admin-ajax.php'),
         'submitNonce' => wp_create_nonce('wonom_submit_form'),
         'detailNonce' => wp_create_nonce('wonom_home_detail'),
+        'language' => wonom_home_current_language(),
+        'i18n' => wonom_home_ui_js_strings(),
         'explorePopupData' => wonom_get_home_explore_popup_data(),
     ));
     wp_enqueue_script(

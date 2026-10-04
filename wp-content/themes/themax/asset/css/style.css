@@ -4951,6 +4951,10 @@ h2 {
     margin-right: min(6.4rem, 7vh);
 }
 
+.restaurant_popup_tabs:empty {
+    display: none;
+}
+
 .restaurant_popup_tab {
     color: #460700;
     font-family: inherit;
@@ -4970,11 +4974,11 @@ h2 {
 .restaurant_popup_panel {
     display: block;
     position: absolute;
-    top: min(7.3rem, 8vh);
+    top: var(--restaurant-popup-head-height, min(7.3rem, 8vh));
     right: 0;
-    bottom: 0;
+    bottom: auto;
     left: 0;
-    height: auto;
+    height: calc(100% - var(--restaurant-popup-head-height, min(7.3rem, 8vh)));
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
@@ -5751,12 +5755,13 @@ h2 {
 
     .restaurant .popup_tour_head {
         height: auto;
-        min-height: 11rem;
+        min-height: 0;
         padding: 1.2rem 1.6rem;
         flex-direction: column;
         justify-content: left;
         align-items: start;
         gap: 1.6rem;
+        padding-right: 5rem;
     }
 
     .restaurant_popup_tabs {
@@ -5787,11 +5792,6 @@ h2 {
         flex: 0 0 auto;
         padding: .7rem 1rem;
         white-space: nowrap;
-    }
-
-    .restaurant .popup_tour_content {
-        top: 11rem;
-        height: calc(100% - 11rem);
     }
 
     .restaurant_menu {
@@ -6579,9 +6579,9 @@ html.wonom-page-loaded [data-wonom-popup-image][data-wonom-image-ready="true"] {
     .footer_contact_num_txt,
     .popup_tour_title,
     .popup_member_title {
-        -webkit-text-stroke: 3px #460700;
+        -webkit-text-stroke: .4rem #460700;
         paint-order: stroke fill;
-        text-shadow: 3px 2px 0 #460700;
+        text-shadow: .2rem .2rem 0 #460700;
     }
 
     .home_space_right_card_item {

@@ -4,6 +4,137 @@
  * Dedicated TypeRocket settings screen for the Wonom homepage.
  */
 
+function wonom_get_homepage_language()
+{
+    if (is_admin() && isset($_GET['lang'])) {
+        $requested_language = sanitize_key(wp_unslash($_GET['lang']));
+        $available_languages = function_exists('pll_languages_list')
+            ? (array) pll_languages_list(array('fields' => 'slug'))
+            : array('vi', 'en', 'ko');
+
+        if (in_array($requested_language, $available_languages, true)) {
+            return $requested_language;
+        }
+    }
+
+    if (isset($_POST['lang'])) {
+        $posted_language = sanitize_key(wp_unslash($_POST['lang']));
+        $available_languages = function_exists('pll_languages_list')
+            ? (array) pll_languages_list(array('fields' => 'slug'))
+            : array('vi', 'en', 'ko');
+
+        if (in_array($posted_language, $available_languages, true)) {
+            return $posted_language;
+        }
+    }
+
+    if (function_exists('pll_current_language')) {
+        $current_language = pll_current_language('slug');
+        if ($current_language) {
+            return sanitize_key($current_language);
+        }
+    }
+
+    if (function_exists('pll_default_language')) {
+        $default_language = pll_default_language('slug');
+        if ($default_language) {
+            return sanitize_key($default_language);
+        }
+    }
+
+    return 'vi';
+}
+
+function wonom_get_homepage_default_language()
+{
+    if (function_exists('pll_default_language')) {
+        $default_language = pll_default_language('slug');
+        if ($default_language) {
+            return sanitize_key($default_language);
+        }
+    }
+
+    return 'vi';
+}
+
+function wonom_is_shared_homepage_field($key)
+{
+    $key = sanitize_key($key);
+
+    // Image descriptions remain translatable even though the image is shared.
+    if (preg_match('/(?:^|_)image_alt$/', $key)) {
+        return false;
+    }
+
+    // Plural keys such as home_library_images are containers; recurse into
+    // them so captions/tags can still be translated while each `image` stays shared.
+    return 'image' === $key || (bool) preg_match('/(?:^|_)image(?:_|$)/', $key);
+}
+
+function wonom_remove_shared_homepage_values($values)
+{
+    if (!is_array($values)) {
+        return $values;
+    }
+
+    foreach ($values as $key => $value) {
+        if (!is_int($key) && wonom_is_shared_homepage_field($key)) {
+            unset($values[$key]);
+            continue;
+        }
+
+        if (is_array($value)) {
+            $values[$key] = wonom_remove_shared_homepage_values($value);
+        }
+    }
+
+    return $values;
+}
+
+function wonom_restore_shared_homepage_values($values, $shared_values)
+{
+    if (!is_array($shared_values)) {
+        return $values;
+    }
+    if (!is_array($values)) {
+        $values = array();
+    }
+
+    foreach ($shared_values as $key => $shared_value) {
+        if (!is_int($key) && wonom_is_shared_homepage_field($key)) {
+            $values[$key] = $shared_value;
+            continue;
+        }
+
+        if (is_array($shared_value)) {
+            $current_value = isset($values[$key]) ? $values[$key] : array();
+            $values[$key] = wonom_restore_shared_homepage_values($current_value, $shared_value);
+        }
+    }
+
+    return $values;
+}
+
+function wonom_filter_homepage_options_by_language($default_options)
+{
+    $default_options = is_array($default_options) ? $default_options : array();
+    $language = wonom_get_homepage_language();
+
+    if ($language === wonom_get_homepage_default_language()) {
+        return $default_options;
+    }
+
+    $translated_options = get_option('wonom_home_options_' . $language, array());
+    if (!is_array($translated_options) || !$translated_options) {
+        return $default_options;
+    }
+
+    $merged_options = array_replace_recursive($default_options, $translated_options);
+
+    return wonom_restore_shared_homepage_values($merged_options, $default_options);
+}
+add_filter('option_wonom_home_options', 'wonom_filter_homepage_options_by_language');
+
 function wonom_register_homepage_settings_menu()
 {
     add_menu_page(
@@ -48,13 +179,27 @@ function wonom_handle_homepage_settings_save()
     $submitted = isset($_POST['tr']['wonom_home_options'])
         ? wp_unslash($_POST['tr']['wonom_home_options'])
         : array();
-    update_option('wonom_home_options', wonom_sanitize_homepage_settings($submitted));
+    $language = wonom_get_homepage_language();
+    $default_language = wonom_get_homepage_default_language();
+    $option_name = 'wonom_home_options';
+    $sanitized = wonom_sanitize_homepage_settings($submitted);
+
+    if ($language !== $default_language) {
+        $option_name .= '_' . $language;
+        $sanitized = wonom_remove_shared_homepage_values($sanitized);
+    }
+
+    update_option($option_name, $sanitized);
     // Change the homepage fragment-cache key immediately so saved Admin data
     // is visible on the next frontend request instead of waiting five minutes.
     update_option('wonom_home_cache_generation', (string) microtime(true), false);
 
     wp_safe_redirect(add_query_arg(
-        array('page' => 'wonom-homepage-settings', 'settings-updated' => 'true'),
+        array(
+            'page' => 'wonom-homepage-settings',
+            'lang' => $language,
+            'settings-updated' => 'true',
+        ),
         admin_url('admin.php')
     ));
     exit;
@@ -198,6 +343,8 @@ function wonom_render_homepage_settings()
         return;
     }
 
+    $language = wonom_get_homepage_language();
+    $default_language = wonom_get_homepage_default_language();
     $model = new \TypeRocket\Models\WPOption();
     $form = tr_form('option', 'create', null, $model)
         ->setGroup('wonom_home_options');
@@ -619,11 +766,36 @@ function wonom_render_homepage_settings()
     echo '<div class="wrap">';
     echo '<h1>Wonom · Cài đặt trang chủ</h1>';
     echo '<p>Toàn bộ nội dung cấu hình của homepage sẽ được quản lý tập trung tại đây.</p>';
+    if (function_exists('pll_languages_list')) {
+        $language_slugs = (array) pll_languages_list(array('fields' => 'slug'));
+        $language_names = (array) pll_languages_list(array('fields' => 'name'));
+
+        echo '<nav class="nav-tab-wrapper" aria-label="Ngôn ngữ trang chủ">';
+        foreach ($language_slugs as $index => $language_slug) {
+            $language_slug = sanitize_key($language_slug);
+            $language_name = isset($language_names[$index]) ? $language_names[$index] : strtoupper($language_slug);
+            $language_url = add_query_arg(
+                array('page' => 'wonom-homepage-settings', 'lang' => $language_slug),
+                admin_url('admin.php')
+            );
+            $active_class = $language_slug === $language ? ' nav-tab-active' : '';
+            echo '<a class="nav-tab' . esc_attr($active_class) . '" href="' . esc_url($language_url) . '">' . esc_html($language_name) . '</a>';
+        }
+        echo '</nav>';
+    }
+    echo '<p><strong>Ngôn ngữ đang sửa:</strong> ' . esc_html(strtoupper($language)) . '. ';
+    echo $language === $default_language
+        ? 'Hình ảnh được quản lý tại ngôn ngữ gốc này.'
+        : 'Hình ảnh được dùng chung từ ngôn ngữ gốc; các trường chữ được lưu riêng.';
+    echo '</p>';
     echo '<div class="typerocket-container">';
     if (isset($_GET['settings-updated']) && 'true' === $_GET['settings-updated']) {
         echo '<div class="notice notice-success is-dismissible"><p>Đã lưu cài đặt trang chủ.</p></div>';
     }
-    echo '<form method="post" action="' . esc_url(admin_url('admin.php?page=wonom-homepage-settings')) . '">';
+    echo '<form method="post" action="' . esc_url(add_query_arg(
+        array('page' => 'wonom-homepage-settings', 'lang' => $language),
+        admin_url('admin.php')
+    )) . '">';
     wp_nonce_field('wonom_save_homepage_settings', 'wonom_homepage_nonce');
 
     tr_tabs()

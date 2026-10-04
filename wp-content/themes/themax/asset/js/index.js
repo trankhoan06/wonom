@@ -560,6 +560,7 @@ $(document).ready(function () {
         });
     }
     $('#langSelectorBtn').on('click', function (e) {
+        e.preventDefault();
         e.stopPropagation();
         $('#langWrapper').toggleClass('active');
     });
@@ -603,7 +604,7 @@ $(document).ready(function () {
             .toggleClass('is-disabled', isDisabled)
             .prop('disabled', isDisabled)
             .attr('data-tab', isDisabled ? '' : 'tab' + floorLabel.toLowerCase())
-            .attr('aria-label', isDisabled ? '' : 'Đi đến tầng ' + (targetIndex + 1));
+            .attr('aria-label', isDisabled ? '' : (((window.wonomHome && window.wonomHome.i18n && window.wonomHome.i18n.go_to_floor) || 'Đi đến tầng {number}').replace('{number}', targetIndex + 1)));
         $control.find('.home_explore_floor_control_label').text(floorLabel);
     }
 
@@ -966,6 +967,7 @@ $(document).ready(function () {
         var body = new URLSearchParams();
         body.set('action', 'wonom_get_home_detail');
         body.set('nonce', config.detailNonce);
+        body.set('lang', config.language || 'vi');
         body.set('detail_type', type);
         body.set('detail_index', String(index));
 
@@ -1428,15 +1430,16 @@ $(document).ready(function () {
 
     $('.global_btn_list_item').hover(
         function () {
+            var uiStrings = (window.wonomHome && window.wonomHome.i18n) || {};
             var text = '';
             var $txtEl = null;
             if ($(this).hasClass('item1')) {
-                text = 'tham quan tour';
+                text = uiStrings.tour_hover || 'tham quan tour';
                 $(this).find('.global_btn_list_item_txt').remove();
                 $txtEl = $('<div class="global_btn_list_item_txt txt_14 txt_extrabold txt_uppercase">' + text + '</div>');
                 $(this).append($txtEl);
             } else if ($(this).hasClass('item2')) {
-                text = 'đặt chỗ';
+                text = uiStrings.booking_short || 'đặt chỗ';
                 $(this).find('.global_btn_list_item_txt').remove();
                 $txtEl = $('<div class="global_btn_list_item_txt txt_14 txt_extrabold cl_cream txt_uppercase">' + text + '</div>');
                 $(this).append($txtEl);
@@ -1763,7 +1766,7 @@ $(document).ready(function () {
                 '<button class="restaurant_popup_tab btn bg_white" type="button" role="tab" aria-selected="false" data-restaurant-view="menu">' +
                 '<span class="btn-inner restaurant_popup_menu_label txt_14 txt_extrabold">' + escapeExploreHtml(config.menuLabel) + '</span></button>',
                 '<button class="restaurant_popup_tab btn bg_white" type="button" role="tab" aria-selected="false" data-restaurant-view="gallery">' +
-                '<span class="btn-inner txt_14 txt_extrabold">THƯ VIỆN ẢNH</span></button>'
+                '<span class="btn-inner txt_14 txt_extrabold">' + escapeExploreHtml(((window.wonomHome && window.wonomHome.i18n && window.wonomHome.i18n.photo_gallery) || 'THƯ VIỆN ẢNH')) + '</span></button>'
             ];
         }
 
@@ -1777,8 +1780,8 @@ $(document).ready(function () {
             var pageNumber = index + 1;
             $thumbs.append(
                 '<button class="restaurant_menu_thumb' + (index < 2 ? ' active' : '') + '" type="button"' +
-                ' data-menu-page="' + index + '" aria-label="Trang ' + pageNumber + '">' +
-                '<span class="restaurant_menu_thumb_img"><img data-wonom-popup-image="pending" loading="lazy" decoding="async" src="' + escapeExploreHtml(src) + '" alt="Nội dung tầng - trang ' + pageNumber + '"></span>' +
+                ' data-menu-page="' + index + '" aria-label="' + escapeExploreHtml((((window.wonomHome && window.wonomHome.i18n && window.wonomHome.i18n.page) || 'Trang {number}').replace('{number}', pageNumber))) + '">' +
+                '<span class="restaurant_menu_thumb_img"><img data-wonom-popup-image="pending" loading="lazy" decoding="async" src="' + escapeExploreHtml(src) + '" alt="' + escapeExploreHtml((((window.wonomHome && window.wonomHome.i18n && window.wonomHome.i18n.floor_page_alt) || 'Nội dung tầng - trang {number}').replace('{number}', pageNumber))) + '"></span>' +
                 '<span class="restaurant_menu_thumb_number txt_14 txt_bold">' + pageNumber + '</span></button>'
             );
         });
@@ -1829,7 +1832,7 @@ $(document).ready(function () {
             image.loading = 'lazy';
             image.decoding = 'async';
             image.src = src;
-            image.alt = 'Nội dung tầng - trang ' + (index + 1);
+            image.alt = (((window.wonomHome && window.wonomHome.i18n && window.wonomHome.i18n.floor_page_alt) || 'Nội dung tầng - trang {number}').replace('{number}', index + 1));
             image.draggable = false;
             page.appendChild(image);
             return page;
@@ -1855,7 +1858,7 @@ $(document).ready(function () {
             $('.restaurant_menu_page_count').text('1–2 / ' + restaurantMenuPages.length);
             var bookElement = document.getElementById('restaurant-flipbook');
             if (!bookElement) return false;
-            bookElement.innerHTML = '<img class="restaurant_flipbook_fallback" data-wonom-popup-image="pending" decoding="async" src="' + escapeExploreHtml(restaurantMenuPages[0]) + '" alt="Nội dung tầng">';
+            bookElement.innerHTML = '<img class="restaurant_flipbook_fallback" data-wonom-popup-image="pending" decoding="async" src="' + escapeExploreHtml(restaurantMenuPages[0]) + '" alt="' + escapeExploreHtml((window.wonomHome && window.wonomHome.i18n && window.wonomHome.i18n.floor_content) || 'Nội dung tầng') + '">';
         }
 
         return true;
@@ -1937,11 +1940,19 @@ $(document).ready(function () {
             .catch(() => {});
     }
 
+    function syncRestaurantPopupLayout($restaurant) {
+        var restaurant = $restaurant && $restaurant[0];
+        var head = restaurant && restaurant.querySelector('.popup_tour_head');
+        if (!restaurant || !head) return;
+
+        var headHeight = Math.ceil(head.getBoundingClientRect().height);
+        restaurant.style.setProperty('--restaurant-popup-head-height', headHeight + 'px');
+    }
+
     function openRestaurantPopup(view, popupKey) {
         if (!applyExplorePopupData(popupKey)) return;
 
         var $restaurant = $('.popup_tour.restaurant');
-        $restaurant.addClass('active');
         $restaurant.find('.restaurant_popup_tab').removeClass('active').attr('aria-selected', 'false');
         var $activeViewTab = $restaurant.find('[data-restaurant-view="' + view + '"]');
         if ($activeViewTab.length) {
@@ -1953,6 +1964,9 @@ $(document).ready(function () {
         $restaurant.find('.restaurant_popup_panel').removeClass('active');
         $restaurant.find('[data-restaurant-panel="' + view + '"]').addClass('active');
 
+        syncRestaurantPopupLayout($restaurant);
+        $restaurant.addClass('active');
+
         if (view === 'menu') {
             requestAnimationFrame(function () {
                 requestAnimationFrame(loadRestaurantFlipbook);
@@ -1962,6 +1976,17 @@ $(document).ready(function () {
 
     $('[data-explore-popup]').click(function () {
         openRestaurantPopup($(this).attr('data-explore-view'), $(this).attr('data-explore-popup'));
+    });
+
+    var restaurantLayoutFrame;
+    $(window).on('resize orientationchange', function () {
+        var $restaurant = $('.popup_tour.restaurant.active');
+        if (!$restaurant.length) return;
+
+        window.cancelAnimationFrame(restaurantLayoutFrame);
+        restaurantLayoutFrame = window.requestAnimationFrame(function () {
+            syncRestaurantPopupLayout($restaurant);
+        });
     });
 
     $('.restaurant_popup_tabs').on('click', '[data-restaurant-view]', function () {
@@ -2099,8 +2124,8 @@ $(document).ready(function () {
 
         workshopDetailImages.forEach(function (src, index) {
             $thumbs.append(
-                '<button class="workshop_detail_thumb swiper-slide' + (index === 0 ? ' active' : '') + '" type="button" data-detail-image="' + index + '" aria-label="Xem ảnh ' + (index + 1) + '">' +
-                '<img data-wonom-popup-image="pending" loading="lazy" decoding="async" src="' + escapeExploreHtml(src) + '" alt="Ảnh workshop ' + (index + 1) + '"></button>'
+                '<button class="workshop_detail_thumb swiper-slide' + (index === 0 ? ' active' : '') + '" type="button" data-detail-image="' + index + '" aria-label="' + escapeExploreHtml((((window.wonomHome && window.wonomHome.i18n && window.wonomHome.i18n.view_image) || 'Xem ảnh {number}').replace('{number}', index + 1))) + '">' +
+                '<img data-wonom-popup-image="pending" loading="lazy" decoding="async" src="' + escapeExploreHtml(src) + '" alt="' + escapeExploreHtml((((window.wonomHome && window.wonomHome.i18n && window.wonomHome.i18n.workshop_image) || 'Ảnh workshop {number}').replace('{number}', index + 1))) + '"></button>'
             );
         });
 
@@ -2163,8 +2188,9 @@ $(document).ready(function () {
         if ($card.attr('data-detail-duration')) {
             $('.workshop_detail_price_row .cl_meta').text('/ ' + $card.attr('data-detail-duration'));
         }
-        $('.workshop_detail_booking').text('ĐẶT LỊCH QUA ZALO');
-        $('.workshop_detail_note').text('Bạn sẽ được chuyển sang Zalo để xác nhận lịch với nhân viên.');
+        const uiStrings = (window.wonomHome && window.wonomHome.i18n) || {};
+        $('.workshop_detail_booking').text(uiStrings.book_via_zalo || 'ĐẶT LỊCH QUA ZALO');
+        $('.workshop_detail_note').text(uiStrings.zalo_note || 'Bạn sẽ được chuyển sang Zalo để xác nhận lịch với nhân viên.');
         $('.workshop_detail_booking')
             .attr('data-booking-product-id', productId)
             .attr('data-booking-product-name', productName);
@@ -2186,7 +2212,7 @@ $(document).ready(function () {
         $card.attr({
             role: 'button',
             tabindex: '0',
-            'aria-label': 'Xem chi tiết ' + productName
+            'aria-label': ((window.wonomHome && window.wonomHome.i18n && window.wonomHome.i18n.view_details) || 'Xem chi tiết') + ' ' + productName
         });
     }).on('click', function () {
         openWorkshopDetail($(this));

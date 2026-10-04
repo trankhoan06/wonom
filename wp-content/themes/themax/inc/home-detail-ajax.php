@@ -15,11 +15,11 @@ function wonom_ajax_get_home_detail()
     } elseif ('event' === $type) {
         $items = wonom_get_home_events();
     } else {
-        wp_send_json_error(array('message' => 'Loại nội dung không hợp lệ.'), 400);
+        wp_send_json_error(array('message' => wonom_home_t('invalid_content')), 400);
     }
 
     if (!isset($items[$index])) {
-        wp_send_json_error(array('message' => 'Không tìm thấy nội dung.'), 404);
+        wp_send_json_error(array('message' => wonom_home_t('content_not_found')), 404);
     }
 
     $suggestions = array();

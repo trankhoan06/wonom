@@ -1,10 +1,42 @@
 <?php
 if (!defined('ABSPATH')) exit;
+
+$wonom_language_icons = array(
+    'vi' => 'icon_vietnam.svg',
+    'en' => 'icon_eng.svg',
+    'ko' => 'icon_korea.svg',
+);
+$wonom_languages = function_exists('pll_the_languages')
+    ? (array) pll_the_languages(array('raw' => 1, 'hide_if_empty' => 0, 'hide_if_no_translation' => 0))
+    : array();
+$wonom_current_language = function_exists('pll_current_language') ? pll_current_language('slug') : 'vi';
+$wonom_current_language = $wonom_current_language ?: (function_exists('pll_default_language') ? pll_default_language('slug') : 'vi');
+$wonom_home_url = function_exists('pll_home_url') ? pll_home_url($wonom_current_language) : home_url('/');
+
+if (!$wonom_languages) {
+    $wonom_languages = array(
+        'vi' => array('slug' => 'vi', 'name' => 'Tiếng Việt', 'url' => home_url('/'), 'current_lang' => true),
+        'en' => array('slug' => 'en', 'name' => 'English', 'url' => home_url('/'), 'current_lang' => false),
+        'ko' => array('slug' => 'ko', 'name' => '한국어', 'url' => home_url('/'), 'current_lang' => false),
+    );
+}
+
+$wonom_active_language = reset($wonom_languages);
+foreach ($wonom_languages as $wonom_language_candidate) {
+    if (!empty($wonom_language_candidate['current_lang']) || (isset($wonom_language_candidate['slug']) && $wonom_language_candidate['slug'] === $wonom_current_language)) {
+        $wonom_active_language = $wonom_language_candidate;
+        break;
+    }
+}
+$wonom_active_slug = isset($wonom_active_language['slug']) ? $wonom_active_language['slug'] : 'vi';
+$wonom_active_icon = isset($wonom_language_icons[$wonom_active_slug])
+    ? $wonom_language_icons[$wonom_active_slug]
+    : 'icon_vietnam.svg';
 ?>
 <header class="header bg_cream">
         <div class="header_overlay tablet"></div>
         <div class="container header-container">
-            <a href="/" class="header-logo img_height">
+            <a href="<?php echo esc_url($wonom_home_url); ?>" class="header-logo img_height">
                 <img src="/asset/img/logo.webp" alt="Wonom Logo">
             </a>
             <nav class="header-nav">
@@ -38,7 +70,7 @@ if (!defined('ABSPATH')) exit;
                 <div class="lang-selector-wrapper " id="langWrapper">
                     <a href="#" class=" btn img_full" id="langSelectorBtn">
                         <div class="btn-inner lang-selector img_full">
-                            <img src="/asset/img/icon_vietnam.svg" alt="VN">
+                            <img src="<?php echo esc_url('/asset/img/' . $wonom_active_icon); ?>" alt="<?php echo esc_attr(strtoupper($wonom_active_slug)); ?>">
                             <svg class="lang-arrow" width="10" height="6" viewBox="0 0 10 6" fill="none"
                                 xmlns="http://www.w3.org/2000/svg">
                                 <path d="M1 1L5 5L9 1" stroke="#1E1413" stroke-width="1.5" stroke-linecap="round"
@@ -47,25 +79,38 @@ if (!defined('ABSPATH')) exit;
                         </div>
                     </a>
                     <div class="lang-dropdown">
-                        <a href="#" class="lang-item">
-                            <img src="/asset/img/icon_vietnam.svg" alt="Tiếng Việt">
-                            <span class="txt_15 txt_extrabold cl_dark_brown">Tiếng Việt</span>
-                            <svg class="icon-check" width="16" height="12" viewBox="0 0 16 12" fill="none"
-                                xmlns="http://www.w3.org/2000/svg">
-                                <path d="M1 6L5.5 10.5L15 1" stroke="#E41F2F" stroke-width="2" stroke-linecap="round"
-                                    stroke-linejoin="round" />
-                            </svg>
-                        </a>
-                        <div class="dropdown-divider"></div>
-                        <a href="#" class="lang-item">
-                            <img src="/asset/img/icon_eng.svg" alt="Tiếng Anh">
-                            <span class="txt_15 txt_extrabold cl_dark_brown">Tiếng Anh</span>
-                        </a>
-                        <div class="dropdown-divider"></div>
-                        <a href="#" class="lang-item">
-                            <img src="/asset/img/icon_korea.svg" alt="Tiếng Hàn">
-                            <span class="txt_15 txt_extrabold cl_dark_brown">Tiếng Hàn</span>
-                        </a>
+                        <?php $wonom_language_index = 0; ?>
+                        <?php foreach ($wonom_languages as $wonom_language) : ?>
+                            <?php
+                            $wonom_language_slug = isset($wonom_language['slug']) ? $wonom_language['slug'] : '';
+                            $wonom_language_name = isset($wonom_language['name']) ? $wonom_language['name'] : strtoupper($wonom_language_slug);
+                            $wonom_language_url = !empty($wonom_language['url'])
+                                ? $wonom_language['url']
+                                : (function_exists('pll_home_url') ? pll_home_url($wonom_language_slug) : home_url('/'));
+                            $wonom_language_icon = isset($wonom_language_icons[$wonom_language_slug])
+                                ? $wonom_language_icons[$wonom_language_slug]
+                                : 'icon_vietnam.svg';
+                            $wonom_is_current_language = !empty($wonom_language['current_lang']) || $wonom_language_slug === $wonom_current_language;
+                            ?>
+                            <?php if ($wonom_language_index > 0) : ?>
+                                <div class="dropdown-divider"></div>
+                            <?php endif; ?>
+                            <a href="<?php echo esc_url($wonom_language_url); ?>"
+                                class="lang-item<?php echo $wonom_is_current_language ? ' is-current' : ''; ?>"
+                                lang="<?php echo esc_attr($wonom_language_slug); ?>"
+                                <?php echo $wonom_is_current_language ? 'aria-current="page"' : ''; ?>>
+                                <img src="<?php echo esc_url('/asset/img/' . $wonom_language_icon); ?>" alt="<?php echo esc_attr($wonom_language_name); ?>">
+                                <span class="txt_15 txt_extrabold cl_dark_brown"><?php echo esc_html($wonom_language_name); ?></span>
+                                <?php if ($wonom_is_current_language) : ?>
+                                    <svg class="icon-check" width="16" height="12" viewBox="0 0 16 12" fill="none"
+                                        xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M1 6L5.5 10.5L15 1" stroke="#E41F2F" stroke-width="2" stroke-linecap="round"
+                                            stroke-linejoin="round" />
+                                    </svg>
+                                <?php endif; ?>
+                            </a>
+                            <?php $wonom_language_index++; ?>
+                        <?php endforeach; ?>
                     </div>
                 </div>
                 <a href="#" class="header_button btn desktop txt_14 txt_extrabold txt-btn-red txt_bold"

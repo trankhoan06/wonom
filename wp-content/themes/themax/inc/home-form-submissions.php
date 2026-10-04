@@ -106,24 +106,24 @@ function wonom_submission_valid_time($time)
 function wonom_handle_home_form_submission()
 {
     if (!check_ajax_referer('wonom_submit_form', 'nonce', false)) {
-        wp_send_json_error(array('message' => 'Phiên gửi yêu cầu đã hết hạn. Vui lòng tải lại trang.'), 403);
+        wp_send_json_error(array('message' => wonom_home_t('expired')), 403);
     }
 
     $honeypot = isset($_POST['website']) ? trim((string) wp_unslash($_POST['website'])) : '';
     if ('' !== $honeypot) {
-        wp_send_json_success(array('message' => 'Yêu cầu của bạn đã được ghi nhận.'));
+        wp_send_json_success(array('message' => wonom_home_t('request_received')));
     }
 
     $ip = isset($_SERVER['REMOTE_ADDR']) ? sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'])) : 'unknown';
     $rate_key = 'wonom_submit_' . md5($ip);
     $rate_count = (int) get_transient($rate_key);
     if ($rate_count >= 8) {
-        wp_send_json_error(array('message' => 'Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau.'), 429);
+        wp_send_json_error(array('message' => wonom_home_t('rate_limited')), 429);
     }
 
     $form_type = isset($_POST['form_type']) ? sanitize_key(wp_unslash($_POST['form_type'])) : '';
     if (!in_array($form_type, array('booking', 'tour', 'membership'), true)) {
-        wp_send_json_error(array('message' => 'Loại biểu mẫu không hợp lệ.'), 400);
+        wp_send_json_error(array('message' => wonom_home_t('invalid_form')), 400);
     }
 
     $name = isset($_POST['name']) ? sanitize_text_field(wp_unslash($_POST['name'])) : '';
@@ -131,10 +131,10 @@ function wonom_handle_home_form_submission()
     $errors = array();
     $name_length = function_exists('mb_strlen') ? mb_strlen($name) : strlen($name);
     if ($name_length < 2 || $name_length > 80 || preg_match('/[0-9]/', $name)) {
-        $errors['name'] = 'Vui lòng nhập họ tên hợp lệ.';
+        $errors['name'] = wonom_home_t('invalid_name');
     }
     if (!wonom_submission_valid_phone($phone)) {
-        $errors['phone'] = 'Vui lòng nhập đúng số điện thoại Việt Nam.';
+        $errors['phone'] = wonom_home_t('invalid_phone');
     }
 
     $data = array(
@@ -146,16 +146,16 @@ function wonom_handle_home_form_submission()
     if ('membership' === $form_type) {
         $consent = !empty($_POST['consent']);
         if (!$consent) {
-            $errors['consent'] = 'Bạn cần đồng ý điều khoản để đăng ký.';
+            $errors['consent'] = wonom_home_t('required_consent');
         }
         $data['consent'] = $consent ? 'yes' : 'no';
     } else {
         $date = isset($_POST['date']) ? sanitize_text_field(wp_unslash($_POST['date'])) : '';
         $time = isset($_POST['time']) ? sanitize_text_field(wp_unslash($_POST['time'])) : '';
         $guests = isset($_POST['guests']) ? sanitize_text_field(wp_unslash($_POST['guests'])) : '';
-        if (!wonom_submission_valid_date($date)) $errors['date'] = 'Vui lòng chọn ngày hợp lệ, không sớm hơn hôm nay.';
-        if (!wonom_submission_valid_time($time)) $errors['time'] = 'Vui lòng nhập thời gian theo định dạng HH:mm.';
-        if (!preg_match('/^(?:[1-9][0-9]*|5\+)$/', $guests)) $errors['guests'] = 'Vui lòng chọn số người.';
+        if (!wonom_submission_valid_date($date)) $errors['date'] = wonom_home_t('invalid_date');
+        if (!wonom_submission_valid_time($time)) $errors['time'] = wonom_home_t('invalid_time');
+        if (!preg_match('/^(?:[1-9][0-9]*|5\+)$/', $guests)) $errors['guests'] = wonom_home_t('required_guests');
         $data = array_merge($data, array(
             'date' => $date,
             'time' => $time,
@@ -166,7 +166,7 @@ function wonom_handle_home_form_submission()
     if ('booking' === $form_type) {
         $booking_type = isset($_POST['booking_type']) ? sanitize_key(wp_unslash($_POST['booking_type'])) : 'general';
         $floor = isset($_POST['floor']) ? sanitize_text_field(wp_unslash($_POST['floor'])) : '';
-        if ('general' === $booking_type && '' === $floor) $errors['floor'] = 'Vui lòng chọn tầng bạn muốn đến.';
+        if ('general' === $booking_type && '' === $floor) $errors['floor'] = wonom_home_t('required_floor');
         $data = array_merge($data, array(
             'booking_type' => $booking_type,
             'floor' => $floor,
@@ -179,7 +179,7 @@ function wonom_handle_home_form_submission()
     }
 
     if ($errors) {
-        wp_send_json_error(array('message' => 'Vui lòng kiểm tra lại các thông tin.', 'fields' => $errors), 422);
+        wp_send_json_error(array('message' => wonom_home_t('check_information'), 'fields' => $errors), 422);
     }
 
     $labels = wonom_submission_type_labels();
@@ -189,7 +189,7 @@ function wonom_handle_home_form_submission()
         'post_title' => sprintf('[%s] %s · %s', $labels[$form_type], $name, current_time('d/m/Y H:i')),
     ), true);
     if (is_wp_error($post_id)) {
-        wp_send_json_error(array('message' => 'Chưa thể lưu yêu cầu. Vui lòng thử lại.'), 500);
+        wp_send_json_error(array('message' => wonom_home_t('save_failed')), 500);
     }
 
     foreach ($data as $key => $value) {
@@ -214,7 +214,7 @@ function wonom_handle_home_form_submission()
     update_post_meta($post_id, '_wonom_email_sent_at', $mail_sent ? current_time('mysql') : '');
 
     wp_send_json_success(array(
-        'message' => 'Gửi yêu cầu thành công! WONOM sẽ liên hệ với bạn trong thời gian sớm nhất.',
+        'message' => wonom_home_t('success'),
         'submission_id' => $post_id,
     ));
 }
