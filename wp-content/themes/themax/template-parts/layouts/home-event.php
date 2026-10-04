@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) exit;
                                 <img src="/asset/img/store.jpg" alt="">
                             </div>
                             <div class="home_event_card_item_txt">
-                                <div class="home_event_card_item_txt_subtitle txt_title">THƯỜNG XUYÊN</div>
+                                <div class="home_event_card_item_txt_subtitle txt_title txt_13">THƯỜNG XUYÊN</div>
                                 <div class="home_event_card_item_txt_inner">
                                     <div class="home_event_card_item_txt_content">
                                         <div class="home_event_card_item_txt_title txt_18 txt_extrabold">Giảm 20% ban
@@ -46,7 +46,7 @@ if (!defined('ABSPATH')) exit;
                                 <img src="/asset/img/store.jpg" alt="">
                             </div>
                             <div class="home_event_card_item_txt">
-                                <div class="home_event_card_item_txt_subtitle txt_title">THƯỜNG XUYÊN</div>
+                                <div class="home_event_card_item_txt_subtitle txt_title txt_13">THƯỜNG XUYÊN</div>
                                 <div class="home_event_card_item_txt_inner">
                                     <div class="home_event_card_item_txt_content">
                                         <div class="home_event_card_item_txt_title txt_18 txt_extrabold">Giảm 20% ban
@@ -78,7 +78,7 @@ if (!defined('ABSPATH')) exit;
                                 <img src="/asset/img/store.jpg" alt="">
                             </div>
                             <div class="home_event_card_item_txt">
-                                <div class="home_event_card_item_txt_subtitle txt_title">THƯỜNG XUYÊN</div>
+                                <div class="home_event_card_item_txt_subtitle txt_title txt_13">THƯỜNG XUYÊN</div>
                                 <div class="home_event_card_item_txt_inner">
                                     <div class="home_event_card_item_txt_content">
                                         <div class="home_event_card_item_txt_title txt_18 txt_extrabold">Giảm 20% ban
@@ -110,7 +110,7 @@ if (!defined('ABSPATH')) exit;
                                 <img src="/asset/img/store.jpg" alt="">
                             </div>
                             <div class="home_event_card_item_txt">
-                                <div class="home_event_card_item_txt_subtitle txt_title">THƯỜNG XUYÊN</div>
+                                <div class="home_event_card_item_txt_subtitle txt_title txt_13">THƯỜNG XUYÊN</div>
                                 <div class="home_event_card_item_txt_inner">
                                     <div class="home_event_card_item_txt_content">
                                         <div class="home_event_card_item_txt_title txt_18 txt_extrabold">Giảm 20% ban

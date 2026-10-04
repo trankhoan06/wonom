@@ -947,8 +947,54 @@ $(document).ready(function () {
         $('.home_tour_card_title').text(tour.title || '');
     }
 
-    function renderHomeTourPopup(index) {
-        var tour = homeTourData[index];
+    var homeDetailRequestIds = { tour: 0, event: 0 };
+    var homeDetailControllers = { tour: null, event: null };
+
+    function requestHomeDetail(type, index, $popup) {
+        var config = window.wonomHome || {};
+        if (!config.ajaxUrl || !config.detailNonce || !window.fetch) {
+            return Promise.reject(new Error('AJAX detail is unavailable.'));
+        }
+
+        homeDetailRequestIds[type] += 1;
+        var requestId = homeDetailRequestIds[type];
+        if (homeDetailControllers[type]) homeDetailControllers[type].abort();
+        var controller = window.AbortController ? new AbortController() : null;
+        homeDetailControllers[type] = controller;
+        $popup.addClass('is-detail-loading').attr('aria-busy', 'true');
+
+        var body = new URLSearchParams();
+        body.set('action', 'wonom_get_home_detail');
+        body.set('nonce', config.detailNonce);
+        body.set('detail_type', type);
+        body.set('detail_index', String(index));
+
+        return fetch(config.ajaxUrl, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
+            body: body.toString(),
+            signal: controller ? controller.signal : undefined
+        }).then(function (response) {
+            if (!response.ok) throw new Error('Detail request failed.');
+            return response.json();
+        }).then(function (response) {
+            if (!response || !response.success || !response.data) {
+                throw new Error('Invalid detail response.');
+            }
+            if (requestId !== homeDetailRequestIds[type]) {
+                throw new DOMException('Stale detail response.', 'AbortError');
+            }
+            return response.data;
+        }).finally(function () {
+            if (requestId === homeDetailRequestIds[type]) {
+                $popup.removeClass('is-detail-loading').removeAttr('aria-busy');
+            }
+        });
+    }
+
+    function renderHomeTourPopup(index, responseData) {
+        var tour = responseData && responseData.detail ? responseData.detail : homeTourData[index];
         var $popup = $('.popup_tour.tour');
         if (!tour || !$popup.length) return;
 
@@ -975,13 +1021,17 @@ $(document).ready(function () {
         });
         $popup.find('.tour_detail_form [name="tour_name"]').val(tour.title || '');
 
+        var suggestions = responseData && Array.isArray(responseData.suggestions)
+            ? responseData.suggestions
+            : homeTourData.map(function (suggestion, suggestionIndex) {
+                return { index: suggestionIndex, image: suggestion.image, imageAlt: suggestion.imageAlt, title: suggestion.title };
+            }).filter(function (suggestion) { return suggestion.index !== index; });
         var $suggestions = $popup.find('.popup_tour_sidebar_suggest').empty();
-        homeTourData.forEach(function (suggestion, suggestionIndex) {
-            if (suggestionIndex === index) return;
+        suggestions.forEach(function (suggestion) {
             var $button = $('<button>', {
                 class: 'popup_tour_sidebar_suggest_item',
                 type: 'button',
-                'data-tour-index': suggestionIndex
+                'data-tour-index': suggestion.index
             });
             $('<span>', { class: 'popup_tour_sidebar_suggest_item_img img_full' })
                 .append($('<img>', {
@@ -998,6 +1048,18 @@ $(document).ready(function () {
             $suggestions.append($button);
         });
         $popup.find('.popup_tour_content').scrollTop(0);
+    }
+
+    function loadHomeTourPopup(index) {
+        var $popup = $('.popup_tour.tour');
+        return requestHomeDetail('tour', index, $popup)
+            .then(function (responseData) {
+                renderHomeTourPopup(responseData.index, responseData);
+            })
+            .catch(function (error) {
+                if (error && 'AbortError' === error.name) return;
+                renderHomeTourPopup(index);
+            });
     }
 
     var homeTourThumbs = new Swiper('.home_tour_card_slide', {
@@ -1090,7 +1152,8 @@ $(document).ready(function () {
             
             for (let i = 0; i < cloneAmount; i++) {
                 let html = itemClone.clone();
-                const animDuration = (itemSize / this.duration).toFixed(3);
+                const marqueeSpeed = window.innerWidth <= 767 ? this.duration * 0.65 : this.duration;
+                const animDuration = (itemSize / marqueeSpeed).toFixed(3);
                 html.css({
                     'flex-shrink': '0',
                     'display': 'flex',
@@ -1404,14 +1467,14 @@ $(document).ready(function () {
     // Xử lý đóng/mở popup_tour.tour
     $('.home_tour_card_detail_see ').click(function () {
         var $tourPopup = $('.popup_tour.tour');
-        renderHomeTourPopup(activeHomeTourIndex);
         $tourPopup.addClass('active');
+        loadHomeTourPopup(activeHomeTourIndex);
     });
 
     $('.popup_tour.tour').on('click', '.popup_tour_sidebar_suggest_item[data-tour-index]', function () {
         var tourIndex = Number($(this).attr('data-tour-index'));
         if (!Number.isFinite(tourIndex)) return;
-        renderHomeTourPopup(tourIndex);
+        loadHomeTourPopup(tourIndex);
         updateHomeTourCard(tourIndex);
         if (homeTourSwiper) homeTourSwiper.slideTo(tourIndex);
     });
@@ -1454,13 +1517,18 @@ $(document).ready(function () {
         }
     }
 
-    function renderEventPopupList() {
+    function renderEventPopupList(activeIndex, responseSuggestions) {
         var $list = $('.popup_tour.event .popup_tour_sidebar_suggest').empty();
-        eventPopupData.forEach(function (item, index) {
+        var suggestions = Array.isArray(responseSuggestions)
+            ? responseSuggestions
+            : eventPopupData.map(function (item, index) {
+                return { index: index, image: item.image, imageAlt: item.imageAlt, title: item.title };
+            }).filter(function (item) { return item.index !== activeIndex; });
+        suggestions.forEach(function (item) {
             var $button = $('<button>', {
                 class: 'popup_tour_sidebar_suggest_item',
                 type: 'button',
-                'data-event-index': index
+                'data-event-index': item.index
             });
             $('<span>', { class: 'popup_tour_sidebar_suggest_item_img img_full' })
                 .append($('<img>', {
@@ -1471,15 +1539,17 @@ $(document).ready(function () {
                     'data-wonom-popup-image': 'pending'
                 }))
                 .appendTo($button);
-            $('<span>', { class: 'popup_tour_sidebar_suggest_item_title txt_bold' })
+            $('<span>', { class: 'popup_tour_sidebar_suggest_item_title txt_bold txt_16 cl_dark_brown' })
                 .text(item.title || '')
                 .appendTo($button);
             $list.append($button);
         });
     }
 
-    function showEventPopupItem(index) {
-        var item = eventPopupData[index] || eventPopupData[0];
+    function showEventPopupItem(index, responseData) {
+        var item = responseData && responseData.detail
+            ? responseData.detail
+            : (eventPopupData[index] || eventPopupData[0]);
         var $popup = $('.popup_tour.event');
         if (!item) return;
 
@@ -1493,16 +1563,28 @@ $(document).ready(function () {
         $popup.find('.event_popup_content_title').text(item.title);
         $popup.find('.event_popup_content_subtitle').text(item.subtitle);
         $popup.find('.popup_tour_content_des').html(item.content || '');
-        $popup.find('[data-event-index]').removeClass('active')
-            .filter('[data-event-index="' + index + '"]').addClass('active');
+        renderEventPopupList(index, responseData ? responseData.suggestions : null);
+        $popup.find('.popup_tour_content').scrollTop(0);
     }
 
-    renderEventPopupList();
+    function loadHomeEventPopup(index) {
+        var $popup = $('.popup_tour.event');
+        return requestHomeDetail('event', index, $popup)
+            .then(function (responseData) {
+                showEventPopupItem(responseData.index, responseData);
+            })
+            .catch(function (error) {
+                if (error && 'AbortError' === error.name) return;
+                showEventPopupItem(index);
+            });
+    }
+
+    renderEventPopupList(0);
 
     $('.home_event_card_item').click(function () {
         var index = Number($(this).attr('data-event-index'));
-        showEventPopupItem(index);
         $('.popup_tour.event').addClass('active').attr('aria-hidden', 'false');
+        loadHomeEventPopup(index);
     });
 
     $('.home_event_card_item').keydown(function (event) {
@@ -1512,7 +1594,7 @@ $(document).ready(function () {
     });
 
     $('.popup_tour.event').on('click', '[data-event-index]', function () {
-        showEventPopupItem(Number($(this).attr('data-event-index')));
+        loadHomeEventPopup(Number($(this).attr('data-event-index')));
     });
 
     $('.event .popup_tour_close').click(function () {

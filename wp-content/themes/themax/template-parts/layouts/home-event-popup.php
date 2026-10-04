@@ -3,8 +3,8 @@ if (!defined('ABSPATH')) exit;
 ?>
 <section class="popup_tour event" aria-hidden="true">
         <div class="popup_tour_head">
-            <div class="popup_tour_title heading h4 cl_cream h6_mb">SỰ KIỆN ĐANG DIỄN RA</div>
-            <div class="popup_tour_img img_full">
+            <div class="popup_tour_title heading h4 cl_cream h5_mb">SỰ KIỆN ĐANG DIỄN RA</div>
+            <div class="popup_tour_img img_fullfill">
                 <img src="/asset/img/ex_bg_bot.png" alt="">
             </div>
             <div class="popup_tour_close btn">
@@ -29,13 +29,13 @@ if (!defined('ABSPATH')) exit;
                     <div class="event_popup_condition_label txt_13 cl_meta">ĐIỀU KIỆN</div>
                     <div class="event_popup_condition txt_bold">Là thành viên Wonom</div>
                 </div>
-                <div class="popup_tour_sidebar_title txt_title txt_18"><span>*</span> ĐANG DIỄN RA</div>
+                <div class="popup_tour_sidebar_title txt_title txt_18">GỢI Ý CÁC SỰ KIỆN KHÁC</div>
                 <div class="popup_tour_sidebar_suggest">
                     <div class="popup_tour_sidebar_suggest_item">
                         <div class="popup_tour_sidebar_suggest_item_img img_full">
                             <img src="/asset/img/store.jpg" alt="">
                         </div>
-                        <div class="popup_tour_sidebar_suggest_item_title txt_bold cl_dark_brown">Tour chụp ảnh câu cá +
+                        <div class="popup_tour_sidebar_suggest_item_title txt_bold txt_16 cl_dark_brown">Tour chụp ảnh câu cá +
                             đánh
                             golf ngoại cảnh</div>
                     </div>
@@ -43,7 +43,7 @@ if (!defined('ABSPATH')) exit;
                         <div class="popup_tour_sidebar_suggest_item_img img_full">
                             <img src="/asset/img/store.jpg" alt="">
                         </div>
-                        <div class="popup_tour_sidebar_suggest_item_title txt_bold cl_dark_brown">Tour chụp ảnh câu cá +
+                        <div class="popup_tour_sidebar_suggest_item_title txt_bold txt_16 cl_dark_brown">Tour chụp ảnh câu cá +
                             đánh
                             golf ngoại cảnh</div>
                     </div>
@@ -51,7 +51,7 @@ if (!defined('ABSPATH')) exit;
                         <div class="popup_tour_sidebar_suggest_item_img img_full">
                             <img src="/asset/img/store.jpg" alt="">
                         </div>
-                        <div class="popup_tour_sidebar_suggest_item_title txt_bold cl_dark_brown">Tour chụp ảnh câu cá +
+                        <div class="popup_tour_sidebar_suggest_item_title txt_bold txt_16 cl_dark_brown">Tour chụp ảnh câu cá +
                             đánh
                             golf ngoại cảnh</div>
                     </div>

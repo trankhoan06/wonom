@@ -69,7 +69,7 @@ if (!defined('ABSPATH')) exit;
                     </div>
                     <div class="footer_contact_num">
                         <div class="footer_contact_num_icon img_full">
-                            <img src="asset/img/icon_phone.svg" alt="">
+                            <img src="asset/img/icon_phone.webp" alt="">
                         </div>
                         <div class="footer_contact_num_txt txt_64 h3_mb">0968 487 096</div>
                     </div>

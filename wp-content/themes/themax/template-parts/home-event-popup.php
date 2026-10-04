@@ -59,6 +59,9 @@ $list = $popup_first('//*[' . $popup_class('popup_tour_sidebar_suggest') . ']');
 if ($list) {
     while ($list->firstChild) $list->removeChild($list->firstChild);
     foreach ($events as $index => $item_data) {
+        if (0 === $index) {
+            continue;
+        }
         $button = $popup_dom->createElement('button');
         $button->setAttribute('class', 'popup_tour_sidebar_suggest_item' . (0 === $index ? ' active' : ''));
         $button->setAttribute('type', 'button');
@@ -70,7 +73,7 @@ if ($list) {
         $thumb->setAttribute('alt', $item_data['imageAlt']);
         $image_wrap->appendChild($thumb);
         $title = $popup_dom->createElement('span');
-        $title->setAttribute('class', 'popup_tour_sidebar_suggest_item_title txt_bold');
+        $title->setAttribute('class', 'popup_tour_sidebar_suggest_item_title txt_bold txt_16 cl_dark_brown');
         $title->appendChild($popup_dom->createTextNode($item_data['title']));
         $button->appendChild($image_wrap);
         $button->appendChild($title);

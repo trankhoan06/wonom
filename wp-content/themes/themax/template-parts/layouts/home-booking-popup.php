@@ -90,7 +90,7 @@ if (!defined('ABSPATH')) exit;
                             </div>
                         </div>
                     </div>
-                    <div class="popup_form_row">
+                    <div class="popup_form_row popup_form_datetime_row">
                         <div class="popup_form_group">
                             <label class="popup_form_label txt_15 txt_extrabold cl_text" for="booking-date">CHỌN
                                 NGÀY</label>

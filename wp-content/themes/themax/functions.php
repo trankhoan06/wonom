@@ -8,6 +8,7 @@ require dirname(__FILE__) . '/inc/homepage-settings.php';
 require dirname(__FILE__) . '/inc/home-tour-data.php';
 require dirname(__FILE__) . '/inc/home-event-data.php';
 require dirname(__FILE__) . '/inc/home-library-data.php';
+require dirname(__FILE__) . '/inc/home-detail-ajax.php';
 require dirname(__FILE__) . '/inc/home-form-submissions.php';
 require dirname(__FILE__) . '/inc/upload-image-optimizer.php';
 
@@ -77,6 +78,7 @@ function wonom_enqueue_assets()
         'imageHoverUrl' => $theme_url . '/asset/js/global-image-hover.js',
         'ajaxUrl' => admin_url('admin-ajax.php'),
         'submitNonce' => wp_create_nonce('wonom_submit_form'),
+        'detailNonce' => wp_create_nonce('wonom_home_detail'),
         'explorePopupData' => wonom_get_home_explore_popup_data(),
     ));
     wp_enqueue_script(
