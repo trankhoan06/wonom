@@ -68,6 +68,27 @@
         });
     }
 
+    function resetValidationState(scope) {
+        if (!scope) return;
+        clearErrors(scope);
+        scope.querySelectorAll('.wonom-form-status').forEach(function (status) {
+            status.className = 'wonom-form-status';
+            status.textContent = '';
+        });
+    }
+
+    function resetValidationWhenPopupOpens() {
+        document.querySelectorAll('.popup_form, .popup_member, .popup_tour.tour').forEach(function (popup) {
+            var wasOpen = popup.classList.contains('active');
+            var observer = new MutationObserver(function () {
+                var isOpen = popup.classList.contains('active');
+                if (isOpen && !wasOpen) resetValidationState(popup);
+                wasOpen = isOpen;
+            });
+            observer.observe(popup, { attributes: true, attributeFilter: ['class'] });
+        });
+    }
+
     function showFieldError(field, message) {
         if (!field) return;
         var container = fieldContainer(field) || field.parentElement;
@@ -309,6 +330,33 @@
         });
     }
 
+    function enhanceMobileTimeInputs() {
+        document.querySelectorAll('.popup_form_input[type="time"]').forEach(function (input) {
+            var wrap = input.closest('.popup_form_input_wrap');
+            if (!wrap || wrap.classList.contains('has-mobile-time-display')) return;
+
+            var display = document.createElement('span');
+            display.className = 'popup_form_time_display is-placeholder';
+            display.setAttribute('aria-hidden', 'true');
+            input.insertAdjacentElement('afterend', display);
+            wrap.classList.add('has-mobile-time-display');
+
+            var updateDisplay = function () {
+                display.textContent = input.value || '--:--';
+                display.classList.toggle('is-placeholder', !input.value);
+            };
+
+            input.addEventListener('input', updateDisplay);
+            input.addEventListener('change', updateDisplay);
+            if (input.form) {
+                input.form.addEventListener('reset', function () {
+                    window.setTimeout(updateDisplay, 0);
+                });
+            }
+            updateDisplay();
+        });
+    }
+
     function boot() {
         var today = new Date();
         var minimumDate = [
@@ -320,6 +368,8 @@
             input.min = minimumDate;
         });
         enhanceMobileDateInputs();
+        enhanceMobileTimeInputs();
+        resetValidationWhenPopupOpens();
         bindForm(document.querySelector('.popup_form_booking_form'), 'booking', validateBooking);
         bindForm(document.querySelector('.tour_detail_form'), 'tour', validateTour);
         bindMembership();

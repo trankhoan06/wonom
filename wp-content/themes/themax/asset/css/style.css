@@ -1608,7 +1608,7 @@ h2 {
 
     .home_intro_bottom_bar {
         height: 6.4rem;
-        border-top: 2px;
+        border-top: 3px solid #460700;
     }
 
     .home_intro_arrow {
@@ -3085,15 +3085,15 @@ h2 {
     .home_explore_mobile_floor_nav {
         position: fixed;
         right: 0;
+        top: auto;
         bottom: 0;
         left: 0;
         z-index: 999999;
         display: flex;
         justify-content: center;
         width: 100%;
-        height: 5.8rem;
-        padding: 0 .6rem;
-        background-color: #FFF6DB;
+        height: calc(5.8rem + env(safe-area-inset-bottom, 0px));
+        padding: 0 .6rem env(safe-area-inset-bottom, 0px);
         border-bottom: 2px solid #460700;
         opacity: 0;
         visibility: hidden;
@@ -4202,16 +4202,15 @@ h2 {
 
 .home_space_right_card_wrap {
     transition-timing-function: linear !important;
-    will-change: transform;
     backface-visibility: hidden;
     display: flex;
     flex-direction: column;
     gap: 2.4rem;
 }
 
-.home_space_right_card:hover .marquee-group {
+/* .home_space_right_card:hover .marquee-group {
     animation-play-state: paused !important;
-}
+} */
 
 @keyframes marquee-up {
     0% {
@@ -4235,10 +4234,12 @@ h2 {
 
 .anim.marquee-up {
     animation-name: marquee-up;
+    will-change: transform;
 }
 
 .anim.marquee-down {
     animation-name: marquee-down;
+    will-change: transform;
 }
 
 .anim.marquee-left {
@@ -4824,7 +4825,8 @@ h2 {
         transition: opacity .3s ease, transform .3s ease, visibility 0s linear 0s;
     }
 
-    body.mobile-menu-open .global_btn {
+    body.mobile-menu-open .global_btn,
+    body.explore-floor-nav-visible .global_btn {
         opacity: 0;
         visibility: hidden;
         pointer-events: none;
@@ -5034,13 +5036,19 @@ h2 {
 /* popup_tour */
 
 .popup_tour {
+    display: none;
     background-color: #FFF6DB;
     position: fixed;
     inset: 0;
     z-index: 99999999999;
     transform: translateY(104%);
     pointer-events: none;
-    transition: all .6s ease-in-out;
+    transition: transform .6s ease-in-out;
+    will-change: transform;
+}
+
+.popup_tour.is-mounted {
+    display: block;
 }
 
 .popup_tour.active {
@@ -5089,7 +5097,6 @@ h2 {
     right: 0;
     top: 0;
     height: 100%;
-    border-bottom: 2px solid #460700;
 }
 
 .popup_tour_head {
@@ -5099,6 +5106,9 @@ h2 {
     padding-inline: 2.4rem;
     align-items: center;
     padding-block: 1rem;
+    border-bottom: 2px solid #460700;
+    border-top: 2px solid #460700;
+
 }
 
 .popup_tour_head {
@@ -5594,6 +5604,15 @@ h2 {
 }
 
 @media only screen and (max-width: 767px) {
+    .popup_tour {
+        height: 100dvh;
+        transform: translate3d(0, calc(100dvh + 2px), 0);
+    }
+
+    .popup_tour.active {
+        transform: translate3d(0, 0, 0);
+    }
+
     .popup_tour.tour {
         overflow-y: auto;
         overscroll-behavior-y: contain;
@@ -6413,7 +6432,8 @@ h2 {
     pointer-events: none;
 }
 
-.popup_form_date_display {
+.popup_form_date_display,
+.popup_form_time_display {
     display: none;
 }
 
@@ -6636,7 +6656,7 @@ button.is-loading {
 
     .popup_form_input {
         padding-block: 1rem;
-        font-size: 1.3rem;
+        font-size: 16px;
     }
 
     .popup_form_label {
@@ -6664,6 +6684,12 @@ button.is-loading {
     .popup_form_input[type="time"]::-webkit-datetime-edit {
         display: block;
         padding: 0;
+        font-size: 16px;
+    }
+
+    .popup_form_input[type="date"]::-webkit-date-and-time-value,
+    .popup_form_input[type="date"]::-webkit-datetime-edit {
+        font-size: 16px;
     }
 
     .has-mobile-date-display .popup_form_input[type="date"] {
@@ -6671,24 +6697,32 @@ button.is-loading {
         -webkit-text-fill-color: transparent;
     }
 
-    .popup_form_date_display {
+    .popup_form_date_display,
+    .popup_form_time_display {
         position: absolute;
         inset: 0 2.8rem 0 0;
         display: flex;
         align-items: center;
         overflow: hidden;
         color: #460700;
-        font-size: 16px;
+        font-size: 1.3rem;
         line-height: 1.35;
         white-space: nowrap;
         pointer-events: none;
     }
 
-    .popup_form_date_display.is-placeholder {
+    .popup_form_date_display.is-placeholder,
+    .popup_form_time_display.is-placeholder {
         color: #BDBDBD;
     }
 
-    .has-mobile-date-display .popup_form_input_icon {
+    .has-mobile-time-display .popup_form_input[type="time"] {
+        color: transparent;
+        -webkit-text-fill-color: transparent;
+    }
+
+    .has-mobile-date-display .popup_form_input_icon,
+    .has-mobile-time-display .popup_form_input_icon {
         width: 1.7rem;
         height: 1.7rem;
         right: .15rem;
