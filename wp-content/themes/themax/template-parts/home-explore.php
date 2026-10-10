@@ -275,6 +275,10 @@ foreach ($explore_defaults as $floor => $defaults) {
 
 $explore_section = $explore_dom->getElementById('explore');
 $explore_output = $explore_section ? $explore_dom->saveHTML($explore_section) : $explore_markup;
+$explore_mobile_floor_nav = $explore_first('//*[' . $class_query('home_explore_mobile_floor_nav') . ']');
+if ($explore_section && $explore_mobile_floor_nav) {
+    $explore_output .= $explore_dom->saveHTML($explore_mobile_floor_nav);
+}
 $explore_asset_url = trailingslashit(get_template_directory_uri()) . 'asset/';
 $explore_output = preg_replace('/(?<=["\'])(?:\.\/|\/)?asset\//', $explore_asset_url, $explore_output);
 

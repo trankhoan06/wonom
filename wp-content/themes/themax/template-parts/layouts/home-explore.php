@@ -376,7 +376,7 @@ if (!defined('ABSPATH')) exit;
 
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
                                 xmlns="http://www.w3.org/2000/svg">
-                                <path d="M18 9L12 15L6 9" stroke="#460700" stroke-width="2" stroke-linecap="round"
+                                <path d="M18 9L12 15L6 9" stroke="#FFF6DB" stroke-width="2" stroke-linecap="round"
                                     stroke-linejoin="round"></path>
                             </svg>
 
@@ -553,7 +553,7 @@ if (!defined('ABSPATH')) exit;
 
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
                                 xmlns="http://www.w3.org/2000/svg">
-                                <path d="M18 9L12 15L6 9" stroke="#460700" stroke-width="2" stroke-linecap="round"
+                                <path d="M18 9L12 15L6 9" stroke="#FFF6DB" stroke-width="2" stroke-linecap="round"
                                     stroke-linejoin="round"></path>
                             </svg>
 
@@ -660,7 +660,7 @@ if (!defined('ABSPATH')) exit;
                         <div class="home_explore_content_subtitle_icon svg_full">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
                                 xmlns="http://www.w3.org/2000/svg">
-                                <path d="M18 9L12 15L6 9" stroke="#460700" stroke-width="2" stroke-linecap="round"
+                                <path d="M18 9L12 15L6 9" stroke="#FFF6DB" stroke-width="2" stroke-linecap="round"
                                     stroke-linejoin="round"></path>
                             </svg>
                         </div>
@@ -771,3 +771,15 @@ if (!defined('ABSPATH')) exit;
             <img src="asset/img/explore_bg.png" alt="">
         </div>
     </section>
+    <nav class="home_explore_mobile_floor_nav" aria-label="Chọn tầng">
+        <div class="home_explore_mobile_floor_nav_inner">
+            <?php for ($mobile_floor = 1; $mobile_floor <= 5; $mobile_floor++) : ?>
+                <button type="button"
+                    class="home_explore_mobile_floor_item<?php echo 1 === $mobile_floor ? ' active' : ''; ?>"
+                    data-explore-tab="tab<?php echo esc_attr($mobile_floor); ?>f"
+                    aria-current="<?php echo 1 === $mobile_floor ? 'true' : 'false'; ?>">
+                    <?php echo esc_html($mobile_floor); ?>F
+                </button>
+            <?php endfor; ?>
+        </div>
+    </nav>

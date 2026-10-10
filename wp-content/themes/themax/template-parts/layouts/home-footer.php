@@ -84,9 +84,7 @@ if (!defined('ABSPATH')) exit;
             </div>
         </div>
         <div class="footer_bot">
-            <div class="footer_bot_img img_full">
-                <img src="/asset/img/footer_bg_bot.png" alt="">
-            </div>
+            <div class="footer_bot_img"></div>
             <div class="container">
                 <div class="footer_contact_info">
                     <div class="footer_contact_info_social">

@@ -72,21 +72,9 @@ if (!defined('ABSPATH')) exit;
                             <label class="popup_form_label txt_15 txt_extrabold cl_text" for="booking-guests">SỐ
                                 NGƯỜI</label>
                             <div class="popup_form_input_wrap relative">
-                                <select id="booking-guests" name="guests" class="popup_form_input popup_form_select">
-                                    <option value="" disabled selected>Chọn số người đến</option>
-                                    <option value="1">1 người</option>
-                                    <option value="2">2 người</option>
-                                    <option value="3">3 người</option>
-                                    <option value="4">4 người</option>
-                                    <option value="5+">5+ người</option>
-                                </select>
-                                <span class="popup_form_input_icon absolute svg_full" aria-hidden="true">
-                                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none"
-                                        xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M5 7.5L10 12.5L15 7.5" stroke="#460700" stroke-width="2"
-                                            stroke-linecap="round" stroke-linejoin="round" />
-                                    </svg>
-                                </span>
+                                <input id="booking-guests" name="guests" type="number" min="1" step="1"
+                                    inputmode="numeric" class="popup_form_input" placeholder="Chọn số người đến"
+                                    required>
                             </div>
                         </div>
                     </div>

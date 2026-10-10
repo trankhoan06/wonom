@@ -47,6 +47,61 @@ function wonom_zalo_config()
     );
 }
 
+/**
+ * Save Zalo settings without relying on TypeRocket's JSON rewrite endpoint.
+ */
+function wonom_zalo_handle_save_settings()
+{
+    if (!current_user_can('manage_options')) {
+        wp_die(esc_html__('Bạn không có quyền thực hiện thao tác này.', 'wonom'));
+    }
+    check_admin_referer('wonom_save_zalo_settings');
+
+    $options = get_option('tr_theme_options', array());
+    if (!is_array($options)) {
+        $options = array();
+    }
+
+    $old_app_id = isset($options['zalo_app_id']) ? (string) $options['zalo_app_id'] : '';
+    $app_id = isset($_POST['zalo_app_id'])
+        ? sanitize_text_field(wp_unslash($_POST['zalo_app_id']))
+        : '';
+
+    $options['zalo_enabled'] = !empty($_POST['zalo_enabled']) ? 1 : 0;
+    $options['zalo_app_id'] = $app_id;
+    $options['zalo_group_id'] = isset($_POST['zalo_group_id'])
+        ? sanitize_text_field(wp_unslash($_POST['zalo_group_id']))
+        : '';
+
+    $secret_changed = false;
+    if (!empty($_POST['zalo_app_secret'])) {
+        $options['zalo_app_secret'] = sanitize_text_field(wp_unslash($_POST['zalo_app_secret']));
+        $secret_changed = true;
+    }
+
+    $seed_tokens_changed = false;
+    foreach (array('zalo_access_token', 'zalo_refresh_token') as $token_key) {
+        if (!empty($_POST[$token_key])) {
+            $options[$token_key] = sanitize_text_field(wp_unslash($_POST[$token_key]));
+            $seed_tokens_changed = true;
+        }
+    }
+
+    update_option('tr_theme_options', $options);
+
+    if ($old_app_id !== $app_id || $secret_changed || $seed_tokens_changed) {
+        delete_option('wonom_zalo_runtime_tokens');
+        delete_option('wonom_zalo_oa_id');
+    }
+
+    wp_safe_redirect(add_query_arg(array(
+        'page' => 'theme_options',
+        'wonom_zalo_saved' => 'success',
+    ), admin_url('themes.php')));
+    exit;
+}
+add_action('admin_post_wonom_save_zalo_settings', 'wonom_zalo_handle_save_settings');
+
 function wonom_zalo_configured()
 {
     $config = wonom_zalo_config();

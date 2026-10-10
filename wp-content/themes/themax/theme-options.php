@@ -20,6 +20,11 @@ $form = tr_form()->useJson()->setGroup($this->getName());
         </p>
     </div>
 <?php endif; ?>
+<?php if (isset($_GET['wonom_zalo_saved'])) : ?>
+    <div class="notice notice-success is-dismissible">
+        <p><?php esc_html_e('Đã lưu cấu hình Zalo OA.', 'wonom'); ?></p>
+    </div>
+<?php endif; ?>
 <?php if (isset($_GET['wonom_zalo_oauth'])) : ?>
     <?php $zalo_oauth_success = 'success' === sanitize_key(wp_unslash($_GET['wonom_zalo_oauth'])); ?>
     <div class="notice <?php echo $zalo_oauth_success ? 'notice-success' : 'notice-error'; ?> is-dismissible">
@@ -73,22 +78,9 @@ $form = tr_form()->useJson()->setGroup($this->getName());
         echo $form->text('receive_email')->setLabel('Email nhận thông báo')->setHelp('Có thể nhập nhiều email, phân cách bằng dấu phẩy. Nếu để trống sẽ dùng email quản trị WordPress.');
     };
 
-    $zalo_settings = function () use ($form) {
-        echo '<h3>Zalo OA - Nhóm GMF</h3>';
-        echo '<p>Thông tin form mới sẽ được gửi từ OA vào nhóm GMF. Ứng dụng Zalo cần được cấp quyền quản lý thông tin nhóm.</p>';
-        echo $form->checkbox('zalo_enabled')->setLabel('Thông báo Zalo')->setText('Bật gửi thông báo form vào nhóm GMF');
-        echo $form->text('zalo_app_id')->setLabel('Zalo App ID');
-        echo $form->text('zalo_app_secret')->setLabel('Zalo App Secret')->setAttribute('type', 'password');
-        echo $form->text('zalo_group_id')->setLabel('GMF Group ID');
-        echo $form->textarea('zalo_access_token')->setLabel('OA Access Token')->setHelp('Token ban đầu. Hệ thống sẽ tự làm mới khi hết hạn.');
-        echo $form->textarea('zalo_refresh_token')->setLabel('OA Refresh Token')->setHelp('Refresh token ban đầu; token mới sẽ được lưu tự động sau mỗi lần làm mới.');
-        echo '<p><em>Có thể khai báo các giá trị nhạy cảm bằng hằng WONOM_ZALO_* trong wp-config.php; hằng sẽ được ưu tiên hơn dữ liệu tại đây.</em></p>';
-    };
-
     tr_tabs()
         ->setSidebar($form->submit('Lưu cấu hình'))
         ->addTab('SMTP', $smtp_settings)
-        ->addTab('Zalo OA', $zalo_settings)
         ->render('box');
 
     echo $form->close(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
@@ -101,6 +93,51 @@ $form = tr_form()->useJson()->setGroup($this->getName());
         <input type="hidden" name="action" value="wonom_test_smtp">
         <?php wp_nonce_field('wonom_test_smtp'); ?>
         <?php submit_button(__('Gửi email kiểm tra', 'wonom'), 'secondary', 'submit', false); ?>
+    </form>
+
+    <?php
+    $zalo_options = get_option('tr_theme_options', array());
+    $zalo_options = is_array($zalo_options) ? $zalo_options : array();
+    $zalo_value = static function ($key) use ($zalo_options) {
+        return isset($zalo_options[$key]) ? (string) $zalo_options[$key] : '';
+    };
+    ?>
+    <hr style="margin:24px 0">
+    <h2><?php esc_html_e('Cấu hình Zalo OA - Nhóm GMF', 'wonom'); ?></h2>
+    <p><?php esc_html_e('Phần này được lưu trực tiếp qua WordPress để không phụ thuộc đường dẫn AJAX của TypeRocket.', 'wonom'); ?></p>
+    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="max-width:1000px">
+        <input type="hidden" name="action" value="wonom_save_zalo_settings">
+        <?php wp_nonce_field('wonom_save_zalo_settings'); ?>
+        <table class="form-table" role="presentation">
+            <tr>
+                <th scope="row"><?php esc_html_e('Thông báo Zalo', 'wonom'); ?></th>
+                <td><label><input type="checkbox" name="zalo_enabled" value="1" <?php checked(!empty($zalo_options['zalo_enabled'])); ?>> <?php esc_html_e('Bật gửi thông báo form vào nhóm GMF', 'wonom'); ?></label></td>
+            </tr>
+            <tr>
+                <th scope="row"><label for="zalo_app_id">Zalo App ID</label></th>
+                <td><input class="regular-text" id="zalo_app_id" name="zalo_app_id" type="text" value="<?php echo esc_attr($zalo_value('zalo_app_id')); ?>" autocomplete="off"></td>
+            </tr>
+            <tr>
+                <th scope="row"><label for="zalo_app_secret">Zalo App Secret</label></th>
+                <td>
+                    <input class="regular-text" id="zalo_app_secret" name="zalo_app_secret" type="password" value="" autocomplete="new-password" placeholder="<?php echo esc_attr($zalo_value('zalo_app_secret') ? __('Đã lưu — để trống nếu không đổi', 'wonom') : ''); ?>">
+                    <p class="description"><?php esc_html_e('Để trống nếu App Secret đã lưu và không thay đổi.', 'wonom'); ?></p>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row"><label for="zalo_group_id">GMF Group ID</label></th>
+                <td><input class="regular-text" id="zalo_group_id" name="zalo_group_id" type="text" value="<?php echo esc_attr($zalo_value('zalo_group_id')); ?>" autocomplete="off"></td>
+            </tr>
+            <tr>
+                <th scope="row"><label for="zalo_access_token">OA Access Token</label></th>
+                <td><textarea class="large-text" rows="3" id="zalo_access_token" name="zalo_access_token" autocomplete="off"></textarea><p class="description"><?php esc_html_e('Không cần nhập nếu dùng nút Kết nối Zalo OA ở dưới.', 'wonom'); ?></p></td>
+            </tr>
+            <tr>
+                <th scope="row"><label for="zalo_refresh_token">OA Refresh Token</label></th>
+                <td><textarea class="large-text" rows="3" id="zalo_refresh_token" name="zalo_refresh_token" autocomplete="off"></textarea><p class="description"><?php esc_html_e('Không cần nhập nếu dùng nút Kết nối Zalo OA ở dưới.', 'wonom'); ?></p></td>
+            </tr>
+        </table>
+        <?php submit_button(__('Lưu cấu hình Zalo', 'wonom'), 'primary', 'submit', false); ?>
     </form>
 
     <hr style="margin:24px 0">

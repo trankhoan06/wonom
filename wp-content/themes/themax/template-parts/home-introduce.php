@@ -84,7 +84,6 @@ $intro_images = array(
         </div>
     </div>
     <div class="home_intro_bottom_bar absolute img_fullfill">
-        <img src="<?php echo esc_url($image_asset_url . 'intro_bg_bottom.jpg'); ?>" alt="">
     </div>
     <div class="home_intro_bg absolute img_full">
         <img src="<?php echo esc_url($image_asset_url . 'intro_bg.png'); ?>" alt="">

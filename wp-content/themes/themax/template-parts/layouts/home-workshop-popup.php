@@ -34,7 +34,6 @@ if (!defined('ABSPATH')) exit;
                 </div>
                 <div class="workshop_detail_thumbs swiper">
                     <div class="workshop_detail_thumbs_inner swiper-wrapper"></div>
-                    <div class="workshop_detail_thumbs_scrollbar swiper-scrollbar"></div>
                 </div>
             </div>
             <div class="workshop_detail_info">

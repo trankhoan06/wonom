@@ -22,6 +22,10 @@
         return /^(?:\+?84|0)(?:3|5|7|8|9)[0-9]{8}$/.test(normalizePhone(value));
     }
 
+    function isValidGuests(value) {
+        return /^[1-9][0-9]*$/.test(String(value || '').trim());
+    }
+
     function isValidDate(value) {
         var input = String(value || '').trim();
         var match = input.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
@@ -119,7 +123,7 @@
 
         if (!isValidName(name.value)) { showFieldError(name, t('invalid_name', 'Vui lòng nhập họ tên hợp lệ.')); errors++; }
         if (!isValidPhone(phone.value)) { showFieldError(phone, t('invalid_phone', 'Vui lòng nhập đúng số điện thoại Việt Nam.')); errors++; }
-        if (!guests.value) { showFieldError(guests, t('required_guests', 'Vui lòng chọn số người.')); errors++; }
+        if (!isValidGuests(guests.value)) { showFieldError(guests, t('required_guests', 'Vui lòng chọn số người.')); errors++; }
         if (!isValidDate(date.value)) { showFieldError(date, t('invalid_date', 'Vui lòng chọn ngày hợp lệ, không sớm hơn hôm nay.')); errors++; }
         if (!isValidTime(time.value)) { showFieldError(time, t('invalid_time_short', 'Nhập thời gian theo định dạng HH:mm.')); errors++; }
         if (bookingType && 'general' === bookingType.value && floor && !floor.value) {
@@ -139,7 +143,7 @@
         var time = form.querySelector('[name="time"]');
         if (!isValidName(name.value)) { showFieldError(name, t('invalid_name', 'Vui lòng nhập họ tên hợp lệ.')); errors++; }
         if (!isValidPhone(phone.value)) { showFieldError(phone, t('invalid_phone', 'Vui lòng nhập đúng số điện thoại Việt Nam.')); errors++; }
-        if (!guests.value) { showFieldError(guests, t('required_guests', 'Vui lòng chọn số người.')); errors++; }
+        if (!isValidGuests(guests.value)) { showFieldError(guests, t('required_guests', 'Vui lòng chọn số người.')); errors++; }
         if (!isValidDate(date.value)) { showFieldError(date, t('invalid_date', 'Vui lòng chọn ngày hợp lệ, không sớm hơn hôm nay.')); errors++; }
         if (!isValidTime(time.value)) { showFieldError(time, t('invalid_time_short', 'Nhập thời gian theo định dạng HH:mm.')); errors++; }
         if (errors) focusFirstError(form);
@@ -272,6 +276,39 @@
         });
     }
 
+    function formatDateForDisplay(value) {
+        var match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        return match ? [match[3], match[2], match[1]].join('/') : '';
+    }
+
+    function enhanceMobileDateInputs() {
+        document.querySelectorAll('.popup_form_input[type="date"]').forEach(function (input) {
+            var wrap = input.closest('.popup_form_input_wrap');
+            if (!wrap || wrap.classList.contains('has-mobile-date-display')) return;
+
+            var display = document.createElement('span');
+            display.className = 'popup_form_date_display is-placeholder';
+            display.setAttribute('aria-hidden', 'true');
+            input.insertAdjacentElement('afterend', display);
+            wrap.classList.add('has-mobile-date-display');
+
+            var updateDisplay = function () {
+                var formattedDate = formatDateForDisplay(input.value);
+                display.textContent = formattedDate || 'dd/mm/yyyy';
+                display.classList.toggle('is-placeholder', !formattedDate);
+            };
+
+            input.addEventListener('input', updateDisplay);
+            input.addEventListener('change', updateDisplay);
+            if (input.form) {
+                input.form.addEventListener('reset', function () {
+                    window.setTimeout(updateDisplay, 0);
+                });
+            }
+            updateDisplay();
+        });
+    }
+
     function boot() {
         var today = new Date();
         var minimumDate = [
@@ -282,6 +319,7 @@
         document.querySelectorAll('.popup_form_input[type="date"]').forEach(function (input) {
             input.min = minimumDate;
         });
+        enhanceMobileDateInputs();
         bindForm(document.querySelector('.popup_form_booking_form'), 'booking', validateBooking);
         bindForm(document.querySelector('.tour_detail_form'), 'tour', validateTour);
         bindMembership();

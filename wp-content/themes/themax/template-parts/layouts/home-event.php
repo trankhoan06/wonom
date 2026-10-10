@@ -173,6 +173,5 @@ if (!defined('ABSPATH')) exit;
             </div>
         </div>
         <div class="home_event_bot img_full">
-            <img src="/asset/img/intro_bg_bottom.jpg" alt="">
         </div>
     </section>

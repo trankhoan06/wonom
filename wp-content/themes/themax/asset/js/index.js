@@ -640,6 +640,7 @@ $(document).ready(function () {
         $(this).toggleClass('active');
         $('.header-nav').toggleClass('active');
         $('.header_overlay').toggleClass('active');
+        $('body').toggleClass('mobile-menu-open', $(this).hasClass('active'));
     });
 
     // Close hamburger menu when clicking overlay
@@ -647,6 +648,7 @@ $(document).ready(function () {
         $('.header_menu').removeClass('active');
         $('.header-nav').removeClass('active');
         $(this).removeClass('active');
+        $('body').removeClass('mobile-menu-open');
     });
 
     // Close the mobile menu before navigating to the selected section.
@@ -656,6 +658,7 @@ $(document).ready(function () {
         $('.header_menu').removeClass('active');
         $('.header-nav').removeClass('active');
         $('.header_overlay').removeClass('active');
+        $('body').removeClass('mobile-menu-open');
     });
 
     // Tab logic cho phần Khám Phá 5 Tầng (Explore)
@@ -665,6 +668,22 @@ $(document).ready(function () {
     const $exploreMobileTabs = $('.home_explore_content_subtitle_wrap');
     const $exploreFloorSelector = $('.home_explore_sidebar_bottom_inner');
     const $exploreFloorControls = $exploreFloorSelector.find('.home_explore_floor_control');
+    const $exploreMobileFloorItems = $('.home_explore_mobile_floor_item');
+    const exploreMobileFloorSections = Array.from(document.querySelectorAll('.home_explore_floor_section[data-floor-section]'));
+    const exploreMobileFloorNav = document.querySelector('.home_explore_mobile_floor_nav');
+    let exploreMobileFloorScrollFrame = null;
+
+    // Keep the fixed floor navigation outside transformed/clipped page sections.
+    if (exploreMobileFloorNav && exploreMobileFloorNav.parentElement !== document.body) {
+        document.body.appendChild(exploreMobileFloorNav);
+    }
+
+    function syncExploreMobileFloorItems(targetTab) {
+        $exploreMobileFloorItems.each(function () {
+            var isActive = $(this).attr('data-explore-tab') === targetTab;
+            $(this).toggleClass('active', isActive).attr('aria-current', isActive ? 'true' : 'false');
+        });
+    }
 
     function setExploreFloorControl($control, targetIndex) {
         var isDisabled = targetIndex < 0 || targetIndex >= $exploreContentTabs.length;
@@ -680,11 +699,42 @@ $(document).ready(function () {
 
     function syncExploreFloorSelector(floorIndex) {
         var floorLabel = (floorIndex + 1) + 'F';
+        var targetTab = 'tab' + floorLabel.toLowerCase();
 
         $exploreFloorSelector.attr('data-current-floor', floorIndex + 1);
         $('.home_explore_sidebar_bottom_item.item1').text(floorLabel);
         setExploreFloorControl($exploreFloorSelector.find('.item2'), floorIndex - 1);
         setExploreFloorControl($exploreFloorSelector.find('.item3'), floorIndex + 1);
+        syncExploreMobileFloorItems(targetTab);
+    }
+
+    function syncExploreMobileFloorOnScroll() {
+        exploreMobileFloorScrollFrame = null;
+        if (!exploreMobileMedia.matches || !exploreMobileFloorSections.length) return;
+
+        var header = document.querySelector('header');
+        var floorNav = exploreMobileFloorNav;
+        var exploreSection = document.getElementById('explore');
+        var exploreRect = exploreSection ? exploreSection.getBoundingClientRect() : null;
+        var navHeight = floorNav ? floorNav.getBoundingClientRect().height : 0;
+        var navIsVisible = Boolean(exploreRect && exploreRect.top < window.innerHeight && exploreRect.bottom > navHeight);
+        var activationLine = (header ? header.getBoundingClientRect().height : 0) + 16;
+        var activeIndex = 0;
+
+        if (floorNav) floorNav.classList.toggle('is-visible', navIsVisible);
+
+        exploreMobileFloorSections.forEach(function (section, index) {
+            if (section.getBoundingClientRect().top <= activationLine) activeIndex = index;
+        });
+
+        if (Number($exploreFloorSelector.attr('data-current-floor')) !== activeIndex + 1) {
+            syncExploreFloorSelector(activeIndex);
+        }
+    }
+
+    function requestExploreMobileFloorSync() {
+        if (exploreMobileFloorScrollFrame !== null) return;
+        exploreMobileFloorScrollFrame = window.requestAnimationFrame(syncExploreMobileFloorOnScroll);
     }
 
     function setExploreTabState(targetTab, animate) {
@@ -827,6 +877,10 @@ $(document).ready(function () {
 
     exploreMobileMedia.addEventListener('change', syncExploreMobileAccordion);
     syncExploreMobileAccordion();
+    window.addEventListener('scroll', requestExploreMobileFloorSync, { passive: true });
+    window.addEventListener('resize', requestExploreMobileFloorSync, { passive: true });
+    window.addEventListener('load', requestExploreMobileFloorSync);
+    requestExploreMobileFloorSync();
 
 
     // Close dropdown when clicking outside
@@ -851,7 +905,7 @@ $(document).ready(function () {
         runWhenIdle(() => {
             loadScriptOnce(window.wonomHome?.webglTransitionUrl)
                 .then(initHeroImageTransition)
-                .catch(() => {});
+                .catch(() => { });
         });
     }
 
@@ -859,7 +913,7 @@ $(document).ready(function () {
     // path. They self-initialize after their script has loaded.
     if (window.matchMedia('(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)').matches) {
         runWhenIdle(() => {
-            loadScriptOnce(window.wonomHome?.imageHoverUrl).catch(() => {});
+            loadScriptOnce(window.wonomHome?.imageHoverUrl).catch(() => { });
         }, 3500);
     }
 
@@ -1015,7 +1069,9 @@ $(document).ready(function () {
         var tour = homeTourData[index];
         if (!tour) return;
         activeHomeTourIndex = index;
-        $('.home_tour_card_title').text(tour.title || '');
+        $('.home_tour_card_title')
+            .text(tour.title || '')
+            .attr('aria-label', 'Xem chi tiết ' + (tour.title || 'tour'));
     }
 
     var homeDetailRequestIds = { tour: 0, event: 0 };
@@ -1194,19 +1250,19 @@ $(document).ready(function () {
         setup() {
             if (!this.list.length || !this.item.length) return;
             const isVertical = window.innerWidth >= 992;
-            
+
             this.list.css({
                 'display': 'flex',
                 'flex-wrap': 'nowrap',
                 'overflow': 'hidden',
                 'flex-direction': isVertical ? 'column' : 'row',
-                'gap': '2.4rem'
+                'gap': window.innerWidth <= 767 ? '1.8rem' : '2.4rem'
             });
             this.item.css({
                 'display': 'flex',
                 'flex-direction': isVertical ? 'column' : 'row',
                 'flex-shrink': '0',
-                'gap': '2.4rem'
+                'gap': window.innerWidth <= 767 ? '1.8rem' : '2.4rem'
             });
 
             let itemSize = isVertical ? this.item[0].scrollHeight : this.item[0].scrollWidth;
@@ -1221,7 +1277,7 @@ $(document).ready(function () {
 
             let itemClone = this.item.clone().removeClass('anim marquee-left marquee-right marquee-up marquee-down').css('animation-duration', '');
             this.list.empty();
-            
+
             for (let i = 0; i < cloneAmount; i++) {
                 let html = itemClone.clone();
                 const marqueeSpeed = window.innerWidth <= 767 ? this.duration * 0.65 : this.duration;
@@ -1233,7 +1289,7 @@ $(document).ready(function () {
                     'animation-timing-function': 'linear',
                     'animation-iteration-count': 'infinite'
                 });
-                
+
                 if (this.direction === 'left') {
                     html.addClass(isVertical ? 'marquee-up' : 'marquee-left');
                 } else {
@@ -1373,7 +1429,7 @@ $(document).ready(function () {
             const fallbackSound = getPianoFallbackSound(index);
             if (!fallbackSound) return;
             fallbackSound.currentTime = 0;
-            fallbackSound.play().catch(function () {});
+            fallbackSound.play().catch(function () { });
         };
 
         if (context.state !== 'running') {
@@ -1538,7 +1594,9 @@ $(document).ready(function () {
     );
 
     // Xử lý đóng/mở popup_tour.tour
-    $('.home_tour_card_detail_see ').click(function () {
+    $('.home_tour_card_detail_see, .home_tour_card_title').on('click keydown', function (event) {
+        if (event.type === 'keydown' && event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
         var $tourPopup = $('.popup_tour.tour');
         $tourPopup.addClass('active');
         loadHomeTourPopup(activeHomeTourIndex);
@@ -1867,7 +1925,7 @@ $(document).ready(function () {
             var alt = typeof item === 'string' ? '' : (item.alt || '');
             var tag = typeof item === 'string' ? 'tag' : (item.tag || 'tag');
             columns[index % columns.length].push(
-                '<div class="popup_tour_seeall_list_item_img" data-gallery-category="' + escapeExploreHtml(category || 'all') + '">' +
+                '<div class="popup_tour_seeall_list_item_img img-hover" data-gallery-category="' + escapeExploreHtml(category || 'all') + '">' +
                 '<div class="popup_tour_seeall_list_item_img_inner img_abs">' +
                 '<div class="popup_tour_seeall_list_item_img_block"></div>' +
                 '<img data-wonom-popup-image="pending" loading="lazy" decoding="async" src="' + escapeExploreHtml(src) + '" alt="' + escapeExploreHtml(alt) + '"></div>' +
@@ -2007,7 +2065,7 @@ $(document).ready(function () {
 
         loadScriptOnce(window.wonomHome?.pageFlipUrl)
             .then(initRestaurantFlipbook)
-            .catch(() => {});
+            .catch(() => { });
     }
 
     function syncRestaurantPopupLayout($restaurant) {
@@ -2208,11 +2266,6 @@ $(document).ready(function () {
                 watchOverflow: true,
                 observer: true,
                 observeParents: true,
-                scrollbar: {
-                    el: '.workshop_detail_thumbs_scrollbar',
-                    draggable: true,
-                    hide: false
-                }
             });
         } else {
             workshopDetailThumbSwiper.update();

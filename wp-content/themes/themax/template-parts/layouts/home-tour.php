@@ -19,12 +19,12 @@ if (!defined('ABSPATH')) exit;
             </div>
         </div>
         <div class="home_tour_bot">
-            <img class="home_tour_bot_bg" src="/asset/img/ex_bg_bot.png" alt="">
         </div>
         <div class="home_tour_card">
             <div class="container">
                 <div class="home_tour_card_inner">
-                    <div class="home_tour_card_title h4 heading h5_mb">
+                    <div class="home_tour_card_title h4 heading h5_mb" role="button" tabindex="0"
+                        aria-label="Xem chi tiết tour">
                         Tour chụp ảnh câu cá + đánh golf ngoại cảnh
                     </div>
                     <div class="home_tour_card_detail">

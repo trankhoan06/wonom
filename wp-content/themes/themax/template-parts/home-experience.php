@@ -76,7 +76,6 @@ $render_experience_card = static function ($card) {
 ?>
 <section id="experience" class="home_experience pa_section">
     <div class="home_experience_top img_fullfill desktop absolute">
-        <img src="<?php echo esc_url($experience_asset_url . 'intro_bg_bottom.jpg'); ?>" alt="">
     </div>
     <div class="container">
         <div class="home_experience_list">
@@ -99,7 +98,6 @@ $render_experience_card = static function ($card) {
     </div>
     <div class="home_experience_inner">
         <div class="home_experience_bg img_full">
-            <img src="<?php echo esc_url($experience_asset_url . 'ex_bg_bot.png'); ?>" alt="">
         </div>
         <div class="home_experience_marquee">
             <div class="home_experience_wrap">
