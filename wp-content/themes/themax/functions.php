@@ -5,6 +5,7 @@ include 'typerocket/init.php';
 require dirname(__FILE__) . '/inc/cleanup.php';
 require dirname(__FILE__) . '/inc/frontend-performance.php';
 require dirname(__FILE__) . '/inc/home-i18n.php';
+require dirname(__FILE__) . '/inc/zalo-oa.php';
 require dirname(__FILE__) . '/inc/homepage-settings.php';
 require dirname(__FILE__) . '/inc/home-tour-data.php';
 require dirname(__FILE__) . '/inc/home-event-data.php';

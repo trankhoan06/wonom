@@ -784,7 +784,8 @@ h2 {
     gap: 1.6rem;
 }
 
-.nav-item:hover {
+.nav-item:hover,
+.nav-item.active {
     color: #E41F2F;
 }
 
@@ -808,7 +809,8 @@ h2 {
     width: max-content;
 }
 
-.nav-item:hover {
+.nav-item:hover,
+.nav-item.active {
     color: #E41F2F;
 }
 
@@ -816,7 +818,8 @@ h2 {
     transition: all 0.3s ease;
 }
 
-.nav-item:hover::before {
+.nav-item:hover::before,
+.nav-item.active::before {
     opacity: 1;
     right: 0;
 }

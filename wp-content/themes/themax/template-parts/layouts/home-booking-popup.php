@@ -127,8 +127,8 @@ if (!defined('ABSPATH')) exit;
                     <div class="popup_form_actions">
                         <button class="popup_form_btn popup_form_booking_submit cl_cream txt_extrabold btn"
                             type="submit">GỬI YÊU CẦU ĐẶT CHỖ</button>
-                        <div class="popup_form_note txt_13 txt_bold cl_text txt_center">Bạn sẽ được chuyển sang Zalo để
-                            xác nhận lịch với nhân viên.</div>
+                        <div class="popup_form_note txt_13 txt_bold cl_text txt_center">Yêu cầu của bạn đã được ghi
+                            nhận. Nhân viên sẽ sớm liên hệ xác nhận.</div>
                         <div class="popup_form_divider txt_13 txt_bold cl_dark_brown">HOẶC GỌI HỖ TRỢ</div>
                         <a class="popup_form_btn btn2 cl_cream txt_18 txt_extrabold btn" href="tel:0968487096">0968 487
                             096</a>

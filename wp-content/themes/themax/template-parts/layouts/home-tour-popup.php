@@ -186,8 +186,8 @@ if (!defined('ABSPATH')) exit;
                         <div class="tour_detail_form_actions">
                             <button class="tour_detail_form_submit popup_form_btn btn cl_cream txt_13 txt_extrabold"
                                 type="submit">GỬI YÊU CẦU ĐẶT LỊCH</button>
-                            <div class="tour_detail_form_note txt_11 txt_bold txt_center">Bạn sẽ được chuyển sang Zalo
-                                để xác nhận lịch với nhân viên.</div>
+                            <div class="tour_detail_form_note txt_11 txt_bold txt_center">Yêu cầu của bạn đã được ghi
+                                nhận. Nhân viên sẽ sớm liên hệ xác nhận.</div>
                             <div class="tour_detail_form_divider txt_11 txt_bold cl_dark_brown">HOẶC GỌI HỖ TRỢ</div>
                             <a class="tour_detail_form_phone popup_form_btn btn cl_cream txt_13 txt_extrabold"
                                 href="tel:0968487096">0968 487 096</a>

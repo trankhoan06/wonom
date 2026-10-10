@@ -565,6 +565,76 @@ $(document).ready(function () {
         $('#langWrapper').toggleClass('active');
     });
 
+    // Keep the header navigation in sync with the section currently in view.
+    const headerNavItems = Array.from(document.querySelectorAll('.header-nav .nav-item[href^="#"]'));
+    const headerSections = headerNavItems.map(function (item) {
+        const id = item.getAttribute('href').slice(1);
+        return { id: id, item: item, section: document.getElementById(id) };
+    }).filter(function (entry) {
+        return entry.id && entry.section;
+    });
+    let headerScrollFrame = null;
+
+    function setActiveHeaderItem(activeId) {
+        headerSections.forEach(function (entry) {
+            const isActive = entry.id === activeId;
+            entry.item.classList.toggle('active', isActive);
+            if (isActive) entry.item.setAttribute('aria-current', 'location');
+            else entry.item.removeAttribute('aria-current');
+        });
+    }
+
+    function syncActiveHeaderItem() {
+        headerScrollFrame = null;
+        const header = document.querySelector('.header');
+        const headerHeight = header ? header.getBoundingClientRect().height : 0;
+        const probeY = Math.max(headerHeight + 1, window.innerHeight * 0.35);
+        let activeId = '';
+
+        headerSections.forEach(function (entry) {
+            const rect = entry.section.getBoundingClientRect();
+            if (rect.top <= probeY && rect.bottom > probeY) {
+                activeId = entry.id;
+            }
+        });
+
+        setActiveHeaderItem(activeId);
+    }
+
+    function requestHeaderScrollSync() {
+        if (headerScrollFrame !== null) return;
+        headerScrollFrame = window.requestAnimationFrame(syncActiveHeaderItem);
+    }
+
+    headerNavItems.forEach(function (item) {
+        item.addEventListener('click', function (event) {
+            const id = item.getAttribute('href').slice(1);
+            const target = document.getElementById(id);
+            if (!target) return;
+
+            setActiveHeaderItem(id);
+
+            // Desktop navigation is handled by the full-page GSAP controller.
+            if (window.matchMedia('(min-width: 992px)').matches) return;
+
+            event.preventDefault();
+            const header = document.querySelector('.header');
+            const headerOffset = header ? header.getBoundingClientRect().height : 0;
+            const targetTop = window.scrollY + target.getBoundingClientRect().top - headerOffset;
+            window.scrollTo({
+                top: Math.max(0, targetTop),
+                behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+            });
+            window.history.replaceState(null, '', '#' + id);
+        });
+    });
+
+    window.addEventListener('scroll', requestHeaderScrollSync, { passive: true });
+    window.addEventListener('resize', requestHeaderScrollSync, { passive: true });
+    window.addEventListener('load', requestHeaderScrollSync);
+    window.addEventListener('wonom:section-transition-end', requestHeaderScrollSync);
+    requestHeaderScrollSync();
+
     // Toggle hamburger menu
     $('.header_menu').on('click', function (e) {
         $(this).toggleClass('active');
@@ -2189,8 +2259,8 @@ $(document).ready(function () {
             $('.workshop_detail_price_row .cl_meta').text('/ ' + $card.attr('data-detail-duration'));
         }
         const uiStrings = (window.wonomHome && window.wonomHome.i18n) || {};
-        $('.workshop_detail_booking').text(uiStrings.book_via_zalo || 'ĐẶT LỊCH QUA ZALO');
-        $('.workshop_detail_note').text(uiStrings.zalo_note || 'Bạn sẽ được chuyển sang Zalo để xác nhận lịch với nhân viên.');
+        $('.workshop_detail_booking').text(uiStrings.book_via_zalo || 'ĐẶT LỊCH ONLINE');
+        $('.workshop_detail_note').text(uiStrings.zalo_note || 'Yêu cầu của bạn đã được ghi nhận. Nhân viên sẽ sớm liên hệ xác nhận.');
         $('.workshop_detail_booking')
             .attr('data-booking-product-id', productId)
             .attr('data-booking-product-name', productName);

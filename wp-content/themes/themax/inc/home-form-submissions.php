@@ -213,6 +213,10 @@ function wonom_handle_home_form_submission()
     update_post_meta($post_id, '_wonom_email_status', $mail_sent ? 'sent' : 'failed');
     update_post_meta($post_id, '_wonom_email_sent_at', $mail_sent ? current_time('mysql') : '');
 
+    if (function_exists('wonom_zalo_queue_submission')) {
+        wonom_zalo_queue_submission($post_id);
+    }
+
     wp_send_json_success(array(
         'message' => wonom_home_t('success'),
         'submission_id' => $post_id,
@@ -230,6 +234,7 @@ function wonom_submission_admin_columns($columns)
         'wonom_type' => 'Loại',
         'wonom_status' => 'Trạng thái',
         'wonom_email' => 'Email',
+        'wonom_zalo' => 'Zalo',
         'date' => 'Ngày gửi',
     );
 }
@@ -255,6 +260,18 @@ function wonom_submission_admin_column($column, $post_id)
         echo 'sent' === $email_status
             ? '<span class="wonom-mail-sent">Đã gửi</span>'
             : ('failed' === $email_status ? '<span class="wonom-mail-failed">Gửi lỗi</span>' : '—');
+    }
+    if ('wonom_zalo' === $column) {
+        $zalo_status = get_post_meta($post_id, '_wonom_zalo_status', true);
+        $zalo_labels = array(
+            'queued' => 'Đang chờ',
+            'retrying' => 'Đang thử lại',
+            'sent' => 'Đã gửi',
+            'failed' => 'Gửi lỗi',
+        );
+        echo isset($zalo_labels[$zalo_status])
+            ? '<span class="wonom-zalo wonom-zalo-' . esc_attr($zalo_status) . '">' . esc_html($zalo_labels[$zalo_status]) . '</span>'
+            : '—';
     }
 }
 add_action('manage_wonom_submission_posts_custom_column', 'wonom_submission_admin_column', 10, 2);
@@ -359,6 +376,11 @@ function wonom_submission_render_meta_box($post)
         'consent' => 'Đồng ý nhận ưu đãi',
         'email_status' => 'Trạng thái gửi email',
         'email_sent_at' => 'Thời gian gửi email',
+        'zalo_status' => 'Trạng thái gửi Zalo',
+        'zalo_sent_at' => 'Thời gian gửi Zalo',
+        'zalo_message_id' => 'Zalo Message ID',
+        'zalo_attempts' => 'Số lần gửi Zalo',
+        'zalo_error' => 'Lỗi Zalo gần nhất',
         'source_url' => 'Trang gửi yêu cầu',
     );
     echo '<table class="widefat striped"><tbody>';
@@ -377,6 +399,17 @@ function wonom_submission_render_meta_box($post)
         echo '<option value="' . esc_attr($value) . '" ' . selected($current_status, $value, false) . '>' . esc_html($label) . '</option>';
     }
     echo '</select>';
+
+    if (function_exists('wonom_zalo_is_enabled') && wonom_zalo_is_enabled()) {
+        $resend_url = wp_nonce_url(
+            add_query_arg(array(
+                'action' => 'wonom_resend_zalo',
+                'post_id' => $post->ID,
+            ), admin_url('admin-post.php')),
+            'wonom_resend_zalo_' . $post->ID
+        );
+        echo '<p><a class="button" href="' . esc_url($resend_url) . '">Gửi lại thông báo Zalo</a></p>';
+    }
 }
 
 function wonom_submission_save_status($post_id)
@@ -404,10 +437,11 @@ function wonom_submission_admin_styles()
     $screen = get_current_screen();
     if (!$screen || 'wonom_submission' !== $screen->post_type) return;
     echo '<style>
-        .wonom-status,.wonom-mail-sent,.wonom-mail-failed{display:inline-block;padding:3px 8px;border-radius:999px;font-weight:600}
+        .wonom-status,.wonom-mail-sent,.wonom-mail-failed,.wonom-zalo{display:inline-block;padding:3px 8px;border-radius:999px;font-weight:600}
         .wonom-status-new{background:#e8f1ff;color:#145db2}.wonom-status-contacted{background:#fff4d6;color:#8a5a00}
-        .wonom-status-completed,.wonom-mail-sent{background:#e7f7ed;color:#176b3a}
-        .wonom-status-cancelled,.wonom-mail-failed{background:#fdebec;color:#a51d2d}
+        .wonom-status-completed,.wonom-mail-sent,.wonom-zalo-sent{background:#e7f7ed;color:#176b3a}
+        .wonom-zalo-queued,.wonom-zalo-retrying{background:#fff4d6;color:#8a5a00}
+        .wonom-status-cancelled,.wonom-mail-failed,.wonom-zalo-failed{background:#fdebec;color:#a51d2d}
     </style>';
 }
 add_action('admin_head', 'wonom_submission_admin_styles');

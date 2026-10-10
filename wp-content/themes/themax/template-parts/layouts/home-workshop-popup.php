@@ -81,10 +81,10 @@ if (!defined('ABSPATH')) exit;
                     <button class="workshop_detail_booking popup_form_btn cl_cream txt_extrabold btn txt_16"
                         type="button" data-booking-trigger data-booking-type="workshop" data-booking-floor="3F"
                         data-booking-venue="WORKSHOP" data-booking-title="ĐẶT LỊCH WORKSHOP"
-                        data-booking-subtitle="3F - WORKSHOP" data-booking-submit="GỬI YÊU CẦU ĐẶT LỊCH">ĐẶT LỊCH QUA
-                        ZALO</button>
-                    <div class="workshop_detail_note txt_14 txt_bold txt_center">Bạn sẽ được chuyển sang Zalo để xác
-                        nhận lịch với nhân viên.</div>
+                        data-booking-subtitle="3F - WORKSHOP" data-booking-submit="GỬI YÊU CẦU ĐẶT LỊCH">ĐẶT LỊCH
+                        ONLINE</button>
+                    <div class="workshop_detail_note txt_14 txt_bold txt_center">Yêu cầu của bạn đã được ghi nhận.
+                        Nhân viên sẽ sớm liên hệ xác nhận.</div>
                 </div>
             </div>
         </div>
