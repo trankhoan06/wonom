@@ -1,5 +1,32 @@
 <?php
 if (!defined('ABSPATH')) exit;
+$global_action_option = static function ($field, $fallback = '') {
+    $value = tr_options_field('wonom_home_options.' . $field);
+    return null === $value || false === $value || '' === $value ? $fallback : $value;
+};
+$global_actions = array(
+    array(
+        'class' => 'item1',
+        'icon' => wonom_get_home_image_url('home_global_member_icon', '/asset/img/icon_web.webp'),
+        'text' => $global_action_option('home_global_member_text', 'THAM QUAN TOUR'),
+        'link' => $global_action_option('home_global_member_link', '#tour'),
+        'text_class' => '',
+    ),
+    array(
+        'class' => 'item2',
+        'icon' => wonom_get_home_image_url('home_global_phone_icon', '/asset/img/icon_tel.svg'),
+        'text' => $global_action_option('home_global_phone_text', 'ĐẶT CHỖ'),
+        'link' => $global_action_option('home_global_phone_link', '#contact'),
+        'text_class' => ' cl_cream',
+    ),
+    array(
+        'class' => 'item3',
+        'icon' => wonom_get_home_image_url('home_global_zalo_icon', '/asset/img/icon_zal.svg'),
+        'text' => $global_action_option('home_global_zalo_text', '0968 487 096'),
+        'link' => $global_action_option('home_global_zalo_link', 'tel:0968487096'),
+        'text_class' => ' cl_cream',
+    ),
+);
 ?>
 <section class="global_btn">
         <a href="/#top" class="global_btn_top svg_full btn">
@@ -14,23 +41,16 @@ if (!defined('ABSPATH')) exit;
 
         </a>
         <div class="global_btn_list">
-            <div class="global_btn_list_item item1">
-                <div class="global_btn_list_item_icon img_full">
-                    <img src="asset/img/icon_web.webp" alt="" width="76" height="60" loading="lazy" decoding="async">
-                </div>
-                <div class="global_btn_list_item_txt txt_14 txt_extrabold txt_uppercase"></div>
-            </div>
-            <div class="global_btn_list_item item2">
-                <div class="global_btn_list_item_icon img_full">
-                    <img src="asset/img/icon_tel.svg" alt="">
-                </div>
-                <div class="global_btn_list_item_txt txt_14 txt_extrabold cl_cream txt_uppercase"></div>
-            </div>
-            <div class="global_btn_list_item item3">
-                <div class="global_btn_list_item_icon img_full">
-                    <img src="asset/img/icon_zal.svg" alt="">
-                </div>
-                <div class="global_btn_list_item_txt txt_14 txt_extrabold cl_cream txt_uppercase"></div>
-            </div>
+            <?php foreach ($global_actions as $global_action) : ?>
+                <a class="global_btn_list_item <?php echo esc_attr($global_action['class']); ?>"
+                    href="<?php echo esc_url($global_action['link']); ?>"
+                    data-label="<?php echo esc_attr($global_action['text']); ?>"
+                    aria-label="<?php echo esc_attr($global_action['text']); ?>">
+                    <div class="global_btn_list_item_icon img_full">
+                        <img src="<?php echo esc_url($global_action['icon']); ?>" alt="" loading="lazy" decoding="async">
+                    </div>
+                    <div class="global_btn_list_item_txt txt_14 txt_extrabold<?php echo esc_attr($global_action['text_class']); ?> txt_uppercase"></div>
+                </a>
+            <?php endforeach; ?>
         </div>
     </section>

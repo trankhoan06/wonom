@@ -531,6 +531,46 @@ body {
     line-height: 1.5;
 }
 
+.wonom-page-scroll {
+    width: 100%;
+}
+
+@media only screen and (max-width: 991px) {
+    html {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+    }
+
+    body.wonom-home {
+        width: 100%;
+        height: 100vh;
+        height: 100svh;
+        overflow: hidden;
+        overscroll-behavior: none;
+    }
+
+    .wonom-page-scroll {
+        height: 100vh;
+        height: 100svh;
+        overflow-x: hidden;
+        overflow-y: auto;
+        overscroll-behavior-y: contain;
+        scroll-padding-top: 7.7rem;
+        scrollbar-width: none;
+    }
+
+    .wonom-page-scroll::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+@media only screen and (max-width: 767px) {
+    .wonom-page-scroll {
+        scroll-padding-top: 5.6rem;
+    }
+}
+
 .container {
     width: 100%;
     height: 100vh;
@@ -611,6 +651,13 @@ h2 {
         height: auto;
         object-fit: cover;
     }
+}
+
+.wonom_admin_icon {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
 }
 
 .txt_bold {
@@ -1083,7 +1130,7 @@ h2 {
         bottom: 0;
         background-color: rgba(0, 0, 0, 0.5);
         z-index: -1;
-        height: 100dvh;
+        height: auto;
         opacity: 0;
         visibility: hidden;
         transition: all 0.3s ease-in-out;
@@ -1098,6 +1145,7 @@ h2 {
         background-color: #FFF6DB;
         position: fixed;
         height: calc(100vh - 7.4rem);
+        height: calc(100svh - 7.4rem);
         right: 0;
         left: 50%;
         border-left: 2px solid #460700;
@@ -1175,7 +1223,8 @@ h2 {
         right: 0;
         left: 7.8rem;
         padding-inline: 3.2rem;
-        height: calc(100dvh - 5.6rem);
+        height: calc(100vh - 5.6rem);
+        height: calc(100svh - 5.6rem);
         top: 5.6rem;
     }
 
@@ -1228,7 +1277,8 @@ h2 {
 
 /* banner */
 .home_banner {
-    height: 100dvh;
+    height: 100vh;
+    height: 100svh;
     width: 100%;
     position: relative;
 }
@@ -1265,6 +1315,12 @@ h2 {
 .home_banner_image_item.active {
     opacity: 1;
     visibility: visible;
+}
+
+.home_banner_image_item picture {
+    display: block;
+    width: 100%;
+    height: 100%;
 }
 
 .home_banner_overlay {
@@ -1721,7 +1777,7 @@ h2 {
 
     .home_intro_icon2 {
         width: 8rem;
-        left: 48%;
+        left: 43%;
     }
 
     .home_intro_icon {
@@ -2654,13 +2710,14 @@ h2 {
     gap: 6.4rem;
 }
 
-.workshop_meta_item> :last-child {
+.workshop_meta_item> :not(:first-child) {
     margin-top: .6rem;
 }
 
 .workshop_catalog {
     width: 46%;
     height: calc(100vh - min(18rem, 19vh));
+    height: calc(100svh - min(18rem, 19vh));
     min-height: 42rem;
     overflow: hidden;
     border: 2px solid #460700;
@@ -3049,14 +3106,28 @@ h2 {
     margin-top: min(2.4rem, 2.6vh);
 }
 
-.workshop_detail_section ul {
+.workshop_detail_section ul,
+.workshop_detail_section ol {
     margin: 1rem 0 0;
     padding-left: 2rem;
+}
+
+.workshop_detail_section ul {
+    list-style: disc outside;
+}
+
+.workshop_detail_section ol {
+    list-style: decimal outside;
 }
 
 .workshop_detail_section li {
     margin-top: .8rem;
     line-height: 1.45;
+}
+
+.workshop_detail_section img {
+    max-width: 100%;
+    height: auto;
 }
 
 .workshop_detail_footer {
@@ -3320,6 +3391,20 @@ h2 {
 }
 
 @media only screen and (max-width: 767px) {
+    .workshop_detail_thumb {
+        width: 6.4rem;
+        height: 6.4rem;
+        flex: 0 0 6.4rem;
+    }
+
+    .workshop_detail_thumb::after {
+        display: none;
+    }
+
+    .home_explore_bg {
+        display: none !important;
+    }
+
     .workshop_detail_thumbs {
         padding-bottom: 1.6rem;
         flex: none;
@@ -3333,6 +3418,7 @@ h2 {
     .home_explore_wrap {
         height: auto;
         overflow: visible;
+        /* padding-bottom: 0; */
     }
 
     .home_explore_floor_section {
@@ -5388,20 +5474,19 @@ h2 {
 
 }
 
-.popup_tour_sidebar_card_time {
+.popup_tour_sidebar_card_meta {
+    display: grid;
+    gap: 1.2rem;
     margin-top: 1.6rem;
 }
 
-.popup_tour_sidebar_card_timedes {
-    margin-top: .6rem;
+.popup_tour_sidebar_card_meta:empty {
+    display: none;
 }
 
-.popup_tour_sidebar_card_cost {
-    margin-top: 1.2rem;
-}
-
-.popup_tour_sidebar_card_costdes {
+.popup_tour_sidebar_card_meta_content {
     margin-top: .6rem;
+    overflow-wrap: anywhere;
 }
 
 .popup_tour_sidebar_card_button {
@@ -5605,8 +5690,9 @@ h2 {
 
 @media only screen and (max-width: 767px) {
     .popup_tour {
-        height: 100dvh;
-        transform: translate3d(0, calc(100dvh + 2px), 0);
+        height: 100vh;
+        height: 100svh;
+        transform: translate3d(0, calc(100svh + 2px), 0);
     }
 
     .popup_tour.active {
@@ -5622,6 +5708,7 @@ h2 {
 
     .popup_tour.tour.active {
         transform: none;
+        will-change: auto;
     }
 
     .popup_tour.tour>.home_piano {
@@ -5681,35 +5768,20 @@ h2 {
         line-height: 1.25;
     }
 
-    .popup_tour.tour .popup_tour_sidebar_card_time {
-        grid-column: 1;
-        grid-row: 2;
+    .popup_tour.tour .popup_tour_sidebar_card_meta {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-column: 1 / -1;
         margin-top: 0;
     }
 
-    .popup_tour.tour .popup_tour_sidebar_card_timedes {
-        grid-column: 1;
-        grid-row: 3;
+    .popup_tour.tour .popup_tour_sidebar_card_meta_content {
         margin-top: .4rem;
         font-size: 1.5rem;
-    }
-
-    .popup_tour.tour .popup_tour_sidebar_card_cost {
-        grid-column: 2;
-        grid-row: 2;
-        margin-top: 0;
-    }
-
-    .popup_tour.tour .popup_tour_sidebar_card_costdes {
-        font-size: 1.5rem;
-        grid-column: 2;
-        grid-row: 3;
-        margin-top: .4rem;
     }
 
     .popup_tour.tour .popup_tour_sidebar_card_button {
         grid-column: 1 / -1;
-        grid-row: 4;
         margin-top: 1.2rem;
     }
 
@@ -5871,6 +5943,7 @@ h2 {
 
     .popup_tour.event.active {
         transform: none;
+        will-change: auto;
     }
 
     .popup_tour.event>.home_piano {
@@ -6043,6 +6116,7 @@ h2 {
     box-shadow: 2px 2px 0 0 #460700;
     background-color: #FFF6DB;
     position: absolute;
+    z-index: 2;
     left: 1.2rem;
     bottom: 1.2rem;
     padding: .5rem 1.2rem;
@@ -6069,6 +6143,69 @@ h2 {
     border: 2px solid #460700;
     box-shadow: .4rem .4rem 0 0 #460700;
     overflow: hidden;
+}
+
+.wonom-lazy-media {
+    background: #1d1d1d;
+}
+
+.wonom-lazy-video-player {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #000;
+}
+
+.wonom-lazy-media video.wonom-lazy-video-player {
+    object-fit: cover;
+}
+
+.wonom-lazy-video-play {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: 4;
+    display: grid;
+    width: clamp(4.8rem, 7vw, 7.2rem);
+    height: clamp(4.8rem, 7vw, 7.2rem);
+    padding: 0;
+    border: 2px solid #460700;
+    border-radius: 50%;
+    box-shadow: .3rem .3rem 0 #460700;
+    background: #FFCE56;
+    cursor: pointer;
+    place-items: center;
+    transform: translate(-50%, -50%);
+    transition: transform .2s ease, box-shadow .2s ease, background-color .2s ease;
+}
+
+.wonom-lazy-video-play span {
+    display: block;
+    width: 0;
+    height: 0;
+    margin-left: .4rem;
+    border-top: .9rem solid transparent;
+    border-bottom: .9rem solid transparent;
+    border-left: 1.5rem solid #460700;
+}
+
+.wonom-lazy-video-play:hover {
+    box-shadow: rgb(70, 7, 0) 1px 1px 0;
+    background: #DFA72B;
+    transform: translate(calc(-50% + 2px), calc(-50% + 2px));
+}
+
+.wonom-lazy-video-play:focus-visible {
+    outline: 3px solid #fff;
+    outline-offset: 2px;
+}
+
+.wonom-lazy-media.is-playing > .wonom-lazy-video-thumbnail,
+.wonom-lazy-media.is-playing > .wonom-lazy-video-play {
+    display: none;
 }
 
 .popup_tour_seeall_list_item:nth-child(odd) .popup_tour_seeall_list_item_img_block {
@@ -6331,6 +6468,7 @@ h2 {
     display: flex;
     flex-direction: column;
     max-height: 94vh;
+    max-height: 94svh;
     overflow-y: auto;
     -ms-overflow-style: none;
     scrollbar-width: none;

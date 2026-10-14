@@ -48,17 +48,14 @@ function wonom_submission_notification_emails()
 {
     $configured = (string) tr_options_field('tr_theme_options.receive_email');
     $candidates = preg_split('/[\s,;]+/', $configured, -1, PREG_SPLIT_NO_EMPTY);
-    $emails = array();
+    // The operations mailbox must receive every membership and booking request.
+    $emails = array('wonomcomplex@gmail.com');
 
     foreach ($candidates as $candidate) {
         $email = sanitize_email($candidate);
         if ($email && is_email($email)) {
             $emails[] = $email;
         }
-    }
-
-    if (!$emails) {
-        $emails[] = get_option('admin_email');
     }
 
     return array_values(array_unique($emails));
@@ -400,7 +397,12 @@ function wonom_submission_render_meta_box($post)
     }
     echo '</select>';
 
-    if (function_exists('wonom_zalo_is_enabled') && wonom_zalo_is_enabled()) {
+    $submission_form_type = (string) get_post_meta($post->ID, '_wonom_form_type', true);
+    if (
+        function_exists('wonom_zalo_is_enabled')
+        && wonom_zalo_is_enabled()
+        && in_array($submission_form_type, array('booking', 'tour'), true)
+    ) {
         $resend_url = wp_nonce_url(
             add_query_arg(array(
                 'action' => 'wonom_resend_zalo',

@@ -134,6 +134,28 @@ $(document).ready(function () {
         return (input / 10) * parseFloat($("html").css("font-size"));
     };
 
+    const pageScroller = document.querySelector('.wonom-page-scroll');
+    const mobilePageScrollMedia = window.matchMedia('(max-width: 991px)');
+    const usesPageScroller = () => Boolean(pageScroller && mobilePageScrollMedia.matches);
+    const getPageScrollTop = () => usesPageScroller() ? pageScroller.scrollTop : window.scrollY;
+    const getPageViewportHeight = () => usesPageScroller() ? pageScroller.clientHeight : window.innerHeight;
+    const getElementPageTop = (element) => {
+        if (!element) return 0;
+        if (!usesPageScroller()) return element.getBoundingClientRect().top + window.scrollY;
+
+        return element.getBoundingClientRect().top
+            - pageScroller.getBoundingClientRect().top
+            + pageScroller.scrollTop;
+    };
+    const scrollPageTo = (options) => {
+        if (usesPageScroller()) pageScroller.scrollTo(options);
+        else window.scrollTo(options);
+    };
+    const addPageScrollListener = (callback) => {
+        window.addEventListener('scroll', callback, { passive: true });
+        if (pageScroller) pageScroller.addEventListener('scroll', callback, { passive: true });
+    };
+
     const resolveWonomAsset = (path) => {
         if (typeof path !== 'string' || !path.startsWith('/asset/')) return path;
         const assetBase = window.wonomHome?.assetUrl || '/asset/';
@@ -211,6 +233,8 @@ $(document).ready(function () {
     let pageScrollLocked = false;
     let lockedScrollY = 0;
     let previousBodyStyle = null;
+    let previousPageScrollerStyle = null;
+    let lockedScrollTarget = null;
     let pageScrollUnlockTimer = 0;
 
     const lockPageScroll = () => {
@@ -218,7 +242,24 @@ $(document).ready(function () {
         pageScrollUnlockTimer = 0;
         if (pageScrollLocked) return;
 
-        lockedScrollY = window.scrollY;
+        lockedScrollY = getPageScrollTop();
+
+        if (usesPageScroller()) {
+            previousPageScrollerStyle = {
+                overflow: pageScroller.style.overflow,
+                overflowX: pageScroller.style.overflowX,
+                overflowY: pageScroller.style.overflowY,
+                overscrollBehavior: pageScroller.style.overscrollBehavior,
+                touchAction: pageScroller.style.touchAction
+            };
+            lockedScrollTarget = pageScroller;
+            pageScroller.style.overflow = 'hidden';
+            pageScroller.style.overscrollBehavior = 'none';
+            pageScroller.style.touchAction = 'none';
+            pageScrollLocked = true;
+            return;
+        }
+
         previousBodyStyle = {
             position: body.style.position,
             top: body.style.top,
@@ -234,17 +275,28 @@ $(document).ready(function () {
         body.style.right = '0';
         body.style.width = '100%';
         body.style.overflow = 'hidden';
+        lockedScrollTarget = body;
         pageScrollLocked = true;
     };
 
     const unlockPageScroll = () => {
         if (!pageScrollLocked) return;
 
-        Object.keys(previousBodyStyle).forEach((property) => {
-            body.style[property] = previousBodyStyle[property];
-        });
+        if (lockedScrollTarget === pageScroller && previousPageScrollerStyle) {
+            Object.keys(previousPageScrollerStyle).forEach((property) => {
+                pageScroller.style[property] = previousPageScrollerStyle[property];
+            });
+            pageScroller.scrollTop = lockedScrollY;
+        } else if (previousBodyStyle) {
+            Object.keys(previousBodyStyle).forEach((property) => {
+                body.style[property] = previousBodyStyle[property];
+            });
+            window.scrollTo(0, lockedScrollY);
+        }
+
+        lockedScrollTarget = null;
+        previousPageScrollerStyle = null;
         pageScrollLocked = false;
-        window.scrollTo(0, lockedScrollY);
         syncExploreMobileFloorOnScroll();
     };
 
@@ -728,8 +780,8 @@ $(document).ready(function () {
             event.preventDefault();
             const header = document.querySelector('.header');
             const headerOffset = header ? header.getBoundingClientRect().height : 0;
-            const targetTop = window.scrollY + target.getBoundingClientRect().top - headerOffset;
-            window.scrollTo({
+            const targetTop = getElementPageTop(target) - headerOffset;
+            scrollPageTo({
                 top: Math.max(0, targetTop),
                 behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
             });
@@ -737,7 +789,7 @@ $(document).ready(function () {
         });
     });
 
-    window.addEventListener('scroll', requestHeaderScrollSync, { passive: true });
+    addPageScrollListener(requestHeaderScrollSync);
     window.addEventListener('resize', requestHeaderResizeSync, { passive: true });
     window.addEventListener('load', requestHeaderScrollSync);
     window.addEventListener('wonom:section-transition-end', requestHeaderScrollSync);
@@ -782,7 +834,6 @@ $(document).ready(function () {
     const exploreSection = document.getElementById('explore');
     const exploreHeader = document.querySelector('header');
     let exploreMobileFloorScrollFrame = null;
-    let exploreFloorNavHeight = 0;
     let exploreActivationLine = 16;
     let exploreMetricWidth = 0;
     let exploreSectionTop = 0;
@@ -798,15 +849,13 @@ $(document).ready(function () {
     function measureExploreMobileMetrics(force) {
         if (!force && Math.abs(window.innerWidth - exploreMetricWidth) <= 2) return;
         exploreMetricWidth = window.innerWidth;
-        exploreFloorNavHeight = exploreMobileFloorNav ? exploreMobileFloorNav.offsetHeight : 0;
         exploreActivationLine = (exploreHeader ? exploreHeader.offsetHeight : 0) + 16;
         if (exploreSection) {
-            var exploreRect = exploreSection.getBoundingClientRect();
-            exploreSectionTop = exploreRect.top + window.scrollY;
+            exploreSectionTop = getElementPageTop(exploreSection);
             exploreSectionBottom = exploreSectionTop + exploreSection.offsetHeight;
         }
         exploreFloorSectionTops = exploreMobileFloorSections.map(function (section) {
-            return section.getBoundingClientRect().top + window.scrollY;
+            return getElementPageTop(section);
         });
         requestExploreMobileFloorSync();
     }
@@ -856,9 +905,9 @@ $(document).ready(function () {
         if (pageScrollLocked) return;
 
         var floorNav = exploreMobileFloorNav;
-        var viewportTop = window.scrollY;
-        var viewportBottom = viewportTop + window.innerHeight;
-        var navIsVisible = Boolean(exploreSection && exploreSectionTop < viewportBottom && exploreSectionBottom > viewportTop + exploreFloorNavHeight);
+        var viewportTop = getPageScrollTop();
+        var viewportBottom = viewportTop + getPageViewportHeight();
+        var navIsVisible = Boolean(exploreSection && exploreSectionTop < viewportBottom && exploreSectionBottom > viewportBottom);
         var activationPosition = viewportTop + exploreActivationLine;
         var activeIndex = 0;
 
@@ -886,6 +935,10 @@ $(document).ready(function () {
         var oldIndex = $exploreContentTabs.index($exploreContentTabs.filter('.active').first());
         var newIndex = $exploreContentTabs.index($targetContent);
         if (newIndex < 0) return;
+
+        $exploreContentTabs.not($targetContent).find('.wonom-lazy-media').each(function () {
+            resetWonomLazyVideo(this);
+        });
 
         var $transitionTabs = $targetContent;
         if (oldIndex >= 0) $transitionTabs = $transitionTabs.add($exploreContentTabs.eq(oldIndex));
@@ -950,11 +1003,11 @@ $(document).ready(function () {
             var mobileHeader = document.querySelector('header');
             var headerOffset = mobileHeader ? mobileHeader.getBoundingClientRect().height : 0;
             var targetTop = targetFloor
-                ? targetFloor.getBoundingClientRect().top + window.scrollY - headerOffset
-                : document.getElementById('explore').offsetTop;
+                ? getElementPageTop(targetFloor) - headerOffset
+                : getElementPageTop(document.getElementById('explore'));
 
             window.history.replaceState(null, '', '#explore');
-            window.scrollTo({ top: targetTop, behavior: 'smooth' });
+            scrollPageTo({ top: targetTop, behavior: 'smooth' });
             return;
         }
 
@@ -1021,7 +1074,7 @@ $(document).ready(function () {
 
     exploreMobileMedia.addEventListener('change', syncExploreMobileAccordion);
     syncExploreMobileAccordion();
-    window.addEventListener('scroll', requestExploreMobileFloorSync, { passive: true });
+    addPageScrollListener(requestExploreMobileFloorSync);
     window.addEventListener('resize', function () {
         measureExploreMobileMetrics(false);
     }, { passive: true });
@@ -1185,6 +1238,11 @@ $(document).ready(function () {
                     swiper.params.slidesOffsetAfter = offset;
                     swiper.update();
                 }
+            },
+            slideChange: function (swiper) {
+                swiper.slides.forEach(function (slide, index) {
+                    if (index !== swiper.activeIndex) resetWonomLazyVideo(slide);
+                });
             }
         },
         navigation: {
@@ -1287,8 +1345,24 @@ $(document).ready(function () {
 
         activeHomeTourIndex = index;
         $popup.find('.popup_tour_sidebar_card_title, .popup_tour_content_title').text(tour.title || '');
-        $popup.find('.popup_tour_sidebar_card_timedes').text(tour.duration || '');
-        $popup.find('.popup_tour_sidebar_card_costdes').text(tour.price || '');
+        var $metaItems = $popup.find('.popup_tour_sidebar_card_meta').empty();
+        (Array.isArray(tour.metaItems) ? tour.metaItems : []).forEach(function (metaItem) {
+            if (!metaItem || (!metaItem.label && !metaItem.content)) return;
+            var $metaItem = $('<div>', { class: 'popup_tour_sidebar_card_meta_item' });
+            if (metaItem.label) {
+                $('<div>', {
+                    class: 'popup_tour_sidebar_card_meta_label txt_13 cl_meta',
+                    text: metaItem.label
+                }).appendTo($metaItem);
+            }
+            if (metaItem.content) {
+                $('<div>', {
+                    class: 'popup_tour_sidebar_card_meta_content txt_bold',
+                    text: metaItem.content
+                }).appendTo($metaItem);
+            }
+            $metaItem.appendTo($metaItems);
+        });
         $popup.find('.popup_tour_content_img img').attr({
             src: tour.popupImage || tour.image || '',
             alt: tour.popupImageAlt || tour.title || ''
@@ -1516,14 +1590,23 @@ $(document).ready(function () {
     if (globalTopButton) {
         let globalTopButtonVisible = null;
         const syncGlobalTopButton = () => {
-            const isVisible = window.scrollY > 10;
+            const isVisible = getPageScrollTop() > 10;
             if (globalTopButtonVisible === isVisible) return;
             globalTopButtonVisible = isVisible;
             globalTopButton.classList.toggle('is-visible', isVisible);
             globalTopButton.setAttribute('aria-hidden', String(!isVisible));
         };
 
-        window.addEventListener('scroll', syncGlobalTopButton, { passive: true });
+        addPageScrollListener(syncGlobalTopButton);
+        globalTopButton.addEventListener('click', function (event) {
+            if (!usesPageScroller()) return;
+            event.preventDefault();
+            scrollPageTo({
+                top: 0,
+                behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
+            });
+            window.history.replaceState(null, '', window.location.pathname + window.location.search + '#top');
+        });
         syncGlobalTopButton();
     }
 
@@ -1740,23 +1823,19 @@ $(document).ready(function () {
 
     $('.global_btn_list_item').hover(
         function () {
-            var uiStrings = (window.wonomHome && window.wonomHome.i18n) || {};
-            var text = '';
+            var text = $(this).attr('data-label') || '';
             var $txtEl = null;
             if ($(this).hasClass('item1')) {
-                text = uiStrings.tour_hover || 'tham quan tour';
                 $(this).find('.global_btn_list_item_txt').remove();
-                $txtEl = $('<div class="global_btn_list_item_txt txt_14 txt_extrabold txt_uppercase">' + text + '</div>');
+                $txtEl = $('<div class="global_btn_list_item_txt txt_14 txt_extrabold txt_uppercase"></div>').text(text);
                 $(this).append($txtEl);
             } else if ($(this).hasClass('item2')) {
-                text = uiStrings.booking_short || 'đặt chỗ';
                 $(this).find('.global_btn_list_item_txt').remove();
-                $txtEl = $('<div class="global_btn_list_item_txt txt_14 txt_extrabold cl_cream txt_uppercase">' + text + '</div>');
+                $txtEl = $('<div class="global_btn_list_item_txt txt_14 txt_extrabold cl_cream txt_uppercase"></div>').text(text);
                 $(this).append($txtEl);
             } else if ($(this).hasClass('item3')) {
-                text = '0968 487 096';
                 $(this).find('.global_btn_list_item_txt').remove();
-                $txtEl = $('<div class="global_btn_list_item_txt txt_14 txt_extrabold cl_cream txt_uppercase">' + text + '</div>');
+                $txtEl = $('<div class="global_btn_list_item_txt txt_14 txt_extrabold cl_cream txt_uppercase"></div>').text(text);
                 $(this).append($txtEl);
             }
 
@@ -2105,15 +2184,31 @@ $(document).ready(function () {
 
         images.forEach(function (item, index) {
             var src = typeof item === 'string' ? item : item.src;
+            var type = typeof item === 'string' ? 'image' : (item.type || 'image');
             var category = typeof item === 'string' ? 'all' : item.category;
             var alt = typeof item === 'string' ? '' : (item.alt || '');
-            var tag = typeof item === 'string' ? 'tag' : (item.tag || 'tag');
+            var tag = typeof item === 'string' ? '' : (item.tag || '');
+            var thumbnail = typeof item === 'string' ? src : (item.thumbnail || '');
+            var media;
+            var tagMarkup = tag
+                ? '<div class="popup_tour_seeall_list_item_img_tag txt_14 txt_bold">' + escapeExploreHtml(tag) + '</div>'
+                : '';
+
+            if (type === 'video' || type === 'youtube') {
+                media = (thumbnail
+                    ? '<img class="wonom-lazy-video-thumbnail" data-wonom-popup-image="pending" loading="lazy" decoding="async" src="' + escapeExploreHtml(thumbnail) + '" alt="' + escapeExploreHtml(alt) + '">'
+                    : '') +
+                    '<button class="wonom-lazy-video-play" type="button" data-wonom-video-play="true" data-video-type="' + escapeExploreHtml(type) + '" data-video-src="' + escapeExploreHtml(src) + '" aria-label="' + escapeExploreHtml(alt || 'Phát video') + '"><span aria-hidden="true"></span></button>';
+            } else {
+                media = '<img data-wonom-popup-image="pending" loading="lazy" decoding="async" src="' + escapeExploreHtml(src) + '" alt="' + escapeExploreHtml(alt) + '">';
+            }
+
             columns[index % columns.length].push(
-                '<div class="popup_tour_seeall_list_item_img img-hover" data-gallery-category="' + escapeExploreHtml(category || 'all') + '">' +
-                '<div class="popup_tour_seeall_list_item_img_inner img_abs">' +
+                '<div class="popup_tour_seeall_list_item_img img-hover is-' + escapeExploreHtml(type) + '" data-gallery-category="' + escapeExploreHtml(category || 'all') + '">' +
+                '<div class="popup_tour_seeall_list_item_img_inner img_abs wonom-lazy-media">' +
                 '<div class="popup_tour_seeall_list_item_img_block"></div>' +
-                '<img data-wonom-popup-image="pending" loading="lazy" decoding="async" src="' + escapeExploreHtml(src) + '" alt="' + escapeExploreHtml(alt) + '"></div>' +
-                '<div class="popup_tour_seeall_list_item_img_tag txt_14 txt_bold">' + escapeExploreHtml(tag) + '</div></div>'
+                media + '</div>' +
+                tagMarkup + '</div>'
             );
         });
 
@@ -2123,10 +2218,56 @@ $(document).ready(function () {
 
         var activeFilter = $('.restaurant_popup_tab.gallery_filter_tab.active').attr('data-gallery-filter') || 'all';
         $('.restaurant_gallery [data-gallery-category]').each(function () {
-            var shouldShow = activeFilter === 'all' || $(this).attr('data-gallery-category') === activeFilter;
+            var categories = ($(this).attr('data-gallery-category') || '').split(/\s+/);
+            var shouldShow = activeFilter === 'all' || categories.indexOf(activeFilter) !== -1;
             $(this).toggle(shouldShow);
         });
     }
+
+    function resetWonomLazyVideo(container) {
+        if (!container) return;
+        container.querySelectorAll('.wonom-lazy-video-player').forEach(function (player) {
+            if (player.tagName === 'VIDEO') player.pause();
+            player.remove();
+        });
+        container.classList.remove('is-playing');
+    }
+
+    function stopExploreGalleryMedia() {
+        $('.restaurant_gallery .wonom-lazy-media').each(function () {
+            resetWonomLazyVideo(this);
+        });
+    }
+
+    $(document).on('click', '[data-wonom-video-play]', function () {
+        var button = this;
+        var container = button.closest('.wonom-lazy-media');
+        var type = button.getAttribute('data-video-type');
+        var src = button.getAttribute('data-video-src');
+        var player;
+        if (!container || !src || container.classList.contains('is-playing')) return;
+
+        if (type === 'youtube') {
+            player = document.createElement('iframe');
+            player.src = src + (src.indexOf('?') === -1 ? '?' : '&') + 'autoplay=1';
+            player.title = button.getAttribute('aria-label') || 'YouTube video';
+            player.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+            player.referrerPolicy = 'strict-origin-when-cross-origin';
+            player.allowFullscreen = true;
+        } else {
+            player = document.createElement('video');
+            player.src = src;
+            player.controls = true;
+            player.playsInline = true;
+            player.autoplay = true;
+            player.preload = 'metadata';
+        }
+
+        player.className = 'wonom-lazy-video-player';
+        container.classList.add('is-playing');
+        container.appendChild(player);
+        if (player.tagName === 'VIDEO') player.play().catch(function () { });
+    });
 
     exploreGalleryMobileMedia.addEventListener('change', function () {
         var config = explorePopupData[activeExplorePopup];
@@ -2314,6 +2455,7 @@ $(document).ready(function () {
         $restaurant.find('[data-restaurant-panel="' + view + '"]').addClass('active');
 
         if (view === 'menu') {
+            stopExploreGalleryMedia();
             requestAnimationFrame(function () {
                 requestAnimationFrame(loadRestaurantFlipbook);
             });
@@ -2326,7 +2468,9 @@ $(document).ready(function () {
         $('.restaurant_popup_tab').removeClass('active').attr('aria-selected', 'false');
         $(this).addClass('active').attr('aria-selected', 'true');
         $('.restaurant_gallery [data-gallery-category]').each(function () {
-            var shouldShow = filter === 'all' || $(this).attr('data-gallery-category') === filter;
+            var categories = ($(this).attr('data-gallery-category') || '').split(/\s+/);
+            var shouldShow = filter === 'all' || categories.indexOf(filter) !== -1;
+            if (!shouldShow) resetWonomLazyVideo(this.querySelector('.wonom-lazy-media'));
             $(this).toggle(shouldShow);
         });
     });
@@ -2345,6 +2489,7 @@ $(document).ready(function () {
     });
 
     $('.restaurant .popup_tour_close').click(function () {
+        stopExploreGalleryMedia();
         closeSlidingPopup($('.popup_tour.restaurant'));
     });
     $('[data-booking-trigger]').click(function (event) {
@@ -2383,7 +2528,8 @@ $(document).ready(function () {
         $('.workshop_filter').removeClass('active');
         $(this).addClass('active');
         $('.workshop_card').each(function () {
-            var shouldShow = category === 'all' || $(this).attr('data-workshop-category') === category;
+            var categories = ($(this).attr('data-workshop-category') || '').split(/\s+/);
+            var shouldShow = category === 'all' || categories.indexOf(category) !== -1;
             $(this).prop('hidden', !shouldShow);
         });
     });
@@ -2489,12 +2635,10 @@ $(document).ready(function () {
         $('.workshop_detail_title').text(productName);
         $('.workshop_detail_description').text($card.find('.workshop_card_description').text());
         $('.workshop_detail_price').text($card.find('.workshop_card_price').text());
-        if ($card.attr('data-detail-content')) {
-            $('.workshop_detail_section').eq(0).html($card.attr('data-detail-content'));
-        }
-        if ($card.attr('data-detail-includes')) {
-            $('.workshop_detail_section').eq(1).html($card.attr('data-detail-includes'));
-        }
+        $('.workshop_detail_section').eq(0).find('.workshop_detail_section_content')
+            .html($card.attr('data-detail-content') || '');
+        $('.workshop_detail_section').eq(1).find('.workshop_detail_section_content')
+            .html($card.attr('data-detail-includes') || '');
         if ($card.attr('data-detail-duration')) {
             $('.workshop_detail_price_row .cl_meta').text('/ ' + $card.attr('data-detail-duration'));
         }

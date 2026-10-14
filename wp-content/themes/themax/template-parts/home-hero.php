@@ -6,21 +6,34 @@ $slides = is_array($homepage_options) && isset($homepage_options['home_hero_slid
     ? $homepage_options['home_hero_slides']
     : array();
 
+$resolve_hero_image_url = static function ($image) {
+    if (is_numeric($image)) {
+        return (string) wp_get_attachment_image_url((int) $image, 'full');
+    }
+    if (is_array($image)) {
+        $attachment_id = isset($image['id']) ? (int) $image['id'] : 0;
+        $image_url = $attachment_id ? wp_get_attachment_image_url($attachment_id, 'full') : '';
+        return $image_url ?: (isset($image['url']) ? (string) $image['url'] : '');
+    }
+
+    return is_string($image) ? $image : '';
+};
+
 $default_slides = array(
     array(
         'image_url' => $asset_url . 'home_banner.webp',
+        'mobile_image_url' => '',
         'title' => "KHÔNG GIAN VĂN HOÁ HÀN QUỐC CÓ MẶT TẠI TP.HCM",
-        'alt' => 'Không gian văn hóa Hàn Quốc Wonom',
     ),
     array(
         'image_url' => $asset_url . 'home-hero2.webp',
+        'mobile_image_url' => '',
         'title' => "TRẢI NGHIỆM KHÔNG GIAN HÀN QUỐC NGAY GIỮA LÒNG TP.HCM",
-        'alt' => 'Trải nghiệm không gian Hàn Quốc tại Wonom',
     ),
     array(
         'image_url' => $asset_url . 'home-hero3.webp',
+        'mobile_image_url' => '',
         'title' => "MỘT GÓC VĂN HÓA HÀN QUỐC GIỮA LÒNG SÀI GÒN",
-        'alt' => 'Văn hóa Hàn Quốc giữa lòng Sài Gòn',
     ),
 );
 
@@ -29,19 +42,9 @@ if (is_array($slides) && $slides) {
 
     foreach ($slides as $slide) {
         $image = isset($slide['image']) ? $slide['image'] : '';
-        $image_url = '';
-
-        if (is_numeric($image)) {
-            $image_url = wp_get_attachment_image_url((int) $image, 'full');
-        } elseif (is_array($image)) {
-            $attachment_id = isset($image['id']) ? (int) $image['id'] : 0;
-            $image_url = $attachment_id ? wp_get_attachment_image_url($attachment_id, 'full') : '';
-            if (!$image_url && !empty($image['url'])) {
-                $image_url = $image['url'];
-            }
-        } elseif (is_string($image)) {
-            $image_url = $image;
-        }
+        $mobile_image = isset($slide['mobile_image']) ? $slide['mobile_image'] : '';
+        $image_url = $resolve_hero_image_url($image);
+        $mobile_image_url = $resolve_hero_image_url($mobile_image);
 
         $title = isset($slide['title']) ? trim($slide['title']) : '';
         if (!$image_url || !$title) {
@@ -50,8 +53,8 @@ if (is_array($slides) && $slides) {
 
         $configured_slides[] = array(
             'image_url' => $image_url,
+            'mobile_image_url' => $mobile_image_url,
             'title' => $title,
-            'alt' => isset($slide['alt']) && $slide['alt'] !== '' ? $slide['alt'] : $title,
         );
     }
 
@@ -67,14 +70,25 @@ if (is_array($slides) && $slides) {
 // front-page.php renders this partial before wp_head(), allowing the actual
 // LCP asset (including an admin-configured image) to be preloaded precisely.
 $GLOBALS['wonom_home_lcp_image'] = isset($slides[0]['image_url']) ? $slides[0]['image_url'] : '';
+$GLOBALS['wonom_home_lcp_mobile_image'] = isset($slides[0]['mobile_image_url']) ? $slides[0]['mobile_image_url'] : '';
 ?>
 <section class="home_banner pa_section">
     <div class="home_banner_image_list" aria-hidden="true">
         <?php foreach ($slides as $index => $slide) : ?>
             <div class="home_banner_image_item img_fullfill<?php echo 0 === $index ? ' active' : ''; ?>">
-                <img src="<?php echo esc_url($slide['image_url']); ?>"
-                    alt="<?php echo esc_attr($slide['alt']); ?>"
-                    <?php echo 0 === $index ? 'fetchpriority="high"' : 'loading="lazy"'; ?>>
+                <?php if (!empty($slide['mobile_image_url'])) : ?>
+                    <?php $mobile_image_data = wonom_get_image_performance_data($slide['mobile_image_url']); ?>
+                    <picture>
+                        <source media="(max-width: 991px)"
+                            srcset="<?php echo esc_attr(!empty($mobile_image_data['srcset']) ? $mobile_image_data['srcset'] : $slide['mobile_image_url']); ?>"
+                            sizes="100vw">
+                <?php endif; ?>
+                        <img src="<?php echo esc_url($slide['image_url']); ?>"
+                            alt="<?php echo esc_attr($slide['title']); ?>"
+                            <?php echo 0 === $index ? 'fetchpriority="high"' : 'loading="lazy"'; ?>>
+                <?php if (!empty($slide['mobile_image_url'])) : ?>
+                    </picture>
+                <?php endif; ?>
             </div>
         <?php endforeach; ?>
     </div>

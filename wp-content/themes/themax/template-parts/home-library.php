@@ -37,6 +37,16 @@ $library_set_text($library_first('.//*[' . $library_class('home_space_left_subti
 $library_set_text($library_first('.//*[' . $library_class('home_event_title') . ']', $section), $library_option('home_library_title', 'Những khoảnh khắc của không gian.'));
 $library_set_text($library_first('.//*[' . $library_class('home_space_left_des') . ']', $section), $library_option('home_library_description', 'Không gian chạm và tận hưởng văn hóa đời thường Hàn Quốc ngay tại Sài Gòn, mở ra nhịp cầu kết nối văn hóa hai quốc gia.'));
 $library_set_text($library_first('.//*[' . $library_class('home_space_left_button') . ']//*[' . $library_class('btn-inner') . ']', $section), 'XEM TẤT CẢ HÌNH ẢNH');
+$library_decor_icon = $library_first('.//*[' . $library_class('home_space_icon') . ']//img', $section);
+if ($library_decor_icon) {
+    $library_decor_icon->setAttribute(
+        'src',
+        wonom_get_home_image_url(
+            'home_library_decor_icon',
+            trailingslashit(get_template_directory_uri()) . 'asset/img/space_icon1.png'
+        )
+    );
+}
 
 $tracks = $library_xpath->query('.//*[' . $library_class('home_space_right_card_wrap') . ']', $section);
 if ($tracks && $tracks->length >= 2) {

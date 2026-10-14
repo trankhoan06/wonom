@@ -9,6 +9,13 @@
 
 function wonom_home_current_language()
 {
+    if (isset($_GET['lang'])) {
+        $requested_language = sanitize_key(wp_unslash($_GET['lang']));
+        if (in_array($requested_language, array('vi', 'en', 'ko'), true)) {
+            return $requested_language;
+        }
+    }
+
     if (isset($_POST['lang'])) {
         $posted_language = sanitize_key(wp_unslash($_POST['lang']));
         if (in_array($posted_language, array('vi', 'en', 'ko'), true)) {

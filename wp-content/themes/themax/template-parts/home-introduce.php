@@ -42,18 +42,18 @@ if (!$content) {
 $intro_images = array(
     array(
         'url' => $resolve_image($get_option('home_intro_image_1'), $image_asset_url . 'store.jpg'),
-        'alt' => $get_option('home_intro_image_1_alt', 'Không gian Wonom'),
-        'pin' => 'RedPin.svg',
+        'alt' => 'Wonom Culture Complex',
+        'pin' => wonom_get_home_image_url('home_intro_card_1_pin_image', $image_asset_url . 'RedPin.svg'),
     ),
     array(
         'url' => $resolve_image($get_option('home_intro_image_2'), $image_asset_url . 'intro2.webp'),
-        'alt' => $get_option('home_intro_image_2_alt', 'Trải nghiệm tại Wonom'),
-        'pin' => 'YellowPin.svg',
+        'alt' => wp_strip_all_tags($eyebrow),
+        'pin' => wonom_get_home_image_url('home_intro_card_2_pin_image', $image_asset_url . 'YellowPin.svg'),
     ),
     array(
         'url' => $resolve_image($get_option('home_intro_image_3'), $image_asset_url . 'intro3.webp'),
-        'alt' => $get_option('home_intro_image_3_alt', 'Văn hóa Hàn Quốc tại Wonom'),
-        'pin' => 'BluePin.svg',
+        'alt' => preg_replace('/\s+/', ' ', wp_strip_all_tags($title)),
+        'pin' => wonom_get_home_image_url('home_intro_card_3_pin_image', $image_asset_url . 'BluePin.svg'),
     ),
 );
 ?>
@@ -75,7 +75,7 @@ $intro_images = array(
         <div class="home_intro_image_wrap absolute">
             <?php foreach ($intro_images as $index => $intro_image) : ?>
                 <div class="home_intro_image<?php echo esc_attr($index + 1); ?> home_intro_image_item relative">
-                    <div class="home_intro_pin img_full"><img src="<?php echo esc_url($image_asset_url . $intro_image['pin']); ?>" alt=""></div>
+                    <div class="home_intro_pin img_full"><img src="<?php echo esc_url($intro_image['pin']); ?>" alt=""></div>
                     <div class="home_intro_image_inner img_full">
                         <img src="<?php echo esc_url($intro_image['url']); ?>" alt="<?php echo esc_attr($intro_image['alt']); ?>" loading="lazy">
                     </div>

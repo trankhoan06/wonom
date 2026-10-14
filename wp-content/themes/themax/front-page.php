@@ -45,7 +45,7 @@ $homepage_cacheable = !is_user_logged_in()
     && !is_customize_preview()
     && empty($_GET['preview']);
 $homepage_cache_generation = (string) get_option('wonom_home_cache_generation', '1');
-$homepage_cache_schema = 'direct-parts-v2-assets';
+$homepage_cache_schema = 'hero-mobile-images-v4';
 $homepage_cache_key = 'wonom_home_markup_' . md5(
     wonom_home_current_language() . '|' . get_locale() . '|' . $homepage_cache_schema . '|' . $homepage_cache_version . '|' . $homepage_cache_generation
 );
@@ -53,12 +53,24 @@ $homepage_lcp_cache_key = $homepage_cache_key . '_lcp';
 $homepage_body = $homepage_cacheable ? get_transient($homepage_cache_key) : false;
 
 if (false !== $homepage_body) {
-    $GLOBALS['wonom_home_lcp_image'] = (string) get_transient($homepage_lcp_cache_key);
+    $cached_lcp_images = get_transient($homepage_lcp_cache_key);
+    if (is_array($cached_lcp_images)) {
+        $GLOBALS['wonom_home_lcp_image'] = isset($cached_lcp_images['desktop']) ? (string) $cached_lcp_images['desktop'] : '';
+        $GLOBALS['wonom_home_lcp_mobile_image'] = isset($cached_lcp_images['mobile']) ? (string) $cached_lcp_images['mobile'] : '';
+    } else {
+        $GLOBALS['wonom_home_lcp_image'] = (string) $cached_lcp_images;
+        $GLOBALS['wonom_home_lcp_mobile_image'] = '';
+    }
 }
 
 if (false === $homepage_body) {
     ob_start();
-    foreach ($homepage_parts as $homepage_part) {
+    foreach ($homepage_parts as $homepage_part_index => $homepage_part) {
+        if (1 === $homepage_part_index) {
+            echo '<div id="top" class="wonom-page-scroll">';
+        } elseif (9 === $homepage_part_index) {
+            echo '</div>';
+        }
         get_template_part($homepage_part[0], $homepage_part[1]);
     }
     $homepage_body = ob_get_clean();
@@ -102,7 +114,10 @@ if (false === $homepage_body) {
         set_transient($homepage_cache_key, $homepage_body, 12 * HOUR_IN_SECONDS);
         set_transient(
             $homepage_lcp_cache_key,
-            isset($GLOBALS['wonom_home_lcp_image']) ? $GLOBALS['wonom_home_lcp_image'] : '',
+            array(
+                'desktop' => isset($GLOBALS['wonom_home_lcp_image']) ? $GLOBALS['wonom_home_lcp_image'] : '',
+                'mobile' => isset($GLOBALS['wonom_home_lcp_mobile_image']) ? $GLOBALS['wonom_home_lcp_mobile_image'] : '',
+            ),
             12 * HOUR_IN_SECONDS
         );
     }
@@ -114,15 +129,29 @@ if (false === $homepage_body) {
     <meta charset="<?php bloginfo('charset'); ?>">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-    <?php if (!empty($GLOBALS['wonom_home_lcp_image'])) : ?>
-        <?php $wonom_lcp_data = wonom_get_image_performance_data($GLOBALS['wonom_home_lcp_image']); ?>
-        <link rel="preload" as="image" href="<?php echo esc_url($GLOBALS['wonom_home_lcp_image']); ?>"<?php
+    <?php
+    $wonom_lcp_desktop_image = isset($GLOBALS['wonom_home_lcp_image']) ? $GLOBALS['wonom_home_lcp_image'] : '';
+    $wonom_lcp_mobile_image = isset($GLOBALS['wonom_home_lcp_mobile_image']) ? $GLOBALS['wonom_home_lcp_mobile_image'] : '';
+    $wonom_lcp_preloads = array();
+    if ($wonom_lcp_mobile_image) {
+        $wonom_lcp_preloads[] = array('url' => $wonom_lcp_mobile_image, 'media' => '(max-width: 991px)');
+    }
+    if ($wonom_lcp_desktop_image) {
+        $wonom_lcp_preloads[] = array('url' => $wonom_lcp_desktop_image, 'media' => $wonom_lcp_mobile_image ? '(min-width: 992px)' : '');
+    }
+    foreach ($wonom_lcp_preloads as $wonom_lcp_preload) :
+        $wonom_lcp_data = wonom_get_image_performance_data($wonom_lcp_preload['url']);
+    ?>
+        <link rel="preload" as="image" href="<?php echo esc_url($wonom_lcp_preload['url']); ?>"<?php
+        if ($wonom_lcp_preload['media']) {
+            echo ' media="' . esc_attr($wonom_lcp_preload['media']) . '"';
+        }
         if (!empty($wonom_lcp_data['srcset'])) {
             echo ' imagesrcset="' . esc_attr($wonom_lcp_data['srcset']) . '"';
-            echo ' imagesizes="' . esc_attr($wonom_lcp_data['sizes']) . '"';
+            echo ' imagesizes="100vw"';
         }
         ?> fetchpriority="high">
-    <?php endif; ?>
+    <?php endforeach; ?>
     <?php wp_head(); ?>
 </head>
 <body <?php body_class('wonom-home'); ?>>

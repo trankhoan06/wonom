@@ -31,7 +31,7 @@ function wonom_get_home_events()
         } elseif (is_string($image)) {
             $url = esc_url_raw($image);
         }
-        return array('url' => $url, 'alt' => $id ? sanitize_text_field(get_post_meta($id, '_wp_attachment_image_alt', true)) : '');
+        return $url;
     };
 
     $events = array();
@@ -40,20 +40,20 @@ function wonom_get_home_events()
             continue;
         }
         $image = $resolve_image(isset($row['image']) ? $row['image'] : '');
-        if (!$image['url']) {
+        if (!$image) {
             continue;
         }
         $title = isset($row['title']) ? sanitize_text_field($row['title']) : '';
-        $image_alt = !empty($row['image_alt']) ? sanitize_text_field($row['image_alt']) : ($image['alt'] ?: $title);
+        $image_alt = $title ?: 'Wonom Culture Complex';
         $events[] = array(
-            'image' => $image['url'],
+            'image' => $image,
             'imageAlt' => $image_alt,
             'title' => $title,
             'apply' => isset($row['apply']) ? sanitize_text_field($row['apply']) : '',
             'category' => isset($row['category']) ? sanitize_text_field($row['category']) : '',
             'condition' => isset($row['condition']) ? sanitize_text_field($row['condition']) : '',
             'subtitle' => isset($row['subtitle']) ? sanitize_text_field($row['subtitle']) : '',
-            'popupImage' => $image['url'],
+            'popupImage' => $image,
             'popupImageAlt' => $image_alt,
             'content' => isset($row['content']) ? wp_kses_post($row['content']) : '',
         );

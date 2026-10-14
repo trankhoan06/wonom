@@ -9,7 +9,8 @@ if (!defined('ABSPATH')) {
  *
  * Production secrets may be defined in wp-config.php with these constants:
  * WONOM_ZALO_APP_ID, WONOM_ZALO_APP_SECRET, WONOM_ZALO_ACCESS_TOKEN,
- * WONOM_ZALO_REFRESH_TOKEN and WONOM_ZALO_GROUP_ID.
+ * WONOM_ZALO_REFRESH_TOKEN, WONOM_ZALO_GROUP_ID and
+ * WONOM_ZALO_OA_SECRET_KEY.
  */
 function wonom_zalo_option($key, $constant = '')
 {
@@ -41,7 +42,12 @@ function wonom_zalo_config()
         'enabled' => wonom_zalo_is_enabled(),
         'app_id' => wonom_zalo_option('zalo_app_id', 'WONOM_ZALO_APP_ID'),
         'app_secret' => wonom_zalo_option('zalo_app_secret', 'WONOM_ZALO_APP_SECRET'),
+        'oa_secret_key' => wonom_zalo_option('zalo_oa_secret_key', 'WONOM_ZALO_OA_SECRET_KEY'),
         'group_id' => wonom_zalo_option('zalo_group_id', 'WONOM_ZALO_GROUP_ID'),
+        'group_name' => wonom_zalo_option('zalo_group_name'),
+        'recipient_user_id' => wonom_zalo_option('zalo_recipient_user_id', 'WONOM_ZALO_RECIPIENT_USER_ID'),
+        'recipient_name' => wonom_zalo_option('zalo_recipient_name'),
+        'recipient_phone' => wonom_zalo_option('zalo_recipient_phone'),
         'access_token' => wonom_zalo_option('zalo_access_token', 'WONOM_ZALO_ACCESS_TOKEN'),
         'refresh_token' => wonom_zalo_option('zalo_refresh_token', 'WONOM_ZALO_REFRESH_TOKEN'),
     );
@@ -63,20 +69,38 @@ function wonom_zalo_handle_save_settings()
     }
 
     $old_app_id = isset($options['zalo_app_id']) ? (string) $options['zalo_app_id'] : '';
+    $old_group_id = isset($options['zalo_group_id']) ? (string) $options['zalo_group_id'] : '';
     $app_id = isset($_POST['zalo_app_id'])
         ? sanitize_text_field(wp_unslash($_POST['zalo_app_id']))
+        : '';
+    $recipient_user_id = isset($_POST['zalo_recipient_user_id'])
+        ? preg_replace('/[^0-9]/', '', (string) wp_unslash($_POST['zalo_recipient_user_id']))
         : '';
 
     $options['zalo_enabled'] = !empty($_POST['zalo_enabled']) ? 1 : 0;
     $options['zalo_app_id'] = $app_id;
-    $options['zalo_group_id'] = isset($_POST['zalo_group_id'])
+    $group_id = isset($_POST['zalo_group_id'])
         ? sanitize_text_field(wp_unslash($_POST['zalo_group_id']))
+        : '';
+    $options['zalo_group_id'] = $group_id;
+    $options['zalo_group_name'] = $group_id === $old_group_id && isset($_POST['zalo_group_name'])
+        ? sanitize_text_field(wp_unslash($_POST['zalo_group_name']))
+        : '';
+    $options['zalo_recipient_user_id'] = $recipient_user_id;
+    $options['zalo_recipient_name'] = isset($_POST['zalo_recipient_name'])
+        ? sanitize_text_field(wp_unslash($_POST['zalo_recipient_name']))
+        : '';
+    $options['zalo_recipient_phone'] = isset($_POST['zalo_recipient_phone'])
+        ? sanitize_text_field(wp_unslash($_POST['zalo_recipient_phone']))
         : '';
 
     $secret_changed = false;
     if (!empty($_POST['zalo_app_secret'])) {
         $options['zalo_app_secret'] = sanitize_text_field(wp_unslash($_POST['zalo_app_secret']));
         $secret_changed = true;
+    }
+    if (!empty($_POST['zalo_oa_secret_key'])) {
+        $options['zalo_oa_secret_key'] = sanitize_text_field(wp_unslash($_POST['zalo_oa_secret_key']));
     }
 
     $seed_tokens_changed = false;
@@ -105,12 +129,13 @@ add_action('admin_post_wonom_save_zalo_settings', 'wonom_zalo_handle_save_settin
 function wonom_zalo_configured()
 {
     $config = wonom_zalo_config();
+    $tokens = wonom_zalo_tokens();
 
     return $config['enabled']
         && '' !== $config['app_id']
         && '' !== $config['app_secret']
         && '' !== $config['group_id']
-        && ('' !== $config['access_token'] || '' !== $config['refresh_token']);
+        && ('' !== $tokens['access_token'] || '' !== $tokens['refresh_token']);
 }
 
 function wonom_zalo_token_source_hash($config)
@@ -324,6 +349,105 @@ function wonom_zalo_handle_oauth_callback()
 add_action('admin_post_wonom_zalo_oauth_callback', 'wonom_zalo_handle_oauth_callback');
 add_action('admin_post_nopriv_wonom_zalo_oauth_callback', 'wonom_zalo_handle_oauth_callback');
 
+function wonom_zalo_webhook_url()
+{
+    return admin_url('admin-post.php?action=wonom_zalo_webhook');
+}
+
+/**
+ * Validate a webhook with the OA Secret Key configured in Zalo Developers.
+ */
+function wonom_zalo_webhook_signature_is_valid($raw_body, $payload)
+{
+    $config = wonom_zalo_config();
+    if ('' === $config['oa_secret_key'] || empty($payload['app_id']) || empty($payload['timestamp'])) {
+        return false;
+    }
+
+    if ('' !== $config['app_id'] && (string) $payload['app_id'] !== (string) $config['app_id']) {
+        return false;
+    }
+
+    $signature = isset($_SERVER['HTTP_X_ZEVENT_SIGNATURE'])
+        ? sanitize_text_field(wp_unslash($_SERVER['HTTP_X_ZEVENT_SIGNATURE']))
+        : '';
+    $signature = preg_replace('/^mac=/i', '', trim($signature));
+    if (!preg_match('/^[a-f0-9]{64}$/i', $signature)) {
+        return false;
+    }
+
+    $expected = hash(
+        'sha256',
+        (string) $payload['app_id'] . $raw_body . (string) $payload['timestamp'] . $config['oa_secret_key']
+    );
+
+    return hash_equals(strtolower($expected), strtolower($signature));
+}
+
+function wonom_zalo_webhook_users()
+{
+    $users = get_option('wonom_zalo_webhook_users', array());
+    return is_array($users) ? $users : array();
+}
+
+/**
+ * Receive user_send_* events and retain a short admin-only list of candidate
+ * recipients. Nothing is selected automatically, so a customer cannot replace
+ * the configured notification recipient by messaging the OA.
+ */
+function wonom_zalo_handle_webhook()
+{
+    if ('POST' !== strtoupper(isset($_SERVER['REQUEST_METHOD']) ? (string) $_SERVER['REQUEST_METHOD'] : '')) {
+        wp_send_json(array('status' => 'ready'));
+    }
+
+    $raw_body = file_get_contents('php://input');
+    $payload = json_decode($raw_body, true);
+    if (!is_array($payload) || !wonom_zalo_webhook_signature_is_valid($raw_body, $payload)) {
+        // Zalo probes a new webhook URL before enabling it. Return 200 so the
+        // connectivity check succeeds, but never persist an unsigned event.
+        wp_send_json(array('status' => 'ready'));
+    }
+
+    $event_name = isset($payload['event_name']) ? sanitize_key($payload['event_name']) : '';
+    $user_id = isset($payload['sender']['id'])
+        ? preg_replace('/[^0-9]/', '', (string) $payload['sender']['id'])
+        : '';
+    if (0 === strpos($event_name, 'user_send_') && '' !== $user_id) {
+        $message = '';
+        if (!empty($payload['message']['text'])) {
+            $message = sanitize_text_field((string) $payload['message']['text']);
+        } elseif (!empty($payload['message']['attachments'])) {
+            $message = '[' . sanitize_text_field($event_name) . ']';
+        }
+
+        $name = '';
+        foreach (array('display_name', 'name') as $name_key) {
+            if (!empty($payload['sender'][$name_key])) {
+                $name = sanitize_text_field((string) $payload['sender'][$name_key]);
+                break;
+            }
+        }
+
+        $users = wonom_zalo_webhook_users();
+        $users[$user_id] = array(
+            'user_id' => $user_id,
+            'name' => $name,
+            'message' => function_exists('mb_substr') ? mb_substr($message, 0, 160) : substr($message, 0, 160),
+            'received_at' => time(),
+        );
+        uasort($users, static function ($left, $right) {
+            return (int) $right['received_at'] <=> (int) $left['received_at'];
+        });
+        $users = array_slice($users, 0, 20, true);
+        update_option('wonom_zalo_webhook_users', $users, false);
+    }
+
+    wp_send_json(array('status' => 'ok'));
+}
+add_action('admin_post_wonom_zalo_webhook', 'wonom_zalo_handle_webhook');
+add_action('admin_post_nopriv_wonom_zalo_webhook', 'wonom_zalo_handle_webhook');
+
 function wonom_zalo_access_token($force_refresh = false)
 {
     $tokens = wonom_zalo_tokens();
@@ -343,6 +467,31 @@ function wonom_zalo_response_requires_refresh($http_code, $body)
     return 401 === (int) $http_code || in_array($error, array(-124, -201, -216, -217), true);
 }
 
+/**
+ * Build the authentication headers required by Zalo OpenAPI.
+ *
+ * Apps with enhanced security enabled require appsecret_proof in addition to
+ * the OA access token. Zalo calculates it as an HMAC-SHA256 of the access
+ * token, using the app secret as the signing key.
+ */
+function wonom_zalo_api_headers($access_token, $headers = array())
+{
+    $config = wonom_zalo_config();
+    $auth_headers = array(
+        'access_token' => (string) $access_token,
+    );
+
+    if ('' !== $config['app_secret']) {
+        $auth_headers['appsecret_proof'] = hash_hmac(
+            'sha256',
+            (string) $access_token,
+            $config['app_secret']
+        );
+    }
+
+    return array_merge($auth_headers, $headers);
+}
+
 function wonom_zalo_send_group_message($message, $allow_token_retry = true)
 {
     if (!wonom_zalo_configured()) {
@@ -357,10 +506,9 @@ function wonom_zalo_send_group_message($message, $allow_token_retry = true)
 
     $response = wp_remote_post('https://openapi.zalo.me/v3.0/oa/group/message', array(
         'timeout' => 15,
-        'headers' => array(
-            'access_token' => $access_token,
+        'headers' => wonom_zalo_api_headers($access_token, array(
             'Content-Type' => 'application/json; charset=utf-8',
-        ),
+        )),
         'body' => wp_json_encode(array(
             'recipient' => array('group_id' => $config['group_id']),
             'message' => array('text' => (string) $message),
@@ -395,6 +543,193 @@ function wonom_zalo_send_group_message($message, $allow_token_retry = true)
     return $body;
 }
 
+/**
+ * Send a one-to-one consultation message from the OA to the configured admin.
+ */
+function wonom_zalo_send_admin_message($message, $allow_token_retry = true)
+{
+    if (!wonom_zalo_configured()) {
+        return new WP_Error('zalo_not_configured', 'Cấu hình Zalo OA hoặc người nhận thông báo chưa đầy đủ.');
+    }
+
+    $config = wonom_zalo_config();
+    $access_token = wonom_zalo_access_token();
+    if (is_wp_error($access_token)) {
+        return $access_token;
+    }
+
+    $response = wp_remote_post('https://openapi.zalo.me/v3.0/oa/message/cs', array(
+        'timeout' => 15,
+        'headers' => wonom_zalo_api_headers($access_token, array(
+            'Content-Type' => 'application/json; charset=utf-8',
+        )),
+        'body' => wp_json_encode(array(
+            'recipient' => array('user_id' => $config['recipient_user_id']),
+            'message' => array('text' => (string) $message),
+        ), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+    ));
+
+    if (is_wp_error($response)) {
+        return $response;
+    }
+
+    $http_code = (int) wp_remote_retrieve_response_code($response);
+    $body = json_decode(wp_remote_retrieve_body($response), true);
+
+    if ($allow_token_retry && wonom_zalo_response_requires_refresh($http_code, $body)) {
+        $refreshed = wonom_zalo_access_token(true);
+        if (is_wp_error($refreshed)) {
+            return $refreshed;
+        }
+        return wonom_zalo_send_admin_message($message, false);
+    }
+
+    if (200 !== $http_code || !is_array($body) || !isset($body['error']) || 0 !== (int) $body['error']) {
+        $error_message = is_array($body) && !empty($body['message'])
+            ? $body['message']
+            : 'Zalo OA không chấp nhận yêu cầu gửi tin 1-1.';
+        return new WP_Error('zalo_send_failed', sanitize_text_field((string) $error_message), array(
+            'http_code' => $http_code,
+            'response' => $body,
+        ));
+    }
+
+    return $body;
+}
+
+/**
+ * Return users from the OA's latest one-to-one conversations.
+ */
+function wonom_zalo_get_recent_users($allow_token_retry = true)
+{
+    $access_token = wonom_zalo_access_token();
+    if (is_wp_error($access_token)) {
+        return $access_token;
+    }
+
+    $url = add_query_arg('data', wp_json_encode(array(
+        'offset' => 0,
+        'count' => 20,
+    )), 'https://openapi.zalo.me/v2.0/oa/listrecentchat');
+    $response = wp_remote_get($url, array(
+        'timeout' => 15,
+        'headers' => wonom_zalo_api_headers($access_token),
+    ));
+    if (is_wp_error($response)) {
+        return $response;
+    }
+
+    $http_code = (int) wp_remote_retrieve_response_code($response);
+    $body = json_decode(wp_remote_retrieve_body($response), true);
+    if ($allow_token_retry && wonom_zalo_response_requires_refresh($http_code, $body)) {
+        $refreshed = wonom_zalo_access_token(true);
+        if (is_wp_error($refreshed)) {
+            return $refreshed;
+        }
+        return wonom_zalo_get_recent_users(false);
+    }
+
+    if (200 !== $http_code || !is_array($body) || !isset($body['error']) || 0 !== (int) $body['error']) {
+        $error_message = is_array($body) && !empty($body['message'])
+            ? $body['message']
+            : 'Không thể lấy danh sách hội thoại gần đây từ Zalo OA.';
+        return new WP_Error('zalo_recent_users_failed', sanitize_text_field((string) $error_message));
+    }
+
+    $users = array();
+    $messages = !empty($body['data']) && is_array($body['data']) ? $body['data'] : array();
+    foreach ($messages as $chat) {
+        if (!is_array($chat)) {
+            continue;
+        }
+
+        $from_user = isset($chat['src']) && 1 === (int) $chat['src'];
+        $user_id = $from_user
+            ? (isset($chat['from_id']) ? (string) $chat['from_id'] : '')
+            : (isset($chat['to_id']) ? (string) $chat['to_id'] : '');
+        $user_id = preg_replace('/[^0-9]/', '', $user_id);
+        if ('' === $user_id) {
+            continue;
+        }
+
+        $name_key = $from_user ? 'from_display_name' : 'to_display_name';
+        $avatar_key = $from_user ? 'from_avatar' : 'to_avatar';
+        $time = isset($chat['time']) ? (int) $chat['time'] : 0;
+        if (!isset($users[$user_id]) || $time > $users[$user_id]['time']) {
+            $users[$user_id] = array(
+                'user_id' => $user_id,
+                'name' => isset($chat[$name_key]) ? sanitize_text_field((string) $chat[$name_key]) : '',
+                'avatar' => isset($chat[$avatar_key]) ? esc_url_raw((string) $chat[$avatar_key]) : '',
+                'message' => isset($chat['message']) ? sanitize_text_field((string) $chat['message']) : '',
+                'time' => $time,
+            );
+        }
+    }
+
+    uasort($users, static function ($left, $right) {
+        return $right['time'] <=> $left['time'];
+    });
+
+    return array_values($users);
+}
+
+function wonom_zalo_handle_load_recent_users()
+{
+    if (!current_user_can('manage_options')) {
+        wp_die(esc_html__('Bạn không có quyền thực hiện thao tác này.', 'wonom'));
+    }
+    check_admin_referer('wonom_zalo_load_recent_users');
+
+    $users = wonom_zalo_get_recent_users();
+    $args = array('page' => 'theme_options');
+    if (is_wp_error($users)) {
+        $args['wonom_zalo_users'] = 'error';
+        $args['wonom_zalo_error'] = $users->get_error_message();
+    } else {
+        set_transient('wonom_zalo_users_' . get_current_user_id(), $users, 10 * MINUTE_IN_SECONDS);
+        $args['wonom_zalo_users'] = 'success';
+    }
+
+    wp_safe_redirect(add_query_arg($args, admin_url('themes.php')));
+    exit;
+}
+add_action('admin_post_wonom_zalo_load_recent_users', 'wonom_zalo_handle_load_recent_users');
+
+function wonom_zalo_handle_select_recipient()
+{
+    if (!current_user_can('manage_options')) {
+        wp_die(esc_html__('Bạn không có quyền thực hiện thao tác này.', 'wonom'));
+    }
+    check_admin_referer('wonom_zalo_select_recipient');
+
+    $user_id = isset($_POST['zalo_recipient_user_id'])
+        ? preg_replace('/[^0-9]/', '', (string) wp_unslash($_POST['zalo_recipient_user_id']))
+        : '';
+    if ('' === $user_id) {
+        wp_safe_redirect(add_query_arg(array(
+            'page' => 'theme_options',
+            'wonom_zalo_users' => 'error',
+            'wonom_zalo_error' => 'Zalo User ID không hợp lệ.',
+        ), admin_url('themes.php')));
+        exit;
+    }
+
+    $options = get_option('tr_theme_options', array());
+    $options = is_array($options) ? $options : array();
+    $options['zalo_recipient_user_id'] = $user_id;
+    $options['zalo_recipient_name'] = isset($_POST['zalo_recipient_name'])
+        ? sanitize_text_field(wp_unslash($_POST['zalo_recipient_name']))
+        : '';
+    update_option('tr_theme_options', $options);
+
+    wp_safe_redirect(add_query_arg(array(
+        'page' => 'theme_options',
+        'wonom_zalo_recipient_saved' => 'success',
+    ), admin_url('themes.php')));
+    exit;
+}
+add_action('admin_post_wonom_zalo_select_recipient', 'wonom_zalo_handle_select_recipient');
+
 function wonom_zalo_get_groups($allow_token_retry = true)
 {
     $access_token = wonom_zalo_access_token();
@@ -407,7 +742,7 @@ function wonom_zalo_get_groups($allow_token_retry = true)
         'count' => 10,
     ), 'https://openapi.zalo.me/v3.0/oa/group/getgroupsofoa'), array(
         'timeout' => 15,
-        'headers' => array('access_token' => $access_token),
+        'headers' => wonom_zalo_api_headers($access_token),
     ));
     if (is_wp_error($response)) {
         return $response;
@@ -430,9 +765,15 @@ function wonom_zalo_get_groups($allow_token_retry = true)
         return new WP_Error('zalo_groups_failed', sanitize_text_field((string) $message));
     }
 
-    return !empty($body['data']['groups']) && is_array($body['data']['groups'])
-        ? $body['data']['groups']
-        : array();
+    $data = isset($body['data']) && is_array($body['data']) ? $body['data'] : array();
+    if (isset($data['groups']) && is_array($data['groups'])) {
+        return $data['groups'];
+    }
+    if (isset($data['items']) && is_array($data['items'])) {
+        return $data['items'];
+    }
+
+    return $data && array_keys($data) === range(0, count($data) - 1) ? $data : array();
 }
 
 function wonom_zalo_handle_load_groups()
@@ -457,6 +798,41 @@ function wonom_zalo_handle_load_groups()
 }
 add_action('admin_post_wonom_zalo_load_groups', 'wonom_zalo_handle_load_groups');
 
+function wonom_zalo_handle_select_group()
+{
+    if (!current_user_can('manage_options')) {
+        wp_die(esc_html__('Bạn không có quyền thực hiện thao tác này.', 'wonom'));
+    }
+    check_admin_referer('wonom_zalo_select_group');
+
+    $group_id = isset($_POST['zalo_group_id'])
+        ? sanitize_text_field(wp_unslash($_POST['zalo_group_id']))
+        : '';
+    if ('' === $group_id) {
+        wp_safe_redirect(add_query_arg(array(
+            'page' => 'theme_options',
+            'wonom_zalo_groups' => 'error',
+            'wonom_zalo_error' => 'Group ID không hợp lệ.',
+        ), admin_url('themes.php')));
+        exit;
+    }
+
+    $options = get_option('tr_theme_options', array());
+    $options = is_array($options) ? $options : array();
+    $options['zalo_group_id'] = $group_id;
+    $options['zalo_group_name'] = isset($_POST['zalo_group_name'])
+        ? sanitize_text_field(wp_unslash($_POST['zalo_group_name']))
+        : '';
+    update_option('tr_theme_options', $options);
+
+    wp_safe_redirect(add_query_arg(array(
+        'page' => 'theme_options',
+        'wonom_zalo_group_saved' => 'success',
+    ), admin_url('themes.php')));
+    exit;
+}
+add_action('admin_post_wonom_zalo_select_group', 'wonom_zalo_handle_select_group');
+
 function wonom_zalo_submission_message($post_id)
 {
     $type = (string) get_post_meta($post_id, '_wonom_form_type', true);
@@ -467,6 +843,7 @@ function wonom_zalo_submission_message($post_id)
         'date' => 'Ngày đến',
         'time' => 'Thời gian',
         'guests' => 'Số người',
+        'booking_type' => 'Loại đặt chỗ',
         'floor' => 'Tầng',
         'venue' => 'Khu vực',
         'product_name' => 'Dịch vụ',
@@ -503,6 +880,10 @@ function wonom_zalo_queue_submission($post_id, $attempt = 0)
 {
     $post_id = absint($post_id);
     if (!$post_id || !wonom_zalo_is_enabled()) {
+        return false;
+    }
+    $form_type = (string) get_post_meta($post_id, '_wonom_form_type', true);
+    if (!in_array($form_type, array('booking', 'tour'), true)) {
         return false;
     }
 
@@ -567,7 +948,7 @@ function wonom_zalo_handle_test()
 
     $result = wonom_zalo_send_group_message(
         '[WONOM] Kiểm tra kết nối Zalo OA' . "\n" .
-        'Website đã kết nối thành công lúc ' . current_time('d/m/Y H:i:s') . '.'
+        'Website đã gửi thành công vào nhóm GMF lúc ' . current_time('d/m/Y H:i:s') . '.'
     );
     $args = array(
         'page' => 'theme_options',

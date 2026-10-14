@@ -47,7 +47,7 @@ if (!defined('ABSPATH')) exit;
                         </div>
                     </div>
                     <div class="popup_member_icon absolute img_full">
-                        <img src="/asset/img/icon_member.png" alt="">
+                        <img src="<?php echo esc_url(wonom_get_home_image_url('home_member_popup_icon', '/asset/img/icon_member.png')); ?>" alt="">
                     </div>
                 </div>
                 <div class="popup_member_back btn txt_14 txt_extrabold cl_text">

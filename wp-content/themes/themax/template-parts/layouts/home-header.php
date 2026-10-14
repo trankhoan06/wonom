@@ -6,18 +6,35 @@ $wonom_language_icons = array(
     'en' => 'icon_eng.svg',
     'ko' => 'icon_korea.svg',
 );
-$wonom_languages = function_exists('pll_the_languages')
+$wonom_has_polylang = function_exists('pll_the_languages') && function_exists('pll_current_language');
+$wonom_languages = $wonom_has_polylang
     ? (array) pll_the_languages(array('raw' => 1, 'hide_if_empty' => 0, 'hide_if_no_translation' => 0))
     : array();
-$wonom_current_language = function_exists('pll_current_language') ? pll_current_language('slug') : 'vi';
-$wonom_current_language = $wonom_current_language ?: (function_exists('pll_default_language') ? pll_default_language('slug') : 'vi');
-$wonom_home_url = function_exists('pll_home_url') ? pll_home_url($wonom_current_language) : home_url('/');
+$wonom_current_language = wonom_home_current_language();
+$wonom_home_url = $wonom_has_polylang && function_exists('pll_home_url')
+    ? pll_home_url($wonom_current_language)
+    : add_query_arg('lang', $wonom_current_language, home_url('/'));
+$wonom_header_option = static function ($field, $fallback) {
+    $value = tr_options_field('wonom_home_options.' . $field);
+    return null === $value || false === $value || '' === $value ? $fallback : $value;
+};
+$wonom_header_nav = array(
+    'introduce' => $wonom_header_option('home_header_nav_introduce', 'GIỚI THIỆU'),
+    'experience' => $wonom_header_option('home_header_nav_experience', 'TRẢI NGHIỆM'),
+    'explore' => $wonom_header_option('home_header_nav_explore', 'KHÁM PHÁ 5 TẦNG'),
+    'tour' => $wonom_header_option('home_header_nav_tour', 'THAM QUAN'),
+    'event' => $wonom_header_option('home_header_nav_event', 'SỰ KIỆN'),
+    'library' => $wonom_header_option('home_header_nav_library', 'THƯ VIỆN ẢNH'),
+    'contact' => $wonom_header_option('home_header_nav_contact', 'LIÊN HỆ'),
+);
+$wonom_header_booking_text = $wonom_header_option('home_header_booking_text', 'ĐẶT CHỖ');
+$wonom_header_member_text = $wonom_header_option('home_header_member_text', 'THÀNH VIÊN');
 
 if (!$wonom_languages) {
     $wonom_languages = array(
-        'vi' => array('slug' => 'vi', 'name' => 'Tiếng Việt', 'url' => home_url('/'), 'current_lang' => true),
-        'en' => array('slug' => 'en', 'name' => 'English', 'url' => home_url('/'), 'current_lang' => false),
-        'ko' => array('slug' => 'ko', 'name' => '한국어', 'url' => home_url('/'), 'current_lang' => false),
+        'vi' => array('slug' => 'vi', 'name' => 'Tiếng Việt', 'url' => add_query_arg('lang', 'vi', home_url('/')), 'current_lang' => 'vi' === $wonom_current_language),
+        'en' => array('slug' => 'en', 'name' => 'English', 'url' => add_query_arg('lang', 'en', home_url('/')), 'current_lang' => 'en' === $wonom_current_language),
+        'ko' => array('slug' => 'ko', 'name' => '한국어', 'url' => add_query_arg('lang', 'ko', home_url('/')), 'current_lang' => 'ko' === $wonom_current_language),
     );
 }
 
@@ -37,25 +54,21 @@ $wonom_active_icon = isset($wonom_language_icons[$wonom_active_slug])
         <div class="header_overlay tablet"></div>
         <div class="container header-container">
             <a href="<?php echo esc_url($wonom_home_url); ?>" class="header-logo img_height">
-                <img src="/asset/img/logo.webp" alt="Wonom Logo">
+                <img src="<?php echo esc_url(wonom_get_home_image_url('home_header_logo_image', '/asset/img/logo.webp')); ?>" alt="Wonom Logo">
             </a>
             <nav class="header-nav">
-                <a href="#introduce" class="nav-item h6_mb txt_15 txt_extrabold cl_dark_brown">GIỚI THIỆU</a>
-                <a href="#experience" class="nav-item h6_mb txt_15 txt_extrabold cl_dark_brown">TRẢI NGHIỆM</a>
-                <a href="#explore" class="nav-item h6_mb txt_15 txt_extrabold cl_dark_brown">KHÁM PHÁ 5 TẦNG</a>
-                <a href="#tour" class="nav-item h6_mb txt_15 txt_extrabold cl_dark_brown">THAM QUAN</a>
-                <a href="#event" class="nav-item h6_mb txt_15 txt_extrabold cl_dark_brown">SỰ KIỆN</a>
-                <a href="#library" class="nav-item h6_mb txt_15 txt_extrabold cl_dark_brown">THƯ VIỆN ẢNH</a>
-                <a href="#contact" class="nav-item h6_mb txt_15 txt_extrabold cl_dark_brown">LIÊN HỆ</a>
+                <?php foreach ($wonom_header_nav as $wonom_header_section => $wonom_header_label) : ?>
+                    <a href="#<?php echo esc_attr($wonom_header_section); ?>" class="nav-item h6_mb txt_15 txt_extrabold cl_dark_brown"><?php echo esc_html($wonom_header_label); ?></a>
+                <?php endforeach; ?>
                 <div class="header_nav_wrap">
                     <a href="#" class="header_button btn tablet txt_14 txt_extrabold txt-btn-red txt_bold"
                         data-booking-trigger data-booking-type="general" data-booking-floor=""
                         data-booking-venue="WONOM" data-booking-title="LIÊN HỆ TƯ VẤN NGAY" data-booking-subtitle=""
                         data-booking-submit="GỬI YÊU CẦU ĐẶT LỊCH">
-                        <div class="btn-inner">ĐẶT CHỖ</div>
+                        <div class="btn-inner"><?php echo esc_html($wonom_header_booking_text); ?></div>
                     </a>
                     <a href="#" class="header_button_member tablet btn txt_14 txt_extrabold txt-btn-yellow txt_bold">
-                        <div class="btn-inner">THÀNH VIÊN</div>
+                        <div class="btn-inner"><?php echo esc_html($wonom_header_member_text); ?></div>
                     </a>
                 </div>
 
@@ -86,7 +99,9 @@ $wonom_active_icon = isset($wonom_language_icons[$wonom_active_slug])
                             $wonom_language_name = isset($wonom_language['name']) ? $wonom_language['name'] : strtoupper($wonom_language_slug);
                             $wonom_language_url = !empty($wonom_language['url'])
                                 ? $wonom_language['url']
-                                : (function_exists('pll_home_url') ? pll_home_url($wonom_language_slug) : home_url('/'));
+                                : ($wonom_has_polylang && function_exists('pll_home_url')
+                                    ? pll_home_url($wonom_language_slug)
+                                    : add_query_arg('lang', $wonom_language_slug, home_url('/')));
                             $wonom_language_icon = isset($wonom_language_icons[$wonom_language_slug])
                                 ? $wonom_language_icons[$wonom_language_slug]
                                 : 'icon_vietnam.svg';
@@ -117,10 +132,10 @@ $wonom_active_icon = isset($wonom_language_icons[$wonom_active_slug])
                     data-booking-trigger data-booking-type="general" data-booking-floor="" data-booking-venue="WONOM"
                     data-booking-title="LIÊN HỆ TƯ VẤN NGAY" data-booking-subtitle=""
                     data-booking-submit="GỬI YÊU CẦU ĐẶT LỊCH">
-                    <div class="btn-inner">ĐẶT CHỖ</div>
+                    <div class="btn-inner"><?php echo esc_html($wonom_header_booking_text); ?></div>
                 </a>
                 <a href="#" class="header_button_member desktop btn txt_14 txt_extrabold txt-btn-yellow txt_bold">
-                    <div class="btn-inner">THÀNH VIÊN</div>
+                    <div class="btn-inner"><?php echo esc_html($wonom_header_member_text); ?></div>
                 </a>
                 <div class="header_menu tablet btn">
                     <div class="header_menu_inner btn-inner">

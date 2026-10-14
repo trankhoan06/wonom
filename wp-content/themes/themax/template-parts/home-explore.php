@@ -22,6 +22,15 @@ $explore_option = static function ($field, $fallback = '') {
     return null === $value || false === $value || '' === $value ? $fallback : $value;
 };
 
+$explore_saved_options = get_option('wonom_home_options', array());
+$explore_saved_options = is_array($explore_saved_options) ? $explore_saved_options : array();
+$explore_optional_text = static function ($field, $fallback = '') use ($explore_saved_options) {
+    if (array_key_exists($field, $explore_saved_options)) {
+        return is_scalar($explore_saved_options[$field]) ? trim((string) $explore_saved_options[$field]) : '';
+    }
+    return $fallback;
+};
+
 $explore_image_url = static function ($image) {
     if (is_numeric($image)) {
         return wp_get_attachment_image_url((int) $image, 'full') ?: '';
@@ -87,6 +96,10 @@ $class_query = static function ($class_name) {
     return 'contains(concat(" ", normalize-space(@class), " "), " ' . $class_name . ' ")';
 };
 
+$explore_popup_data = function_exists('wonom_get_home_explore_popup_data')
+    ? wonom_get_home_explore_popup_data()
+    : array();
+
 $sidebar_title = $explore_first('//*[@id="explore"]//*[contains(concat(" ", normalize-space(@class), " "), " home_explore_sidebar_title ")]');
 $explore_set_text($sidebar_title, $explore_option('home_explore_sidebar_title', 'Hãy chọn tầng.. bạn muốn đến!!!'));
 
@@ -144,22 +157,50 @@ foreach ($explore_defaults as $floor => $defaults) {
         }
     }
 
+    $meta_wrap = $explore_first('.//*[' . $class_query('workshop_meta') . ']', $floor_section);
     $single_meta_label = $explore_first('.//*[' . $class_query('home_explore_content_time') . ']', $floor_section);
-    if ($single_meta_label) {
-        $explore_set_text($single_meta_label, $explore_option($prefix . 'meta_1_label', $defaults['meta_1_label']));
-        $explore_set_text(
-            $explore_first('.//*[' . $class_query('home_explore_content_txttime') . ']', $floor_section),
-            $explore_option($prefix . 'meta_1_value', $defaults['meta_1_value'])
-        );
-    } else {
-        $meta_items = $explore_xpath->query('.//*[' . $class_query('workshop_meta_item') . ']', $floor_section);
-        if ($meta_items) {
-            for ($meta_index = 0; $meta_index < min(2, $meta_items->length); $meta_index++) {
-                $meta_item = $meta_items->item($meta_index);
-                $number = $meta_index + 1;
-                $explore_set_text($explore_first('.//*[' . $class_query('cl_meta') . ']', $meta_item), $explore_option($prefix . 'meta_' . $number . '_label', $defaults['meta_' . $number . '_label']));
-                $explore_set_text($explore_first('.//*[' . $class_query('txt_bold') . ']', $meta_item), $explore_option($prefix . 'meta_' . $number . '_value', $defaults['meta_' . $number . '_value']));
+    $single_meta_value = $explore_first('.//*[' . $class_query('home_explore_content_txttime') . ']', $floor_section);
+    if (!$meta_wrap && $single_meta_label && $single_meta_label->parentNode) {
+        $meta_wrap = $explore_dom->createElement('div');
+        $meta_wrap->setAttribute('class', 'workshop_meta');
+        $single_meta_label->parentNode->insertBefore($meta_wrap, $single_meta_label);
+        $single_meta_label->parentNode->removeChild($single_meta_label);
+        if ($single_meta_value && $single_meta_value->parentNode) {
+            $single_meta_value->parentNode->removeChild($single_meta_value);
+        }
+    }
+
+    if ($meta_wrap) {
+        while ($meta_wrap->firstChild) {
+            $meta_wrap->removeChild($meta_wrap->firstChild);
+        }
+
+        for ($meta_index = 1; $meta_index <= 2; $meta_index++) {
+            $meta_label = $explore_optional_text($prefix . 'meta_' . $meta_index . '_label', $defaults['meta_' . $meta_index . '_label']);
+            $meta_value = $explore_optional_text($prefix . 'meta_' . $meta_index . '_value', $defaults['meta_' . $meta_index . '_value']);
+            if ('' === $meta_label && '' === $meta_value) {
+                continue;
             }
+
+            $meta_item = $explore_dom->createElement('div');
+            $meta_item->setAttribute('class', 'workshop_meta_item');
+            if ('' !== $meta_label) {
+                $label_node = $explore_dom->createElement('div');
+                $label_node->setAttribute('class', 'txt_13 cl_meta');
+                $label_node->appendChild($explore_dom->createTextNode($meta_label));
+                $meta_item->appendChild($label_node);
+            }
+            if ('' !== $meta_value) {
+                $value_node = $explore_dom->createElement('div');
+                $value_node->setAttribute('class', 'txt_bold');
+                $value_node->appendChild($explore_dom->createTextNode($meta_value));
+                $meta_item->appendChild($value_node);
+            }
+            $meta_wrap->appendChild($meta_item);
+        }
+
+        if (!$meta_wrap->hasChildNodes() && $meta_wrap->parentNode) {
+            $meta_wrap->parentNode->removeChild($meta_wrap);
         }
     }
 
@@ -184,7 +225,9 @@ foreach ($explore_defaults as $floor => $defaults) {
             }
             $product_filters = array_merge(
                 array(array('slug' => 'all', 'label' => 'TẤT CẢ')),
-                wonom_get_home_workshop_categories()
+                function_exists('wonom_get_used_workshop_categories')
+                    ? wonom_get_used_workshop_categories()
+                    : wonom_get_home_workshop_categories()
             );
             foreach ($product_filters as $filter_index => $filter) {
                 $filter_button = $explore_dom->createElement('button');
@@ -200,11 +243,16 @@ foreach ($explore_defaults as $floor => $defaults) {
         }
 
         $workshop_category_labels = array();
-        foreach (wonom_get_home_workshop_categories() as $workshop_category) {
+        $used_workshop_categories = function_exists('wonom_get_used_workshop_categories')
+            ? wonom_get_used_workshop_categories()
+            : wonom_get_home_workshop_categories();
+        foreach ($used_workshop_categories as $workshop_category) {
             $workshop_category_labels[$workshop_category['slug']] = $workshop_category['label'];
         }
 
-        $workshops = $explore_option($prefix . 'workshops', array());
+        $workshops = function_exists('wonom_get_workshop_products')
+            ? wonom_get_workshop_products()
+            : $explore_option($prefix . 'workshops', array());
         $workshop_list = $explore_first('.//*[' . $class_query('workshop_catalog_list') . ']', $floor_section);
         $prototype = $workshop_list ? $explore_first('.//*[' . $class_query('workshop_card') . ']', $workshop_list) : null;
 
@@ -214,13 +262,17 @@ foreach ($explore_defaults as $floor => $defaults) {
             }
             foreach ($workshops as $index => $workshop) {
                 $card = $prototype->cloneNode(true);
-                $category = !empty($workshop['category']) ? sanitize_key($workshop['category']) : 'all';
+                $category_slugs = !empty($workshop['categories']) && is_array($workshop['categories'])
+                    ? array_values(array_filter(array_map('sanitize_key', $workshop['categories'])))
+                    : array(!empty($workshop['category']) ? sanitize_key($workshop['category']) : 'all');
+                $category = $category_slugs ? $category_slugs[0] : 'all';
                 $workshop_tag = isset($workshop_category_labels[$category])
                     ? '#' . ltrim($workshop_category_labels[$category], '#')
                     : (!empty($workshop['tag']) ? sanitize_text_field($workshop['tag']) : '#' . $category);
                 $workshop_title = isset($workshop['title']) ? $workshop['title'] : '';
-                $card->setAttribute('data-product-id', 'workshop-' . $category . '-' . ($index + 1));
-                $card->setAttribute('data-workshop-category', $category);
+                $product_id = !empty($workshop['id']) ? (int) $workshop['id'] : ($index + 1);
+                $card->setAttribute('data-product-id', 'workshop-' . $category . '-' . $product_id);
+                $card->setAttribute('data-workshop-category', implode(' ', $category_slugs));
                 $detail_images = array();
                 if (!empty($workshop['detail_images']) && is_array($workshop['detail_images'])) {
                     foreach ($workshop['detail_images'] as $detail_image) {
@@ -238,7 +290,7 @@ foreach ($explore_defaults as $floor => $defaults) {
                 $image_url = $explore_image_url(isset($workshop['image']) ? $workshop['image'] : '');
                 if ($image_node && $image_url) {
                     $image_node->setAttribute('src', $image_url);
-                    $image_node->setAttribute('alt', !empty($workshop['image_alt']) ? $workshop['image_alt'] : $workshop_title);
+                    $image_node->setAttribute('alt', $workshop_title ?: 'Workshop thủ công tại Wonom');
                 }
                 $explore_set_text($explore_first('.//*[' . $class_query('workshop_card_tag') . ']', $card), $workshop_tag);
                 $explore_set_text($explore_first('.//*[' . $class_query('workshop_card_title') . ']', $card), $workshop_title);
@@ -248,26 +300,87 @@ foreach ($explore_defaults as $floor => $defaults) {
             }
         }
     } else {
-        $gallery = $explore_option($prefix . 'gallery', array());
         $gallery_wrap = $explore_first('.//*[' . $class_query('home_explore_list_inner') . ']', $floor_section);
+        $popup_gallery_rows = $explore_option($prefix . 'popup_gallery', array());
+        $uses_popup_gallery_for_slider = is_array($popup_gallery_rows) && !empty($popup_gallery_rows);
+        $slider_media = array();
 
-        if (is_array($gallery) && $gallery && $gallery_wrap) {
+        if ($uses_popup_gallery_for_slider && !empty($explore_popup_data[$floor . 'f']['galleryImages'])) {
+            foreach ($explore_popup_data[$floor . 'f']['galleryImages'] as $media) {
+                if (!empty($media['showInSlider'])) {
+                    $slider_media[] = $media;
+                }
+            }
+        }
+
+        if ($uses_popup_gallery_for_slider && $gallery_wrap) {
             while ($gallery_wrap->firstChild) {
                 $gallery_wrap->removeChild($gallery_wrap->firstChild);
             }
-            foreach ($gallery as $gallery_image) {
-                $image_url = $explore_image_url(isset($gallery_image['image']) ? $gallery_image['image'] : '');
-                if (!$image_url) {
+
+            foreach ($slider_media as $gallery_index => $media) {
+                $media_type = isset($media['type']) ? sanitize_key($media['type']) : 'image';
+                $media_url = isset($media['src']) ? esc_url_raw($media['src']) : '';
+                $thumbnail_url = isset($media['thumbnail']) ? esc_url_raw($media['thumbnail']) : '';
+                if (!$media_url) {
                     continue;
                 }
+
                 $slide = $explore_dom->createElement('div');
-                $slide->setAttribute('class', 'home_explore_list_item swiper-slide img_abs');
-                $image = $explore_dom->createElement('img');
-                $image->setAttribute('src', $image_url);
-                $image->setAttribute('alt', isset($gallery_image['alt']) ? $gallery_image['alt'] : '');
-                $image->setAttribute('loading', 'lazy');
-                $slide->appendChild($image);
+                $slide->setAttribute('class', 'home_explore_list_item swiper-slide img_abs wonom-lazy-media');
+                $media_alt = $nav_title . ' · Wonom · ' . ($gallery_index + 1);
+
+                if ('image' === $media_type) {
+                    $image = $explore_dom->createElement('img');
+                    $image->setAttribute('src', $media_url);
+                    $image->setAttribute('alt', $media_alt);
+                    $image->setAttribute('loading', 'lazy');
+                    $slide->appendChild($image);
+                } else {
+                    if ($thumbnail_url) {
+                        $thumbnail = $explore_dom->createElement('img');
+                        $thumbnail->setAttribute('class', 'wonom-lazy-video-thumbnail');
+                        $thumbnail->setAttribute('src', $thumbnail_url);
+                        $thumbnail->setAttribute('alt', $media_alt);
+                        $thumbnail->setAttribute('loading', 'lazy');
+                        $slide->appendChild($thumbnail);
+                    }
+                    $play_button = $explore_dom->createElement('button');
+                    $play_button->setAttribute('class', 'wonom-lazy-video-play');
+                    $play_button->setAttribute('type', 'button');
+                    $play_button->setAttribute('data-wonom-video-play', 'true');
+                    $play_button->setAttribute('data-video-type', $media_type);
+                    $play_button->setAttribute('data-video-src', $media_url);
+                    $play_button->setAttribute('aria-label', 'Phát video ' . $media_alt);
+                    $play_icon = $explore_dom->createElement('span');
+                    $play_icon->setAttribute('aria-hidden', 'true');
+                    $play_button->appendChild($play_icon);
+                    $slide->appendChild($play_button);
+                }
                 $gallery_wrap->appendChild($slide);
+            }
+        } elseif ($gallery_wrap) {
+            // Keep legacy slider data as a migration fallback until popup media is configured.
+            $gallery = $explore_option($prefix . 'gallery', array());
+
+            if (is_array($gallery) && $gallery) {
+                while ($gallery_wrap->firstChild) {
+                    $gallery_wrap->removeChild($gallery_wrap->firstChild);
+                }
+                foreach ($gallery as $gallery_index => $gallery_image) {
+                    $image_url = $explore_image_url(isset($gallery_image['image']) ? $gallery_image['image'] : '');
+                    if (!$image_url) {
+                        continue;
+                    }
+                    $slide = $explore_dom->createElement('div');
+                    $slide->setAttribute('class', 'home_explore_list_item swiper-slide img_abs');
+                    $image = $explore_dom->createElement('img');
+                    $image->setAttribute('src', $image_url);
+                    $image->setAttribute('alt', $nav_title . ' · Wonom · ' . ($gallery_index + 1));
+                    $image->setAttribute('loading', 'lazy');
+                    $slide->appendChild($image);
+                    $gallery_wrap->appendChild($slide);
+                }
             }
         }
     }

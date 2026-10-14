@@ -28,15 +28,17 @@ $experience_resolve_image = static function ($image, $fallback) {
 $experience_cards = array();
 
 for ($floor = 1; $floor <= 5; $floor++) {
+    $floor_label = $experience_get_option('home_experience_floor_' . $floor . '_label', $floor . 'F');
+    $floor_title = $experience_get_option('home_experience_floor_' . $floor . '_title', 'Nhà hàng Mujige');
     $experience_cards[] = array(
         'floor' => $floor,
-        'label' => $experience_get_option('home_experience_floor_' . $floor . '_label', $floor . 'F'),
-        'title' => $experience_get_option('home_experience_floor_' . $floor . '_title', 'Nhà hàng Mujige'),
+        'label' => $floor_label,
+        'title' => $floor_title,
         'image_url' => $experience_resolve_image(
             $experience_get_option('home_experience_floor_' . $floor . '_image'),
             $experience_asset_url . 'ex_content.webp'
         ),
-        'image_alt' => $experience_get_option('home_experience_floor_' . $floor . '_image_alt', 'Khám phá tầng ' . $floor),
+        'image_alt' => $floor_label . ' · ' . $floor_title . ' · Wonom',
     );
 }
 
@@ -44,7 +46,7 @@ $experience_middle_image = $experience_resolve_image(
     $experience_get_option('home_experience_middle_image'),
     $experience_asset_url . 'ex_content1.webp'
 );
-$experience_middle_image_alt = $experience_get_option('home_experience_middle_image_alt', 'Wonom Culture Complex');
+$experience_middle_image_alt = 'Wonom Culture Complex';
 $experience_marquee_text = $experience_get_option('home_experience_marquee_text', 'trải nghiệm wonom 5 sao!!!');
 
 $render_experience_card = static function ($card) {

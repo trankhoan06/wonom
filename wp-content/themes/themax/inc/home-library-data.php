@@ -7,7 +7,7 @@ function wonom_get_home_library_images()
     if (!is_array($rows) || !$rows) {
         $defaults = array('home_banner.webp', 'home-hero2.webp', 'home-hero3.webp', 'store.jpg', 'img_popup.webp', 'home_banner.webp', 'home-hero2.webp', 'store.jpg');
         $rows = array_map(static function ($filename) use ($asset_url) {
-            return array('image' => $asset_url . $filename, 'image_alt' => '', 'tag' => 'WONOM');
+            return array('image' => $asset_url . $filename, 'tag' => 'WONOM');
         }, $defaults);
     }
 
@@ -24,18 +24,23 @@ function wonom_get_home_library_images()
         } elseif (is_string($image)) {
             $url = esc_url_raw($image);
         }
-        return array('url' => $url, 'alt' => $id ? sanitize_text_field(get_post_meta($id, '_wp_attachment_image_alt', true)) : '');
+        return $url;
     };
 
     $images = array();
     foreach ($rows as $row) {
         if (!is_array($row)) continue;
         $image = $resolve_image(isset($row['image']) ? $row['image'] : '');
-        if (!$image['url']) continue;
+        if (!$image) continue;
+        $tag = isset($row['tag']) ? sanitize_text_field($row['tag']) : '';
+        $clean_tag = ltrim($tag, '#');
+        $image_alt = $clean_tag && 0 !== strcasecmp($clean_tag, 'WONOM')
+            ? $clean_tag . ' · Wonom'
+            : 'Wonom Culture Complex';
         $images[] = array(
-            'src' => $image['url'],
-            'alt' => !empty($row['image_alt']) ? sanitize_text_field($row['image_alt']) : $image['alt'],
-            'tag' => isset($row['tag']) ? sanitize_text_field($row['tag']) : '',
+            'src' => $image,
+            'alt' => $image_alt,
+            'tag' => $tag,
             'category' => 'all',
         );
     }

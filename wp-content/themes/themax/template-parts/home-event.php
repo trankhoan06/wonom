@@ -43,6 +43,19 @@ if ($title_node) {
     }
 }
 
+$event_icon_asset_url = trailingslashit(get_template_directory_uri()) . 'asset/img/';
+foreach (array(1 => 'event_icon1.png', 2 => 'event_icon2.png') as $icon_index => $icon_filename) {
+    $icon_image = $event_first(
+        '//*[@id="event"]//*[' . $event_class('home_event_icon') . ' and ' . $event_class('icon' . $icon_index) . ']//img'
+    );
+    if ($icon_image) {
+        $icon_image->setAttribute(
+            'src',
+            wonom_get_home_image_url('home_event_decor_icon_' . $icon_index, $event_icon_asset_url . $icon_filename)
+        );
+    }
+}
+
 $card_wrap = $event_first('//*[' . $event_class('home_event_card_wrap') . ']');
 $prototype = $card_wrap ? $event_first('./*[' . $event_class('home_event_card_item') . ']', $card_wrap) : null;
 if ($card_wrap && $prototype) {

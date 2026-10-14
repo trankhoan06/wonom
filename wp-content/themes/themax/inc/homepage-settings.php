@@ -6,11 +6,14 @@
 
 function wonom_get_homepage_language()
 {
-    if (is_admin() && isset($_GET['lang'])) {
+    if (isset($_GET['lang'])) {
         $requested_language = sanitize_key(wp_unslash($_GET['lang']));
         $available_languages = function_exists('pll_languages_list')
             ? (array) pll_languages_list(array('fields' => 'slug'))
             : array('vi', 'en', 'ko');
+        if (!$available_languages) {
+            $available_languages = array('vi', 'en', 'ko');
+        }
 
         if (in_array($requested_language, $available_languages, true)) {
             return $requested_language;
@@ -22,6 +25,9 @@ function wonom_get_homepage_language()
         $available_languages = function_exists('pll_languages_list')
             ? (array) pll_languages_list(array('fields' => 'slug'))
             : array('vi', 'en', 'ko');
+        if (!$available_languages) {
+            $available_languages = array('vi', 'en', 'ko');
+        }
 
         if (in_array($posted_language, $available_languages, true)) {
             return $posted_language;
@@ -61,14 +67,13 @@ function wonom_is_shared_homepage_field($key)
 {
     $key = sanitize_key($key);
 
-    // Image descriptions remain translatable even though the image is shared.
-    if (preg_match('/(?:^|_)image_alt$/', $key)) {
-        return false;
-    }
-
     // Plural keys such as home_library_images are containers; recurse into
-    // them so captions/tags can still be translated while each `image` stays shared.
-    return 'image' === $key || (bool) preg_match('/(?:^|_)image(?:_|$)/', $key);
+    // them so tags can still be translated while images/icons/videos stay shared.
+    return 'image' === $key
+        || 'icon' === $key
+        || 'video' === $key
+        || 'thumbnail' === $key
+        || (bool) preg_match('/(?:^|_)(?:image|icon|video|youtube|thumbnail)(?:_|$)/', $key);
 }
 
 function wonom_remove_shared_homepage_values($values)
@@ -135,6 +140,42 @@ function wonom_filter_homepage_options_by_language($default_options)
 }
 add_filter('option_wonom_home_options', 'wonom_filter_homepage_options_by_language');
 
+function wonom_enqueue_global_richtext_admin_assets()
+{
+    if (!isset($_GET['page']) || 'wonom-homepage-settings' !== sanitize_key(wp_unslash($_GET['page']))) {
+        return;
+    }
+
+    $theme_path = get_template_directory();
+    $theme_url = get_template_directory_uri();
+    $fullscreen_path = $theme_path . '/typerocket/wordpress/assets/typerocket/js/lib/redactor/fullscreen.js';
+    $richtext_script_path = $theme_path . '/asset/js/admin-global-richtext.js';
+    $richtext_style_path = $theme_path . '/asset/css/admin-global-richtext.css';
+
+    wp_enqueue_media();
+    wp_enqueue_script(
+        'wonom-redactor-fullscreen',
+        $theme_url . '/typerocket/wordpress/assets/typerocket/js/lib/redactor/fullscreen.js',
+        array('jquery', 'typerocket-editor'),
+        file_exists($fullscreen_path) ? filemtime($fullscreen_path) : null,
+        true
+    );
+    wp_enqueue_script(
+        'wonom-admin-global-richtext',
+        $theme_url . '/asset/js/admin-global-richtext.js',
+        array('jquery', 'typerocket-scripts-global', 'wonom-redactor-fullscreen'),
+        file_exists($richtext_script_path) ? filemtime($richtext_script_path) : null,
+        true
+    );
+    wp_enqueue_style(
+        'wonom-admin-global-richtext',
+        $theme_url . '/asset/css/admin-global-richtext.css',
+        array('typerocket-styles-redactor'),
+        file_exists($richtext_style_path) ? filemtime($richtext_style_path) : null
+    );
+}
+add_action('admin_enqueue_scripts', 'wonom_enqueue_global_richtext_admin_assets');
+
 function wonom_register_homepage_settings_menu()
 {
     add_menu_page(
@@ -160,6 +201,28 @@ function wonom_sanitize_homepage_settings($value)
     }
 
     return is_string($value) ? wp_kses_post($value) : $value;
+}
+
+function wonom_get_home_image_url($field, $fallback = '')
+{
+    $image = tr_options_field('wonom_home_options.' . $field);
+
+    if (is_numeric($image)) {
+        return wp_get_attachment_image_url((int) $image, 'full') ?: $fallback;
+    }
+    if (is_array($image)) {
+        $attachment_id = isset($image['id']) ? (int) $image['id'] : 0;
+        $image_url = $attachment_id ? wp_get_attachment_image_url($attachment_id, 'full') : '';
+        if (!$image_url && !empty($image['url'])) {
+            $image_url = esc_url_raw($image['url']);
+        }
+        return $image_url ?: $fallback;
+    }
+    if (is_string($image) && $image !== '') {
+        return esc_url_raw($image);
+    }
+
+    return $fallback;
 }
 
 function wonom_handle_homepage_settings_save()
@@ -213,8 +276,20 @@ function wonom_get_home_workshop_categories()
         array('slug' => 'traditional', 'label' => 'ÁO TRUYỀN THỐNG'),
         array('slug' => 'accessories', 'label' => 'PHỤ KIỆN'),
     );
-    $rows = tr_options_field('wonom_home_options.home_explore_floor_3_categories');
+    $terms = get_terms(array(
+        'taxonomy' => 'wonom_workshop_category',
+        'hide_empty' => false,
+        'orderby' => 'name',
+        'order' => 'ASC',
+    ));
+    if (!is_wp_error($terms) && $terms) {
+        return array_map(static function ($term) {
+            return array('slug' => $term->slug, 'label' => $term->name);
+        }, $terms);
+    }
 
+    // Legacy fallback before the one-time taxonomy migration runs in admin.
+    $rows = tr_options_field('wonom_home_options.home_explore_floor_3_categories');
     if (!is_array($rows) || !$rows) {
         return $default_categories;
     }
@@ -253,6 +328,44 @@ function wonom_get_home_explore_popup_data()
         }
         return is_string($image) ? esc_url_raw($image) : '';
     };
+    $resolve_file = static function ($file) {
+        if (is_numeric($file)) {
+            return wp_get_attachment_url((int) $file) ?: '';
+        }
+        if (is_array($file)) {
+            $attachment_id = isset($file['id']) ? (int) $file['id'] : 0;
+            $url = $attachment_id ? wp_get_attachment_url($attachment_id) : '';
+            return $url ?: (isset($file['url']) ? esc_url_raw($file['url']) : '');
+        }
+        return is_string($file) ? esc_url_raw($file) : '';
+    };
+    $resolve_youtube_embed = static function ($url) {
+        $url = esc_url_raw($url);
+        if (!$url) {
+            return '';
+        }
+
+        $parts = wp_parse_url($url);
+        $host = isset($parts['host']) ? strtolower(preg_replace('/^www\./', '', $parts['host'])) : '';
+        $path = isset($parts['path']) ? trim($parts['path'], '/') : '';
+        $video_id = '';
+
+        if ('youtu.be' === $host) {
+            $video_id = strtok($path, '/');
+        } elseif (in_array($host, array('youtube.com', 'm.youtube.com', 'music.youtube.com'), true)) {
+            if (!empty($parts['query'])) {
+                parse_str($parts['query'], $query);
+                $video_id = isset($query['v']) ? $query['v'] : '';
+            }
+            if (!$video_id && preg_match('#^(?:embed|shorts|live)/([^/]+)#', $path, $matches)) {
+                $video_id = $matches[1];
+            }
+        }
+
+        return preg_match('/^[A-Za-z0-9_-]{11}$/', (string) $video_id)
+            ? 'https://www.youtube-nocookie.com/embed/' . rawurlencode($video_id)
+            : '';
+    };
     $popup_data = array();
 
     foreach ($popup_defaults as $floor => $defaults) {
@@ -278,31 +391,75 @@ function wonom_get_home_explore_popup_data()
             }
         }
 
-        if (is_array($gallery_rows)) {
+        if (3 === $floor && function_exists('wonom_get_workshop_products')) {
+            $workshop_category_labels = array();
+            foreach (wonom_get_home_workshop_categories() as $workshop_category) {
+                $workshop_category_labels[$workshop_category['slug']] = $workshop_category['label'];
+            }
+            foreach (wonom_get_workshop_products() as $workshop_product) {
+                $category_slugs = !empty($workshop_product['categories']) && is_array($workshop_product['categories'])
+                    ? array_values(array_filter(array_map('sanitize_key', $workshop_product['categories'])))
+                    : array(!empty($workshop_product['category']) ? sanitize_key($workshop_product['category']) : 'all');
+                $primary_category = $category_slugs ? $category_slugs[0] : 'all';
+                $tag = isset($workshop_category_labels[$primary_category])
+                    ? '#' . ltrim($workshop_category_labels[$primary_category], '#')
+                    : '';
+                $product_title = isset($workshop_product['title']) ? sanitize_text_field($workshop_product['title']) : 'Workshop';
+                $gallery_images[] = array(
+                    'type' => 'image',
+                    'src' => $resolve_image(isset($workshop_product['image']) ? $workshop_product['image'] : '') ?: $asset_url . 'store.jpg',
+                    'thumbnail' => '',
+                    'showInSlider' => false,
+                    'alt' => $product_title . ' · Wonom',
+                    'tag' => $tag,
+                    'category' => implode(' ', $category_slugs),
+                );
+            }
+        } elseif (is_array($gallery_rows)) {
             foreach ($gallery_rows as $row) {
-                $url = $resolve_image(isset($row['image']) ? $row['image'] : '');
-                if (!$url) {
+                $image_url = $resolve_image(isset($row['image']) ? $row['image'] : '');
+                $video_url = $resolve_file(isset($row['video']) ? $row['video'] : '');
+                $youtube_url = $resolve_youtube_embed(isset($row['youtube_url']) ? $row['youtube_url'] : '');
+
+                if ($youtube_url) {
+                    $media_type = 'youtube';
+                    $url = $youtube_url;
+                } elseif ($video_url) {
+                    $media_type = 'video';
+                    $url = $video_url;
+                } elseif ($image_url) {
+                    $media_type = 'image';
+                    $url = $image_url;
+                } else {
                     continue;
                 }
+
+                $category = isset($row['category']) ? sanitize_key($row['category']) : 'all';
+                $tag = isset($row['tag']) ? sanitize_text_field($row['tag']) : '';
                 $gallery_images[] = array(
+                    'type' => $media_type,
                     'src' => $url,
-                    'alt' => isset($row['alt']) ? sanitize_text_field($row['alt']) : '',
-                    'tag' => isset($row['tag']) ? sanitize_text_field($row['tag']) : '',
-                    'category' => isset($row['category']) ? sanitize_key($row['category']) : 'all',
+                    'thumbnail' => $image_url,
+                    'showInSlider' => !empty($row['show_in_slider']),
+                    'alt' => trim(sanitize_text_field($defaults['title']) . ' · Wonom' . ($tag ? ' · ' . ltrim($tag, '#') : '')),
+                    'tag' => $tag,
+                    'category' => $category,
                 );
             }
         }
-        if (!$gallery_images) {
+        if (!$gallery_images && 3 !== $floor) {
             foreach ($defaults['gallery'] as $gallery_index => $filename) {
                 $category = 'all';
                 $tag = 'tag';
-                if (3 === $floor) {
-                    $workshop_categories = wonom_get_home_workshop_categories();
-                    $fallback_category = $workshop_categories[$gallery_index % count($workshop_categories)];
-                    $category = $fallback_category['slug'];
-                    $tag = '#' . $fallback_category['label'];
-                }
-                $gallery_images[] = array('src' => $asset_url . $filename, 'alt' => '', 'tag' => $tag, 'category' => $category);
+                $gallery_images[] = array(
+                    'type' => 'image',
+                    'src' => $asset_url . $filename,
+                    'thumbnail' => $asset_url . $filename,
+                    'showInSlider' => false,
+                    'alt' => trim(sanitize_text_field($defaults['title']) . ' · Wonom' . ($tag ? ' · ' . ltrim($tag, '#') : '')),
+                    'tag' => $tag,
+                    'category' => $category,
+                );
             }
         }
 
@@ -315,7 +472,10 @@ function wonom_get_home_explore_popup_data()
 
         if (3 === $floor) {
             $filters = array(array('value' => 'all', 'label' => 'TẤT CẢ'));
-            foreach (wonom_get_home_workshop_categories() as $category) {
+            $workshop_categories = function_exists('wonom_get_used_workshop_categories')
+                ? wonom_get_used_workshop_categories()
+                : wonom_get_home_workshop_categories();
+            foreach ($workshop_categories as $category) {
                 $filters[] = array('value' => $category['slug'], 'label' => $category['label']);
             }
             $floor_data['galleryFilters'] = $filters;
@@ -349,6 +509,58 @@ function wonom_render_homepage_settings()
     $form = tr_form('option', 'create', null, $model)
         ->setGroup('wonom_home_options');
 
+    $global_icon_settings = function () use ($form) {
+        echo '<h2>Icon chung</h2>';
+        echo '<p>Quản lý logo và các icon dùng ngoài những section nội dung chính.</p>';
+        echo '<h3>Header</h3>';
+        echo $form->image('home_header_logo_image')->setLabel('Logo header');
+        echo '<h3>Nút liên hệ nổi</h3>';
+        echo '<h4>Nút thành viên</h4>';
+        echo $form->row(
+            $form->image('home_global_member_icon')->setLabel('Icon thành viên'),
+            $form->text('home_global_member_text')->setLabel('Nội dung'),
+            $form->text('home_global_member_link')->setLabel('Đường dẫn')
+        );
+        echo '<h4>Nút điện thoại</h4>';
+        echo $form->row(
+            $form->image('home_global_phone_icon')->setLabel('Icon điện thoại'),
+            $form->text('home_global_phone_text')->setLabel('Nội dung'),
+            $form->text('home_global_phone_link')->setLabel('Đường dẫn')
+        );
+        echo '<h4>Nút Zalo</h4>';
+        echo $form->row(
+            $form->image('home_global_zalo_icon')->setLabel('Icon Zalo'),
+            $form->text('home_global_zalo_text')->setLabel('Nội dung'),
+            $form->text('home_global_zalo_link')->setLabel('Đường dẫn')
+        );
+        echo '<h3>Popup thành viên</h3>';
+        echo $form->image('home_member_popup_icon')->setLabel('Icon trang trí thành viên');
+    };
+
+    $header_settings = function () use ($form) {
+        echo '<h2>Nội dung Header</h2>';
+        echo '<p>Quản lý nội dung menu và hai nút hành động trên Header cho cả desktop và mobile.</p>';
+        echo '<h3>Menu điều hướng</h3>';
+        echo $form->row(
+            $form->text('home_header_nav_introduce')->setLabel('Giới thiệu'),
+            $form->text('home_header_nav_experience')->setLabel('Trải nghiệm')
+        );
+        echo $form->row(
+            $form->text('home_header_nav_explore')->setLabel('Khám phá'),
+            $form->text('home_header_nav_tour')->setLabel('Tham quan')
+        );
+        echo $form->row(
+            $form->text('home_header_nav_event')->setLabel('Sự kiện'),
+            $form->text('home_header_nav_library')->setLabel('Thư viện'),
+            $form->text('home_header_nav_contact')->setLabel('Liên hệ')
+        );
+        echo '<h3>Nút hành động</h3>';
+        echo $form->row(
+            $form->text('home_header_booking_text')->setLabel('Nút đặt chỗ'),
+            $form->text('home_header_member_text')->setLabel('Nút thành viên')
+        );
+    };
+
     $hero_settings = function () use ($form) {
         echo '<h2>Hero</h2>';
         echo '<p>Quản lý các slide trong Hero. Thứ tự trong repeater cũng là thứ tự hiển thị ngoài website.</p>';
@@ -357,48 +569,37 @@ function wonom_render_homepage_settings()
             ->setLabel('Hero Slides')
             ->setFields(array(
                 $form->image('image')->setLabel('Ảnh nền'),
+                $form->image('mobile_image')
+                    ->setLabel('Ảnh nền mobile')
+                    ->setHelp('Dùng cho màn hình rộng tối đa 991px. Để trống để dùng ảnh nền desktop.'),
                 $form->textarea('title')->setLabel('Tiêu đề'),
-                $form->text('alt')->setLabel('Alt text của ảnh'),
             ))
             ->setLimit(6);
     };
 
-    $legacy_intro_description = tr_options_field('wonom_home_options.home_intro_description');
-    $legacy_intro_caption = tr_options_field('wonom_home_options.home_intro_caption');
-    $intro_content_default = sprintf(
-        '<p>%s</p><p><strong>%s</strong></p>',
-        esc_html($legacy_intro_description ?: 'Không gian chạm và tận hưởng văn hóa đời thường Hàn Quốc ngay tại Sài Gòn, mở ra nhịp cầu kết nối văn hóa hai quốc gia.'),
-        esc_html($legacy_intro_caption ?: 'Tổ hợp 5 tầng trải nghiệm Ẩm thực, Hanbok, Workshop thủ công và giải trí Hàn Quốc độc đáo.')
-    );
-
-    $introduce_settings = function () use ($form, $intro_content_default) {
+    $introduce_settings = function () use ($form) {
         echo '<h2>Giới thiệu</h2>';
         echo '<p>Quản lý nội dung section Giới thiệu trên trang chủ. Ba hình ảnh tương ứng với ba card từ trái sang phải.</p>';
 
         echo $form->text('home_intro_eyebrow')
-            ->setLabel('Tiêu đề nhỏ')
-            ->setDefault('CÂU CHUYỆN CỦA WONOM!');
+            ->setLabel('Tiêu đề nhỏ');
 
         echo $form->textarea('home_intro_title')
-            ->setLabel('Tiêu đề chính')
-            ->setDefault("Văn hóa trở nên\nrộng lớn hơn khi\nđược sẻ chia.");
+            ->setLabel('Tiêu đề chính');
 
         echo $form->editor('home_intro_content')
-            ->setLabel('Nội dung')
-            ->setDefault($intro_content_default);
+            ->setLabel('Nội dung');
 
         echo '<h3>Hình ảnh các card</h3>';
+        echo $form->image('home_intro_image_1')->setLabel('Hình card 1');
+        echo $form->image('home_intro_image_2')->setLabel('Hình card 2');
+        echo $form->image('home_intro_image_3')->setLabel('Hình card 3');
+
+        echo '<h4>Icon ghim trên từng card</h4>';
         echo $form->row(
-            $form->image('home_intro_image_1')->setLabel('Hình card 1'),
-            $form->text('home_intro_image_1_alt')->setLabel('Alt text card 1')
-        );
-        echo $form->row(
-            $form->image('home_intro_image_2')->setLabel('Hình card 2'),
-            $form->text('home_intro_image_2_alt')->setLabel('Alt text card 2')
-        );
-        echo $form->row(
-            $form->image('home_intro_image_3')->setLabel('Hình card 3'),
-            $form->text('home_intro_image_3_alt')->setLabel('Alt text card 3')
+            $form->image('home_intro_card_1_pin_image')->setLabel('Ghim card 1'),
+            $form->image('home_intro_card_2_pin_image')->setLabel('Ghim card 2'),
+            $form->image('home_intro_card_3_pin_image')->setLabel('Ghim card 3')
         );
     };
 
@@ -406,29 +607,20 @@ function wonom_render_homepage_settings()
         echo '<h2>Trải nghiệm</h2>';
         echo '<p>Quản lý 5 card tầng. Vị trí và liên kết tới từng tab Khám phá được giữ cố định.</p>';
 
-        echo $form->row(
-            $form->image('home_experience_middle_image')->setLabel('Hình Wonom ở giữa'),
-            $form->text('home_experience_middle_image_alt')->setLabel('Alt text hình giữa')
-        );
+        echo $form->image('home_experience_middle_image')->setLabel('Hình Wonom ở giữa');
 
         echo $form->text('home_experience_marquee_text')
-            ->setLabel('Nội dung chữ chạy')
-            ->setDefault('trải nghiệm wonom 5 sao!!!');
+            ->setLabel('Nội dung chữ chạy');
 
         for ($floor = 1; $floor <= 5; $floor++) {
             echo '<hr><h3>Card tầng ' . esc_html($floor) . '</h3>';
             echo $form->row(
                 $form->text('home_experience_floor_' . $floor . '_label')
-                    ->setLabel('Tên tầng')
-                    ->setDefault($floor . 'F'),
+                    ->setLabel('Tên tầng'),
                 $form->text('home_experience_floor_' . $floor . '_title')
                     ->setLabel('Tiêu đề')
-                    ->setDefault('Nhà hàng Mujige')
             );
-            echo $form->row(
-                $form->image('home_experience_floor_' . $floor . '_image')->setLabel('Hình ảnh'),
-                $form->text('home_experience_floor_' . $floor . '_image_alt')->setLabel('Alt text hình ảnh')
-            );
+            echo $form->image('home_experience_floor_' . $floor . '_image')->setLabel('Hình ảnh');
         }
     };
 
@@ -443,8 +635,7 @@ function wonom_render_homepage_settings()
     $explore_settings = function () use ($form, $explore_floor_defaults) {
         echo '<h2>Khám phá 5 tầng</h2>';
         echo $form->text('home_explore_sidebar_title')
-            ->setLabel('Tiêu đề thanh chọn tầng')
-            ->setDefault('Hãy chọn tầng.. bạn muốn đến!!!');
+            ->setLabel('Tiêu đề thanh chọn tầng');
 
         $floor_contents = array();
 
@@ -454,73 +645,50 @@ function wonom_render_homepage_settings()
                 $prefix = 'home_explore_floor_' . $floor . '_';
 
                 echo '<h3>Nội dung tầng ' . esc_html($floor) . 'F</h3>';
+                echo '<div class="wonom-floor-content-tabs" data-wonom-floor-content-tabs>';
+                echo '<div class="wonom-floor-content-tabs__nav" role="tablist" aria-label="Nhóm nội dung tầng ' . esc_attr($floor) . 'F">';
+                echo '<button type="button" class="wonom-floor-content-tabs__button is-active" role="tab" aria-selected="true" data-wonom-floor-content-tab="content">Nội dung</button>';
+                echo '<button type="button" class="wonom-floor-content-tabs__button" role="tab" aria-selected="false" data-wonom-floor-content-tab="popup">Popup content</button>';
+                echo '</div>';
+                echo '<div class="wonom-floor-content-tabs__panel is-active" role="tabpanel" data-wonom-floor-content-panel="content">';
                 echo $form->row(
-                    $form->text($prefix . 'nav_title')->setLabel('Tên trên menu tầng')->setDefault($defaults['nav']),
-                    $form->text($prefix . 'subtitle')->setLabel('Tiêu đề sticky')->setDefault($defaults['subtitle'])
+                    $form->text($prefix . 'nav_title')->setLabel('Tên trên menu tầng'),
+                    $form->text($prefix . 'subtitle')->setLabel('Tiêu đề sticky')
                 );
-                echo $form->textarea($prefix . 'title')->setLabel('Tiêu đề chính')->setDefault($defaults['title']);
-                echo $form->editor($prefix . 'description')->setLabel('Mô tả')->setDefault($defaults['description']);
+                echo $form->textarea($prefix . 'title')->setLabel('Tiêu đề chính');
+                echo $form->editor($prefix . 'description')->setLabel('Mô tả');
                 echo $form->textarea($prefix . 'tags')
-                    ->setLabel('Tags (phân cách bằng dấu phẩy hoặc xuống dòng)')
-                    ->setDefault($defaults['tags']);
+                    ->setLabel('Tags (phân cách bằng dấu phẩy hoặc xuống dòng)');
                 echo $form->row(
-                    $form->text($prefix . 'meta_1_label')->setLabel('Nhãn thông tin 1')->setDefault($defaults['meta_1_label']),
-                    $form->text($prefix . 'meta_1_value')->setLabel('Nội dung thông tin 1')->setDefault($defaults['meta_1_value'])
+                    $form->text($prefix . 'meta_1_label')->setLabel('Nhãn thông tin 1'),
+                    $form->text($prefix . 'meta_1_value')->setLabel('Nội dung thông tin 1')
+                );
+                echo $form->row(
+                    $form->text($prefix . 'meta_2_label')->setLabel('Nhãn thông tin 2'),
+                    $form->text($prefix . 'meta_2_value')->setLabel('Nội dung thông tin 2')
                 );
 
-                if ($floor >= 3) {
-                    echo $form->row(
-                        $form->text($prefix . 'meta_2_label')->setLabel('Nhãn thông tin 2')->setDefault($defaults['meta_2_label']),
-                        $form->text($prefix . 'meta_2_value')->setLabel('Nội dung thông tin 2')->setDefault($defaults['meta_2_value'])
-                    );
-                }
-
                 echo $form->row(
-                    $form->text($prefix . 'primary_button')->setLabel('Nút xem thông tin')->setDefault($defaults['primary']),
-                    $form->text($prefix . 'booking_button')->setLabel('Nút đặt lịch')->setDefault($defaults['booking'])
+                    $form->text($prefix . 'primary_button')->setLabel('Nút xem thông tin'),
+                    $form->text($prefix . 'booking_button')->setLabel('Nút đặt lịch')
                 );
 
                 if (3 === $floor) {
-                    echo '<hr><h3>Danh mục và sản phẩm Workshop</h3>';
-                    echo '<p>Tạo danh mục một lần tại đây. Mã danh mục này được dùng chung cho bộ lọc sản phẩm và gallery popup.</p>';
-                    echo $form->repeater('home_explore_floor_3_categories')
-                        ->setLabel('Danh mục Workshop 3F')
-                        ->setHeadline('label')
-                        ->setFields(array(
-                            $form->text('label')->setLabel('Tên hiển thị, ví dụ: NÓN'),
-                            $form->text('slug')->setLabel('Mã danh mục, ví dụ: hat'),
-                        ));
-                    echo '<datalist id="wonom-workshop-category-options">';
-                    foreach (wonom_get_home_workshop_categories() as $category) {
-                        echo '<option value="' . esc_attr($category['slug']) . '">' . esc_html($category['label']) . '</option>';
-                    }
-                    echo '</datalist>';
-                    echo $form->repeater($prefix . 'workshops')
-                        ->setLabel('Danh sách sản phẩm và popup Product Detail')
-                        ->setHeadline('title')
-                        ->setFields(array(
-                            $form->rowText('<h4>Thông tin hiển thị trên danh sách sản phẩm</h4>'),
-                            $form->image('image')->setLabel('Hình card sản phẩm'),
-                            $form->text('image_alt')->setLabel('Alt text'),
-                            $form->text('category')->setLabel('Nhóm sản phẩm / Tag trên hình')->setAttribute('list', 'wonom-workshop-category-options'),
-                            $form->text('title')->setLabel('Tên sản phẩm'),
-                            $form->textarea('description')->setLabel('Mô tả ngắn trên card'),
-                            $form->text('price')->setLabel('Giá sản phẩm'),
-                            $form->rowText('<hr><h4>Popup Product Detail</h4>'),
-                            $form->gallery('detail_images')->setLabel('Gallery ảnh chi tiết'),
-                            $form->editor('detail_content')->setLabel('Nội dung giới thiệu chi tiết'),
-                            $form->editor('detail_includes')->setLabel('Dụng cụ bao gồm'),
-                            $form->text('detail_duration')->setLabel('Thời lượng')->setDefault('60-90 phút'),
-                        ));
+                    echo '<hr><h3>Danh mục Workshop</h3>';
+                    echo '<p>Danh mục và sản phẩm được quản lý trực tiếp trong post type Workshop để dùng chung cho bộ lọc.</p>';
+                    echo '<p><a class="button" href="' . esc_url(admin_url('edit-tags.php?taxonomy=wonom_workshop_category&post_type=wonom_workshop')) . '">Quản lý danh mục Workshop</a> ';
+                    echo '<a class="button" href="' . esc_url(admin_url('edit.php?post_type=wonom_workshop')) . '">Quản lý sản phẩm Workshop</a></p>';
                 }
 
-                echo '<hr><h3>Popup tầng ' . esc_html($floor) . 'F</h3>';
+                echo '</div>';
+                echo '<div class="wonom-floor-content-tabs__panel" role="tabpanel" data-wonom-floor-content-panel="popup">';
+                echo '<h3>Popup tầng ' . esc_html($floor) . 'F</h3>';
                 if (3 === $floor) {
-                    echo $form->text($prefix . 'popup_title')->setLabel('Tiêu đề popup')->setDefault(str_replace(' - ', ' · ', $defaults['subtitle']));
+                    echo $form->text($prefix . 'popup_title')->setLabel('Tiêu đề popup');
                 } else {
                     echo $form->row(
-                        $form->text($prefix . 'popup_title')->setLabel('Tiêu đề popup')->setDefault(str_replace(' - ', ' · ', $defaults['subtitle'])),
-                        $form->text($prefix . 'popup_menu_label')->setLabel('Tên tab menu/bảng giá')->setDefault($floor === 1 ? 'THỰC ĐƠN' : ($floor === 5 ? 'MENU' : 'BẢNG GIÁ'))
+                        $form->text($prefix . 'popup_title')->setLabel('Tiêu đề popup'),
+                        $form->text($prefix . 'popup_menu_label')->setLabel('Tên tab menu/bảng giá')
                     );
                 }
 
@@ -532,36 +700,35 @@ function wonom_render_homepage_settings()
                         ));
                 }
 
-                $popup_gallery_fields = array(
-                    $form->image('image')->setLabel('Hình ảnh'),
-                    $form->text('alt')->setLabel('Alt text'),
-                    $form->text('tag')->setLabel('Tag hiển thị'),
-                );
                 if (3 === $floor) {
-                    $popup_gallery_fields[] = $form->text('category')
-                        ->setLabel('Nhóm hiển thị trong bộ lọc')
-                        ->setAttribute('list', 'wonom-workshop-category-options');
+                    echo '<p>Danh sách hình ảnh popup được tự động lấy từ ảnh card của các sản phẩm Workshop đã publish, theo đúng thứ tự sản phẩm.</p>';
+                } else {
+                    $popup_gallery_fields = array(
+                        $form->image('image')
+                            ->setLabel('Hình ảnh')
+                            ->setHelp('Nếu có video, hình này được dùng làm thumbnail. Nếu không có video, hình này hiển thị như ảnh bình thường.'),
+                        $form->file('video', array(), array('type' => 'video', 'button' => 'Chọn / tải video lên'))
+                            ->setLabel('Video tải lên'),
+                        $form->text('youtube_url')
+                            ->setLabel('Link YouTube')
+                            ->setHelp('Hỗ trợ youtube.com, youtu.be, YouTube Shorts và YouTube Live.'),
+                        $form->checkbox('show_in_slider')
+                            ->setLabel('Hiển thị ở slider')
+                            ->setText('Hiển thị media này trong slider của tầng'),
+                    );
+                    $popup_gallery_fields[] = $form->text('tag')->setLabel('Tag hiển thị');
+                    echo $form->repeater($prefix . 'popup_gallery')
+                        ->setLabel('Thư viện ảnh popup')
+                        ->setFields($popup_gallery_fields);
                 }
-                echo $form->repeater($prefix . 'popup_gallery')
-                    ->setLabel('Thư viện ảnh popup')
-                    ->setFields($popup_gallery_fields);
 
-                $booking_popup_titles = array(1 => 'ĐẶT BÀN ONLINE', 2 => 'ĐẶT LỊCH THUÊ', 3 => 'ĐẶT LỊCH WORKSHOP', 4 => 'ĐẶT LỊCH HẸN', 5 => 'ĐẶT CHỖ ONLINE');
-                $booking_popup_submits = array(1 => 'GỬI YÊU CẦU ĐẶT LỊCH', 2 => 'GỬI YÊU CẦU ĐẶT LỊCH', 3 => 'GỬI YÊU CẦU ĐẶT LỊCH', 4 => 'GỬI YÊU CẦU ĐẶT LỊCH', 5 => 'GỬI YÊU CẦU ĐẶT CHỖ');
                 echo '<h4>Popup đặt lịch</h4>';
                 echo $form->row(
-                    $form->text($prefix . 'booking_title')->setLabel('Tiêu đề popup đặt lịch')->setDefault($booking_popup_titles[$floor]),
-                    $form->text($prefix . 'booking_submit')->setLabel('Nội dung nút gửi')->setDefault($booking_popup_submits[$floor])
+                    $form->text($prefix . 'booking_title')->setLabel('Tiêu đề popup đặt lịch'),
+                    $form->text($prefix . 'booking_submit')->setLabel('Nội dung nút gửi')
                 );
-
-                if (3 !== $floor) {
-                    echo $form->repeater($prefix . 'gallery')
-                        ->setLabel('Hình ảnh slider')
-                        ->setFields(array(
-                            $form->image('image')->setLabel('Hình ảnh'),
-                            $form->text('alt')->setLabel('Alt text'),
-                        ));
-                }
+                echo '</div>';
+                echo '</div>';
             })();
             $floor_contents[$floor] = ob_get_clean();
         }
@@ -592,46 +759,37 @@ function wonom_render_homepage_settings()
             .wonom-floor-tabs__content{min-width:0;padding:12px}
             .wonom-floor-tabs__panel{display:none}
             .wonom-floor-tabs__panel.is-active{display:block}
+            .wonom-floor-content-tabs__nav{display:flex;gap:4px;margin:0 0 18px;border-bottom:1px solid #c3c4c7}
+            .wonom-floor-content-tabs__button{margin:0 0 -1px;padding:10px 18px;border:1px solid transparent;border-bottom-color:#c3c4c7;background:transparent;color:#2271b1;font-weight:600;cursor:pointer}
+            .wonom-floor-content-tabs__button:hover,.wonom-floor-content-tabs__button:focus{color:#135e96;outline:0;box-shadow:none}
+            .wonom-floor-content-tabs__button.is-active{border-color:#c3c4c7;border-bottom-color:#fff;background:#fff;color:#1d2327}
+            .wonom-floor-content-tabs__panel{display:none}
+            .wonom-floor-content-tabs__panel.is-active{display:block}
             @media(max-width:782px){.wonom-floor-tabs{grid-template-columns:1fr}.wonom-floor-tabs__nav{display:flex;overflow-x:auto;border-right:0;border-bottom:1px solid #ddd}.wonom-floor-tabs__button{width:auto;min-width:64px;border-left:0;border-bottom:3px solid transparent;text-align:center}.wonom-floor-tabs__button.is-active{border-bottom-color:#2271b1}}
         </style>';
         echo '<script>
             (function(){
                 var root = document.currentScript.previousElementSibling.previousElementSibling;
                 if (!root || !root.classList.contains("wonom-floor-tabs")) return;
-                var categoryList = root.querySelector("#wonom-workshop-category-options");
-                var defaultCategories = categoryList ? Array.from(categoryList.options).map(function(option){
-                    return { slug: option.value, label: option.textContent };
-                }) : [];
-
-                function syncWorkshopCategories(){
-                    if (!categoryList) return;
-                    var categories = [];
-                    root.querySelectorAll("input[name*=\"[home_explore_floor_3_categories]\"][name$=\"[slug]\"]").forEach(function(slugInput){
-                        var group = slugInput.closest(".tr-repeater-group");
-                        var labelInput = group ? group.querySelector("input[name$=\"[label]\"]") : null;
-                        var slug = slugInput.value.trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "-").replace(/^-+|-+$/g, "");
-                        if (slug) categories.push({ slug: slug, label: labelInput && labelInput.value.trim() ? labelInput.value.trim() : slug });
-                    });
-                    if (!categories.length) categories = defaultCategories;
-                    categoryList.replaceChildren();
-                    categories.forEach(function(category){
-                        var option = document.createElement("option");
-                        option.value = category.slug;
-                        option.textContent = category.label;
-                        categoryList.appendChild(option);
-                    });
-                }
-
-                function makeCategorySlug(value){
-                    return value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-                }
 
                 root.addEventListener("click", function(event){
+                    var contentTab = event.target.closest("[data-wonom-floor-content-tab]");
+                    if (contentTab && root.contains(contentTab)) {
+                        var contentTabs = contentTab.closest("[data-wonom-floor-content-tabs]");
+                        var contentName = contentTab.getAttribute("data-wonom-floor-content-tab");
+                        contentTabs.querySelectorAll("[data-wonom-floor-content-tab]").forEach(function(item){
+                            var active = item === contentTab;
+                            item.classList.toggle("is-active", active);
+                            item.setAttribute("aria-selected", active ? "true" : "false");
+                        });
+                        contentTabs.querySelectorAll("[data-wonom-floor-content-panel]").forEach(function(panel){
+                            panel.classList.toggle("is-active", panel.getAttribute("data-wonom-floor-content-panel") === contentName);
+                        });
+                        window.dispatchEvent(new Event("resize"));
+                        return;
+                    }
                     var button = event.target.closest("[data-wonom-floor-tab]");
                     if (!button || !root.contains(button)) {
-                        if (event.target.closest(".tr-repeater .add, .tr-repeater .remove")) {
-                            window.setTimeout(syncWorkshopCategories, 50);
-                        }
                         return;
                     }
                     var floor = button.getAttribute("data-wonom-floor-tab");
@@ -645,62 +803,15 @@ function wonom_render_homepage_settings()
                     });
                     window.dispatchEvent(new Event("resize"));
                 });
-                root.addEventListener("input", function(event){
-                    if (event.target.matches("input[name*=\"[home_explore_floor_3_categories]\"]")) {
-                        if (event.target.name.endsWith("[label]")) {
-                            var group = event.target.closest(".tr-repeater-group");
-                            var slugInput = group ? group.querySelector("input[name$=\"[slug]\"]") : null;
-                            if (slugInput && (!slugInput.value || slugInput.dataset.autoCategorySlug === "true")) {
-                                slugInput.value = makeCategorySlug(event.target.value);
-                                slugInput.dataset.autoCategorySlug = "true";
-                            }
-                        } else if (event.target.name.endsWith("[slug]")) {
-                            event.target.dataset.autoCategorySlug = "false";
-                        }
-                        syncWorkshopCategories();
-                    }
-                });
-                syncWorkshopCategories();
             })();
         </script>';
-    };
-
-    $tour_settings = function () use ($form) {
-        echo '<h2>Tour tham quan</h2>';
-        echo '<p>Tạo nhiều tour. Mỗi tour có hình hiển thị trên slider và toàn bộ nội dung popup chi tiết riêng.</p>';
-
-        echo $form->repeater('home_tours')
-            ->setLabel('Danh sách Tour')
-            ->setHeadline('title')
-            ->setFields(array(
-                $form->rowText('<h4>Thông tin hiển thị trên slider</h4>'),
-                $form->image('image')->setLabel('Hình đại diện Tour'),
-                $form->text('image_alt')->setLabel('Alt text hình đại diện'),
-                $form->text('title')->setLabel('Tên tour'),
-                $form->row(
-                    $form->text('duration')->setLabel('Thời gian')->setDefault('120 phút'),
-                    $form->text('price')->setLabel('Chi phí')->setDefault('2,000,000đ/người')
-                ),
-                $form->rowText('<hr><h4>Popup chi tiết Tour</h4>'),
-                $form->image('popup_image')->setLabel('Hình trong popup'),
-                $form->text('popup_image_alt')->setLabel('Alt text hình trong popup'),
-                $form->text('intro_title')->setLabel('Tiêu đề giới thiệu')->setDefault('Giới thiệu tour'),
-                $form->editor('intro_content')->setLabel('Nội dung giới thiệu'),
-                $form->text('itinerary_title')->setLabel('Tiêu đề lịch trình')->setDefault('LỊCH TRÌNH TRẢI NGHIỆM'),
-                $form->editor('itinerary_content')->setLabel('Nội dung lịch trình'),
-                $form->text('notes_title')->setLabel('Tiêu đề lưu ý')->setDefault('THÔNG TIN CẦN LƯU Ý'),
-                $form->editor('notes_content')->setLabel('Nội dung lưu ý'),
-                $form->text('policy_title')->setLabel('Tiêu đề chính sách')->setDefault('CHÍNH SÁCH ĐẶT LỊCH'),
-                $form->editor('policy_content')->setLabel('Nội dung chính sách'),
-            ));
-
     };
 
     $event_settings = function () use ($form) {
         echo '<h2>Sự kiện đang diễn ra</h2>';
         echo $form->row(
-            $form->text('home_event_subtitle')->setLabel('Tiêu đề nhỏ')->setDefault('ĐANG DIỄN RA'),
-            $form->textarea('home_event_title')->setLabel('Tiêu đề chính')->setDefault("Sự kiện đang diễn ra &\nchương trình theo mùa")
+            $form->text('home_event_subtitle')->setLabel('Tiêu đề nhỏ'),
+            $form->textarea('home_event_title')->setLabel('Tiêu đề chính')
         );
         echo $form->repeater('home_events')
             ->setLabel('Danh sách sự kiện')
@@ -708,7 +819,6 @@ function wonom_render_homepage_settings()
             ->setFields(array(
                 $form->rowText('<h4>Thông tin hiển thị trên card</h4>'),
                 $form->image('image')->setLabel('Hình card'),
-                $form->text('image_alt')->setLabel('Alt text hình card'),
                 $form->text('apply')->setLabel('Thời gian áp dụng, ví dụ: THƯỜNG XUYÊN'),
                 $form->text('title')->setLabel('Tên sự kiện'),
                 $form->textarea('subtitle')->setLabel('Mô tả ngắn'),
@@ -717,49 +827,83 @@ function wonom_render_homepage_settings()
                 $form->text('condition')->setLabel('Điều kiện áp dụng'),
                 $form->editor('content')->setLabel('Nội dung chi tiết'),
             ));
+        echo '<h3>Icon trang trí</h3>';
+        echo $form->row(
+            $form->image('home_event_decor_icon_1')->setLabel('Icon trang trí 1'),
+            $form->image('home_event_decor_icon_2')->setLabel('Icon trang trí 2')
+        );
     };
 
     $library_settings = function () use ($form) {
         echo '<h2>Không gian / Thư viện ảnh</h2>';
-        echo $form->text('home_library_subtitle')->setLabel('Tiêu đề nhỏ')->setDefault('BÊN TRONG WONOM THẾ NÀO!');
-        echo $form->textarea('home_library_title')->setLabel('Tiêu đề chính')->setDefault('Những khoảnh khắc của không gian.');
-        echo $form->textarea('home_library_description')->setLabel('Mô tả')->setDefault('Không gian chạm và tận hưởng văn hóa đời thường Hàn Quốc ngay tại Sài Gòn, mở ra nhịp cầu kết nối văn hóa hai quốc gia.');
+        echo $form->text('home_library_subtitle')->setLabel('Tiêu đề nhỏ');
+        echo $form->textarea('home_library_title')->setLabel('Tiêu đề chính');
+        echo $form->textarea('home_library_description')->setLabel('Mô tả');
         echo $form->repeater('home_library_images')
             ->setLabel('Danh sách hình ảnh')
             ->setHeadline('tag')
             ->setFields(array(
                 $form->image('image')->setLabel('Hình ảnh'),
-                $form->text('image_alt')->setLabel('Alt text'),
                 $form->text('tag')->setLabel('Tag trên hình'),
             ));
+        echo '<h3>Icon trang trí</h3>';
+        echo $form->image('home_library_decor_icon')->setLabel('Icon trang trí thư viện');
     };
 
     $footer_settings = function () use ($form) {
         echo '<h2>Liên hệ / Footer</h2>';
         echo $form->row(
-            $form->text('home_footer_subtitle')->setLabel('Tiêu đề nhỏ')->setDefault('GHÉ THĂM'),
-            $form->textarea('home_footer_title')->setLabel('Tiêu đề chính')->setDefault("Hẹn gặp bạn\ntại WONOM - HCMC")
+            $form->text('home_footer_subtitle')->setLabel('Tiêu đề nhỏ'),
+            $form->textarea('home_footer_title')->setLabel('Tiêu đề chính')
         );
-        echo $form->textarea('home_footer_address')->setLabel('Địa chỉ')->setDefault('40A Trần Cao Vân, Phường Xuân Hòa, TP Hồ Chí Minh, Việt Nam');
+        echo $form->textarea('home_footer_address')->setLabel('Địa chỉ');
         echo $form->row(
-            $form->text('home_footer_hours')->setLabel('Giờ mở cửa')->setDefault('Hằng ngày 11:00 – 23:00 & Rooftop đến 01:00'),
-            $form->text('home_footer_email')->setLabel('Email')->setDefault('support@wonom.vn')
+            $form->text('home_footer_hours')->setLabel('Giờ mở cửa'),
+            $form->text('home_footer_email')->setLabel('Email')
         );
 
         echo '<hr><h3>Hotline và Zalo</h3>';
-        echo $form->text('home_footer_hotline_title')->setLabel('Tiêu đề')->setDefault('GỌI HOTLINE TƯ VẤN');
-        echo $form->textarea('home_footer_hotline_description')->setLabel('Mô tả')->setDefault('Gọi Hotline hoặc liên hệ Zalo để giữ chỗ nhanh nhất ngay!!!');
+        echo $form->text('home_footer_hotline_title')->setLabel('Tiêu đề');
+        echo $form->textarea('home_footer_hotline_description')->setLabel('Mô tả');
         echo $form->row(
-            $form->text('home_footer_phone')->setLabel('Số điện thoại')->setDefault('0968 487 096'),
+            $form->text('home_footer_phone')->setLabel('Số điện thoại'),
             $form->text('home_footer_zalo_url')->setLabel('Link Zalo')->setAttribute('type', 'url')
         );
-        echo $form->text('home_footer_location_line')->setLabel('Dòng địa điểm cuối footer')->setDefault('안녕! Ban Ga Wo · Ho Chi Minh City, Vietnam');
+        echo $form->text('home_footer_location_line')->setLabel('Dòng địa điểm cuối footer');
 
         echo '<hr><h3>Mạng xã hội</h3>';
         echo $form->row(
             $form->text('home_footer_facebook_url')->setLabel('Facebook URL')->setAttribute('type', 'url'),
             $form->text('home_footer_instagram_url')->setLabel('Instagram URL')->setAttribute('type', 'url'),
             $form->text('home_footer_tiktok_url')->setLabel('TikTok URL')->setAttribute('type', 'url')
+        );
+
+        echo '<hr><h3>Nội dung cuối Footer</h3>';
+        echo $form->text('home_footer_social_label')
+            ->setLabel('Nội dung trước các icon mạng xã hội');
+        echo $form->text('home_footer_policy_text')
+            ->setLabel('Nội dung chính sách');
+
+        echo '<hr><h3>Icon Footer</h3>';
+        echo $form->row(
+            $form->image('home_footer_phone_icon')->setLabel('Icon điện thoại lớn'),
+            $form->image('home_footer_decor_icon')->setLabel('Icon trang trí khu vực liên hệ')
+        );
+        echo $form->row(
+            $form->image('home_footer_policy_icon')->setLabel('Icon chính sách'),
+            $form->image('home_footer_bottom_icon')->setLabel('Icon trang trí cuối trang')
+        );
+        echo '<h4>Icon thông tin</h4>';
+        echo $form->row(
+            $form->image('home_footer_address_icon')->setLabel('Icon địa chỉ'),
+            $form->image('home_footer_hours_icon')->setLabel('Icon giờ mở cửa'),
+            $form->image('home_footer_email_icon')->setLabel('Icon email')
+        );
+        echo '<h4>Icon mạng xã hội</h4>';
+        echo $form->row(
+            $form->image('home_footer_facebook_icon')->setLabel('Icon Facebook'),
+            $form->image('home_footer_instagram_icon')->setLabel('Icon Instagram'),
+            $form->image('home_footer_tiktok_icon')->setLabel('Icon TikTok')
         );
     };
 
@@ -769,20 +913,27 @@ function wonom_render_homepage_settings()
     if (function_exists('pll_languages_list')) {
         $language_slugs = (array) pll_languages_list(array('fields' => 'slug'));
         $language_names = (array) pll_languages_list(array('fields' => 'name'));
-
-        echo '<nav class="nav-tab-wrapper" aria-label="Ngôn ngữ trang chủ">';
-        foreach ($language_slugs as $index => $language_slug) {
-            $language_slug = sanitize_key($language_slug);
-            $language_name = isset($language_names[$index]) ? $language_names[$index] : strtoupper($language_slug);
-            $language_url = add_query_arg(
-                array('page' => 'wonom-homepage-settings', 'lang' => $language_slug),
-                admin_url('admin.php')
-            );
-            $active_class = $language_slug === $language ? ' nav-tab-active' : '';
-            echo '<a class="nav-tab' . esc_attr($active_class) . '" href="' . esc_url($language_url) . '">' . esc_html($language_name) . '</a>';
-        }
-        echo '</nav>';
+    } else {
+        $language_slugs = array('vi', 'en', 'ko');
+        $language_names = array('Tiếng Việt', 'English', '한국어');
     }
+    if (!$language_slugs) {
+        $language_slugs = array('vi', 'en', 'ko');
+        $language_names = array('Tiếng Việt', 'English', '한국어');
+    }
+
+    echo '<nav class="nav-tab-wrapper" aria-label="Ngôn ngữ trang chủ">';
+    foreach ($language_slugs as $index => $language_slug) {
+        $language_slug = sanitize_key($language_slug);
+        $language_name = isset($language_names[$index]) ? $language_names[$index] : strtoupper($language_slug);
+        $language_url = add_query_arg(
+            array('page' => 'wonom-homepage-settings', 'lang' => $language_slug),
+            admin_url('admin.php')
+        );
+        $active_class = $language_slug === $language ? ' nav-tab-active' : '';
+        echo '<a class="nav-tab' . esc_attr($active_class) . '" href="' . esc_url($language_url) . '">' . esc_html($language_name) . '</a>';
+    }
+    echo '</nav>';
     echo '<p><strong>Ngôn ngữ đang sửa:</strong> ' . esc_html(strtoupper($language)) . '. ';
     echo $language === $default_language
         ? 'Hình ảnh được quản lý tại ngôn ngữ gốc này.'
@@ -800,11 +951,12 @@ function wonom_render_homepage_settings()
 
     tr_tabs()
         ->setSidebar($form->submit('Lưu thay đổi'))
+        ->addTab('Header', $header_settings)
+        ->addTab('Icon chung', $global_icon_settings)
         ->addTab('Hero', $hero_settings)
         ->addTab('Giới thiệu', $introduce_settings)
         ->addTab('Trải nghiệm', $experience_settings)
         ->addTab('Khám phá', $explore_settings)
-        ->addTab('Tour', $tour_settings)
         ->addTab('Sự kiện', $event_settings)
         ->addTab('Thư viện', $library_settings)
         ->addTab('Liên hệ', $footer_settings)

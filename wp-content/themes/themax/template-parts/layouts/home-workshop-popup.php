@@ -55,20 +55,24 @@ if (!defined('ABSPATH')) exit;
                     <div class="workshop_detail_divider"></div>
                     <div class="workshop_detail_section ">
                         <h3 class="txt_13 txt_extrabold cl_red">WORKSHOP TẠI WONOM</h3>
-                        <ul>
-                            <li><strong>Sáng tạo không giới hạn:</strong> Biến những hạt gạo trắng, gạo nâu, gạo nhuộm
-                                màu thành những bức tranh sống động.</li>
-                            <li><strong>Phù hợp mọi lứa tuổi:</strong> Từ trẻ em đến người lớn đều có thể tham gia và
-                                tận hưởng trọn vẹn niềm vui.</li>
-                            <li><strong>Kết nối &amp; gắn kết:</strong> Hoạt động lý tưởng cho nhóm bạn, gia đình, công
-                                ty hoặc trường học.</li>
-                        </ul>
+                        <div class="workshop_detail_section_content">
+                            <ul>
+                                <li><strong>Sáng tạo không giới hạn:</strong> Biến những hạt gạo trắng, gạo nâu, gạo nhuộm
+                                    màu thành những bức tranh sống động.</li>
+                                <li><strong>Phù hợp mọi lứa tuổi:</strong> Từ trẻ em đến người lớn đều có thể tham gia và
+                                    tận hưởng trọn vẹn niềm vui.</li>
+                                <li><strong>Kết nối &amp; gắn kết:</strong> Hoạt động lý tưởng cho nhóm bạn, gia đình, công
+                                    ty hoặc trường học.</li>
+                            </ul>
+                        </div>
                     </div>
                     <div class="workshop_detail_section">
                         <h3 class="txt_13 txt_extrabold cl_red">DỤNG CỤ BAO GỒM</h3>
-                        <ul>
-                            <li><strong>Nón lá, màu vẽ, cọ, nước trà...</strong></li>
-                        </ul>
+                        <div class="workshop_detail_section_content">
+                            <ul>
+                                <li><strong>Nón lá, màu vẽ, cọ, nước trà...</strong></li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
                 <div class="workshop_detail_footer">

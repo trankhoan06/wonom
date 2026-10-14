@@ -43,6 +43,46 @@ $footer = $footer_dom->getElementById('contact');
 $footer_set_text($footer_first('.//*[' . $footer_class('footer_info_subtitle') . ']', $footer), $footer_option('home_footer_subtitle', 'GHÉ THĂM'));
 $footer_set_lines($footer_first('.//*[' . $footer_class('footer_info_title') . ']', $footer), $footer_option('home_footer_title', "Hẹn gặp bạn\ntại WONOM - HCMC"));
 
+$footer_icon_asset_url = trailingslashit(get_template_directory_uri()) . 'asset/img/';
+$footer_icon_sources = array(
+    'footer_contact_num_icon' => wonom_get_home_image_url('home_footer_phone_icon', $footer_icon_asset_url . 'icon_phone.webp'),
+    'footer_contact_icon' => wonom_get_home_image_url('home_footer_decor_icon', $footer_icon_asset_url . 'footer_icon.png'),
+    'footer_bot_right_img' => wonom_get_home_image_url('home_footer_policy_icon', $footer_icon_asset_url . 'footer_policy.png'),
+    'footer_bot_icon' => wonom_get_home_image_url('home_footer_bottom_icon', $footer_icon_asset_url . 'footer_icon1.png'),
+);
+foreach ($footer_icon_sources as $icon_class => $icon_source) {
+    $icon_image = $footer_first('.//*[' . $footer_class($icon_class) . ']//img', $footer);
+    if ($icon_image) {
+        $icon_image->setAttribute('src', $icon_source);
+    }
+}
+
+$footer_replace_inline_icon = static function ($node, $image_url) use ($footer_dom) {
+    if (!$node || !$image_url) return;
+    while ($node->firstChild) $node->removeChild($node->firstChild);
+    $image = $footer_dom->createElement('img');
+    $image->setAttribute('src', $image_url);
+    $image->setAttribute('alt', '');
+    $image->setAttribute('class', 'wonom_admin_icon');
+    $node->appendChild($image);
+};
+$footer_info_icon_nodes = $footer_xpath->query('.//*[' . $footer_class('footer_info_tag_item_icon') . ']', $footer);
+$footer_info_icon_fields = array('home_footer_address_icon', 'home_footer_hours_icon', 'home_footer_email_icon');
+foreach ($footer_info_icon_fields as $index => $icon_field) {
+    $footer_replace_inline_icon(
+        $footer_info_icon_nodes ? $footer_info_icon_nodes->item($index) : null,
+        wonom_get_home_image_url($icon_field)
+    );
+}
+$footer_social_icon_nodes = $footer_xpath->query('.//*[' . $footer_class('footer_contact_info_social_icon_inner') . ']', $footer);
+$footer_social_icon_fields = array('home_footer_facebook_icon', 'home_footer_instagram_icon', 'home_footer_tiktok_icon');
+foreach ($footer_social_icon_fields as $index => $icon_field) {
+    $footer_replace_inline_icon(
+        $footer_social_icon_nodes ? $footer_social_icon_nodes->item($index) : null,
+        wonom_get_home_image_url($icon_field)
+    );
+}
+
 $info_items = $footer_xpath->query('.//*[' . $footer_class('footer_info_tag_item_txt') . ']', $footer);
 $info_values = array(
     $footer_option('home_footer_address', '40A Trần Cao Vân, Phường Xuân Hòa, TP Hồ Chí Minh, Việt Nam'),
@@ -71,6 +111,16 @@ if ($zalo_button && $zalo_url) {
     $zalo_button->setAttribute('data-footer-href', $zalo_url);
 }
 $footer_set_text($footer_first('.//*[' . $footer_class('footer_contact_info_locate') . ']', $footer), $footer_option('home_footer_location_line', '안녕! Ban Ga Wo · Ho Chi Minh City, Vietnam'));
+$footer_set_text(
+    $footer_first('.//*[' . $footer_class('footer_contact_info_social_txt') . ']', $footer),
+    $footer_option('home_footer_social_label', 'Theo dõi Wonom trên:')
+);
+
+$policy_wrap = $footer_first('.//*[' . $footer_class('footer_bot_right') . ']', $footer);
+$footer_set_text(
+    $footer_first('.//*[' . $footer_class('footer_bot_right_txt') . ']', $policy_wrap),
+    $footer_option('home_footer_policy_text', 'CHÍNH SÁCH & ĐIỀU KHOẢN')
+);
 
 $social_links = $footer_xpath->query('.//a[' . $footer_class('footer_contact_info_social_icon') . ']', $footer);
 $social_urls = array(

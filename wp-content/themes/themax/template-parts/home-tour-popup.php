@@ -64,15 +64,32 @@ $tour = $tours[0];
 $popup_set_text('popup_tour_title', 'TOUR THAM QUAN');
 $popup_set_text('popup_tour_sidebar_card_title', $tour['title']);
 $popup_set_text('popup_tour_content_title', $tour['title']);
-$popup_set_text('popup_tour_sidebar_card_time', 'THỜI GIAN');
-$popup_set_text('popup_tour_sidebar_card_timedes', $tour['duration']);
-$popup_set_text('popup_tour_sidebar_card_cost', 'CHI PHÍ');
-$popup_set_text('popup_tour_sidebar_card_costdes', $tour['price']);
 $popup_set_text('popup_tour_sidebar_card_button_inner', 'ĐẶT LỊCH CHUYẾN ĐI');
 $popup_set_text('popup_tour_sidebar_title', 'GỢI Ý CÁC TOUR KHÁC');
 $popup_set_text('tour_detail_form_submit', 'GỬI YÊU CẦU ĐẶT LỊCH');
 $popup_set_text('tour_detail_form_note', 'Yêu cầu của bạn đã được ghi nhận. Nhân viên sẽ sớm liên hệ xác nhận.');
 $popup_set_text('tour_detail_form_divider', 'HOẶC GỌI HỖ TRỢ');
+
+$meta_wrap = $popup_first('//*[' . $popup_class('popup_tour_sidebar_card_meta') . ']');
+if ($meta_wrap) {
+    foreach ($tour['metaItems'] as $meta_item) {
+        $item = $popup_dom->createElement('div');
+        $item->setAttribute('class', 'popup_tour_sidebar_card_meta_item');
+        if ('' !== $meta_item['label']) {
+            $label = $popup_dom->createElement('div');
+            $label->setAttribute('class', 'popup_tour_sidebar_card_meta_label txt_13 cl_meta');
+            $label->appendChild($popup_dom->createTextNode($meta_item['label']));
+            $item->appendChild($label);
+        }
+        if ('' !== $meta_item['content']) {
+            $content = $popup_dom->createElement('div');
+            $content->setAttribute('class', 'popup_tour_sidebar_card_meta_content txt_bold');
+            $content->appendChild($popup_dom->createTextNode($meta_item['content']));
+            $item->appendChild($content);
+        }
+        $meta_wrap->appendChild($item);
+    }
+}
 
 $popup_image = $popup_first('//*[' . $popup_class('popup_tour_content_img') . ']//img');
 if ($popup_image) {

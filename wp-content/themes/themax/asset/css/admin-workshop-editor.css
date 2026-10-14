@@ -1,0 +1,57 @@
+.wonom-workshop-richtext-field {
+    position: relative;
+    margin: 22px 12px 28px;
+    border: 1px solid #c3c4c7;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.wonom-workshop-richtext-title {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 5;
+    max-width: calc(100% - 150px);
+    padding: 10px 16px 8px;
+    color: #1d2327;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 24px;
+}
+
+.wonom-workshop-richtext-field .wp-editor-wrap {
+    margin: 0;
+}
+
+.wonom-workshop-richtext-field .wp-editor-tools {
+    min-height: 43px;
+    padding: 5px 8px 0;
+    box-sizing: border-box;
+    border-bottom: 1px solid #dcdcde;
+    background: #f6f7f7;
+}
+
+.wonom-workshop-richtext-field .wp-editor-tabs {
+    margin-top: 5px;
+}
+
+.wonom-workshop-richtext-field .wp-editor-container {
+    border: 0;
+}
+
+.wonom-workshop-richtext-field textarea.wp-editor-area {
+    min-height: 320px;
+}
+
+@media screen and (max-width: 782px) {
+    .wonom-workshop-richtext-field {
+        margin-right: 8px;
+        margin-left: 8px;
+    }
+
+    .wonom-workshop-richtext-title {
+        max-width: calc(100% - 130px);
+        padding-left: 12px;
+        font-size: 14px;
+    }
+}

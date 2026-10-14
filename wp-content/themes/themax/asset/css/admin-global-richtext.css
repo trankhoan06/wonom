@@ -1,0 +1,39 @@
+.typerocket-container .redactor-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    min-height: 38px;
+    padding: 4px 6px !important;
+}
+
+.typerocket-container .redactor-toolbar li + li {
+    margin-left: 0 !important;
+}
+
+.typerocket-container .redactor-editor {
+    min-height: 220px;
+    padding: 18px 20px;
+}
+
+.typerocket-container .redactor-editor ul {
+    padding-left: 2em;
+    list-style: disc outside;
+}
+
+.typerocket-container .redactor-editor ol {
+    padding-left: 2em;
+    list-style: decimal outside;
+}
+
+.typerocket-container .redactor-editor li + li {
+    margin-top: 6px;
+}
+
+.re-wonommedia::before {
+    content: "\f128";
+}
+
+.redactor-box-fullscreen .redactor-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+}

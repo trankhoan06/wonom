@@ -22,10 +22,7 @@ if (!defined('ABSPATH')) exit;
                 <div class="popup_tour_sidebar_card">
                     <div class="popup_tour_sidebar_card_title heading h6">TOUR CHỤP ẢNH CÂU CÁ + ĐÁNH GOFT NGOẠI CẢNH
                     </div>
-                    <div class="popup_tour_sidebar_card_time txt_13 cl_meta">THỜI GIAN</div>
-                    <div class="popup_tour_sidebar_card_timedes txt_bold">120 phút</div>
-                    <div class="popup_tour_sidebar_card_cost txt_13 cl_meta">CHI PHÍ</div>
-                    <div class="popup_tour_sidebar_card_costdes txt_bold">2,000,000đ/người</div>
+                    <div class="popup_tour_sidebar_card_meta"></div>
                     <div class="popup_tour_sidebar_card_button btn">
                         <div class="popup_tour_sidebar_card_button_inner txt_14 btn-inner txt_extrabold">ĐẶT LỊCH CHUYẾN
                             ĐI</div>
