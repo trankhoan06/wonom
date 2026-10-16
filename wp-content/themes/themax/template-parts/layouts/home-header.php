@@ -64,7 +64,7 @@ $wonom_active_icon = isset($wonom_language_icons[$wonom_active_slug])
                     <a href="#" class="header_button btn tablet txt_14 txt_extrabold txt-btn-red txt_bold"
                         data-booking-trigger data-booking-type="general" data-booking-floor=""
                         data-booking-venue="WONOM" data-booking-title="LIÊN HỆ TƯ VẤN NGAY" data-booking-subtitle=""
-                        data-booking-submit="GỬI YÊU CẦU ĐẶT LỊCH">
+                        data-booking-submit="GỬI YÊU CẦU TƯ VẤN">
                         <div class="btn-inner"><?php echo esc_html($wonom_header_booking_text); ?></div>
                     </a>
                     <a href="#" class="header_button_member tablet btn txt_14 txt_extrabold txt-btn-yellow txt_bold">
@@ -131,7 +131,7 @@ $wonom_active_icon = isset($wonom_language_icons[$wonom_active_slug])
                 <a href="#" class="header_button btn desktop txt_14 txt_extrabold txt-btn-red txt_bold"
                     data-booking-trigger data-booking-type="general" data-booking-floor="" data-booking-venue="WONOM"
                     data-booking-title="LIÊN HỆ TƯ VẤN NGAY" data-booking-subtitle=""
-                    data-booking-submit="GỬI YÊU CẦU ĐẶT LỊCH">
+                    data-booking-submit="GỬI YÊU CẦU TƯ VẤN">
                     <div class="btn-inner"><?php echo esc_html($wonom_header_booking_text); ?></div>
                 </a>
                 <a href="#" class="header_button_member desktop btn txt_14 txt_extrabold txt-btn-yellow txt_bold">

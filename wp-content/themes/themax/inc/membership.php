@@ -70,6 +70,7 @@ function wonom_membership_migrate_legacy_records()
             if ('' !== (string) $value) update_post_meta($member_id, '_wonom_' . $key, $value);
         }
         update_post_meta($member_id, '_wonom_form_type', 'membership');
+        update_post_meta($member_id, '_wonom_form_title', 'ĐĂNG KÝ THÀNH VIÊN');
         update_post_meta($member_id, '_wonom_status', 'completed');
         update_post_meta($member_id, '_wonom_legacy_submission_id', $legacy_id);
     }
@@ -284,6 +285,7 @@ function wonom_membership_verify()
     $member_number = 'WN-' . str_pad((string) $post_id, 6, '0', STR_PAD_LEFT);
     $member_data = array(
         'form_type' => 'membership',
+        'form_title' => 'ĐĂNG KÝ THÀNH VIÊN',
         'name' => $data['name'],
         'phone' => $data['phone'],
         'email' => $data['email'],
@@ -451,6 +453,7 @@ function wonom_member_save($post_id, $post)
     update_post_meta($post_id, '_wonom_member_number', $number);
     update_post_meta($post_id, '_wonom_member_status', $status);
     update_post_meta($post_id, '_wonom_form_type', 'membership');
+    update_post_meta($post_id, '_wonom_form_title', 'ĐĂNG KÝ THÀNH VIÊN');
     update_post_meta($post_id, '_wonom_status', 'completed');
     if (!get_post_meta($post_id, '_wonom_verified_at', true)) {
         update_post_meta($post_id, '_wonom_verified_at', current_time('mysql'));

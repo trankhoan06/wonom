@@ -534,11 +534,15 @@
                 context.fillStyle = '#ed1c24';
                 context.shadowColor = '#72140d';
                 context.shadowBlur = 0;
-                context.shadowOffsetX = 3 * scale;
-                context.shadowOffsetY = 4 * scale;
+                context.shadowOffsetX = 5 * scale;
+                context.shadowOffsetY = 6 * scale;
                 fitCanvasText(context, safeNumber, 628 * scale, 66 * scale, 42 * scale, '900');
-                context.fillText(safeNumber, 70 * scale, 405 * scale);
+                context.strokeStyle = '#FFF6DB';
+                context.lineWidth = 4 * scale;
+                context.lineJoin = 'round';
+                context.strokeText(safeNumber, 70 * scale, 405 * scale);
                 context.shadowColor = 'transparent';
+                context.fillText(safeNumber, 70 * scale, 405 * scale);
 
                 canvas.toBlob(function (blob) {
                     if (!blob) {

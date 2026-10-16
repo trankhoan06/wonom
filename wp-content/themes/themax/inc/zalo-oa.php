@@ -833,70 +833,113 @@ function wonom_zalo_handle_select_group()
 }
 add_action('admin_post_wonom_zalo_select_group', 'wonom_zalo_handle_select_group');
 
-function wonom_zalo_submission_message($post_id)
+function wonom_zalo_submission_meta($post_id, $key)
 {
-    $type = (string) get_post_meta($post_id, '_wonom_form_type', true);
+    return trim((string) get_post_meta($post_id, '_wonom_' . $key, true));
+}
 
-    if ('membership' === $type) {
-        $lines = array(
-            '[WONOM] THÀNH VIÊN MỚI',
-            'Họ tên: ' . trim((string) get_post_meta($post_id, '_wonom_name', true)),
-            'Mã thành viên: ' . trim((string) get_post_meta($post_id, '_wonom_member_number', true)),
-            'Số điện thoại: ' . trim((string) get_post_meta($post_id, '_wonom_phone', true)),
-            'Email/Gmail: ' . trim((string) get_post_meta($post_id, '_wonom_email', true)),
-            'Đăng ký lúc: ' . get_the_date('d/m/Y H:i', $post_id),
-        );
-        $edit_url = get_edit_post_link($post_id, '');
-        if ($edit_url) {
-            $lines[] = 'Xem thành viên: ' . $edit_url;
-        }
+function wonom_zalo_display_date($value)
+{
+    $date = DateTimeImmutable::createFromFormat('!Y-m-d', (string) $value, wp_timezone());
+    return $date ? $date->format('d/m/Y') : (string) $value;
+}
 
-        $message = implode("\n", $lines);
-        if (function_exists('mb_strimwidth')) {
-            return mb_strimwidth($message, 0, 1900, '…', 'UTF-8');
-        }
-
-        return substr($message, 0, 1900);
+function wonom_zalo_add_message_field(&$lines, $label, $value)
+{
+    $value = trim((string) $value);
+    if ('' !== $value) {
+        $lines[] = $label . ': ' . $value;
     }
+}
 
-    $type_labels = function_exists('wonom_submission_type_labels') ? wonom_submission_type_labels() : array();
-    $labels = array(
-        'name' => 'Khách hàng',
-        'phone' => 'Điện thoại',
-        'date' => 'Ngày đến',
-        'time' => 'Thời gian',
-        'guests' => 'Số người',
-        'booking_type' => 'Loại đặt chỗ',
-        'floor' => 'Tầng',
-        'venue' => 'Khu vực',
-        'product_name' => 'Sản phẩm workshop',
-        'tour_name' => 'Tour',
-    );
-    $lines = array(
-        '[WONOM] YÊU CẦU MỚI',
-        'Loại: ' . (isset($type_labels[$type]) ? $type_labels[$type] : $type),
-        'Mã yêu cầu: #' . absint($post_id),
-    );
-
-    foreach ($labels as $key => $label) {
-        $value = trim((string) get_post_meta($post_id, '_wonom_' . $key, true));
-        if ('' !== $value) {
-            $lines[] = $label . ': ' . $value;
-        }
-    }
-
-    $lines[] = 'Gửi lúc: ' . get_the_date('d/m/Y H:i', $post_id);
-    $edit_url = get_edit_post_link($post_id, '');
-    if ($edit_url) {
-        $lines[] = 'Xem chi tiết: ' . $edit_url;
-    }
-
+function wonom_zalo_finish_submission_message($lines)
+{
     $message = implode("\n", $lines);
     if (function_exists('mb_strimwidth')) {
         return mb_strimwidth($message, 0, 1900, '…', 'UTF-8');
     }
-
     return substr($message, 0, 1900);
+}
+
+function wonom_zalo_submission_message($post_id)
+{
+    $type = wonom_zalo_submission_meta($post_id, 'form_type');
+    $form_title = wonom_zalo_submission_meta($post_id, 'form_title');
+
+    if ('membership' === $type) {
+        if ('' === $form_title) $form_title = 'ĐĂNG KÝ THÀNH VIÊN';
+        $lines = array(
+            '🟡 WONOM • ' . $form_title,
+            '━━━━━━━━━━━━━━━━━━',
+            '✅ Đăng ký thành công',
+            '',
+        );
+        wonom_zalo_add_message_field($lines, '👤 Họ tên', wonom_zalo_submission_meta($post_id, 'name'));
+        wonom_zalo_add_message_field($lines, '🎫 Mã thành viên', wonom_zalo_submission_meta($post_id, 'member_number'));
+        wonom_zalo_add_message_field($lines, '📞 Số điện thoại', wonom_zalo_submission_meta($post_id, 'phone'));
+        wonom_zalo_add_message_field($lines, '✉️ Email/Gmail', wonom_zalo_submission_meta($post_id, 'email'));
+        return wonom_zalo_finish_submission_message($lines);
+    }
+
+    if ('tour' === $type) {
+        if ('' === $form_title) $form_title = 'ĐẶT TOUR THAM QUAN';
+        $lines = array(
+            '🚌 WONOM • ' . $form_title,
+            '━━━━━━━━━━━━━━━━━━',
+            '✅ Đã tiếp nhận yêu cầu',
+            '',
+        );
+        wonom_zalo_add_message_field($lines, '👤 Khách hàng', wonom_zalo_submission_meta($post_id, 'name'));
+        wonom_zalo_add_message_field($lines, '📞 Điện thoại', wonom_zalo_submission_meta($post_id, 'phone'));
+        wonom_zalo_add_message_field($lines, '🚌 Tour', wonom_zalo_submission_meta($post_id, 'tour_name'));
+        wonom_zalo_add_message_field($lines, '📅 Ngày đi', wonom_zalo_display_date(wonom_zalo_submission_meta($post_id, 'date')));
+        wonom_zalo_add_message_field($lines, '⏰ Thời gian', wonom_zalo_submission_meta($post_id, 'time'));
+        wonom_zalo_add_message_field($lines, '👥 Số khách', wonom_zalo_submission_meta($post_id, 'guests'));
+        return wonom_zalo_finish_submission_message($lines);
+    }
+
+    $booking_type = wonom_zalo_submission_meta($post_id, 'booking_type');
+    $profiles = array(
+        'general' => array('📩', 'LIÊN HỆ TƯ VẤN NGAY', '✅ Đã tiếp nhận yêu cầu tư vấn'),
+        'restaurant' => array('🍽️', 'ĐẶT BÀN ONLINE', '✅ Đã tiếp nhận yêu cầu đặt bàn'),
+        'rental' => array('👘', 'ĐẶT LỊCH THUÊ', '✅ Đã tiếp nhận yêu cầu thuê'),
+        'workshop' => array('🎨', 'ĐẶT LỊCH WORKSHOP', '✅ Đã tiếp nhận yêu cầu workshop'),
+        'appointment' => array('🧘', 'ĐẶT LỊCH HẸN', '✅ Đã tiếp nhận lịch hẹn'),
+        'reservation' => array('🎉', 'ĐẶT CHỖ ONLINE', '✅ Đã tiếp nhận yêu cầu đặt chỗ'),
+    );
+    $profile = isset($profiles[$booking_type]) ? $profiles[$booking_type] : array(
+        '🟠',
+        'YÊU CẦU MỚI',
+        '✅ Đã tiếp nhận yêu cầu',
+    );
+    if ('' === $form_title) $form_title = $profile[1];
+    $lines = array($profile[0] . ' WONOM • ' . $form_title, '━━━━━━━━━━━━━━━━━━', $profile[2], '');
+
+    wonom_zalo_add_message_field($lines, '👤 Khách hàng', wonom_zalo_submission_meta($post_id, 'name'));
+    wonom_zalo_add_message_field($lines, '📞 Điện thoại', wonom_zalo_submission_meta($post_id, 'phone'));
+
+    $product_name = wonom_zalo_submission_meta($post_id, 'product_name');
+    if ('workshop' === $booking_type && '' !== $product_name) {
+        wonom_zalo_add_message_field($lines, '🎨 Sản phẩm', $product_name);
+    }
+
+    $floor = wonom_zalo_submission_meta($post_id, 'floor');
+    $venue = wonom_zalo_submission_meta($post_id, 'venue');
+    if ('general' === $booking_type) {
+        wonom_zalo_add_message_field($lines, '🏢 Tầng muốn đến', $floor);
+    } else {
+        $location = $venue;
+        if ('' !== $floor) {
+            $location .= ('' !== $location ? ' · ' : '') . $floor;
+        }
+        wonom_zalo_add_message_field($lines, '📍 Địa điểm', $location);
+    }
+
+    wonom_zalo_add_message_field($lines, '📅 Ngày đến', wonom_zalo_display_date(wonom_zalo_submission_meta($post_id, 'date')));
+    wonom_zalo_add_message_field($lines, '⏰ Thời gian', wonom_zalo_submission_meta($post_id, 'time'));
+    wonom_zalo_add_message_field($lines, '👥 Số khách', wonom_zalo_submission_meta($post_id, 'guests'));
+
+    return wonom_zalo_finish_submission_message($lines);
 }
 
 function wonom_zalo_queue_submission($post_id, $attempt = 0)

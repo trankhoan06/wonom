@@ -65,9 +65,9 @@ $tour = $tours[0];
 $popup_set_text('popup_tour_title', 'TOUR THAM QUAN');
 $popup_set_text('popup_tour_sidebar_card_title', $tour['title']);
 $popup_set_text('popup_tour_content_title', $tour['title']);
-$popup_set_text('popup_tour_sidebar_card_button_inner', 'ĐẶT LỊCH CHUYẾN ĐI');
+$popup_set_text('popup_tour_sidebar_card_button_inner', 'ĐẶT TOUR NÀY');
 $popup_set_text('popup_tour_sidebar_title', 'GỢI Ý CÁC TOUR KHÁC');
-$popup_set_text('tour_detail_form_submit', 'GỬI YÊU CẦU ĐẶT LỊCH');
+$popup_set_text('tour_detail_form_submit', 'GỬI YÊU CẦU ĐẶT TOUR');
 $popup_set_text('tour_detail_form_note', 'Yêu cầu của bạn đã được ghi nhận. Nhân viên sẽ sớm liên hệ xác nhận.');
 $popup_set_text('tour_detail_form_divider', 'HOẶC GỌI HỖ TRỢ');
 

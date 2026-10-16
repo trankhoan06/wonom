@@ -7562,26 +7562,27 @@ html.wonom-page-loaded [data-wonom-popup-image][data-wonom-image-ready="true"] {
     left: 9%;
     display: block;
     max-width: 82%;
-    overflow: hidden;
     line-height: 1;
     white-space: nowrap;
     text-transform: uppercase;
 }
 
 .popup_member_card_identity strong {
-    top: 66.5%;
+    top: 61.5%;
     color: #460700;
     font-size: clamp(1.4rem, 4vw, 2rem);
     font-weight: 800;
 }
 
 .popup_member_card_identity span {
-    top: 79%;
+    top: 75%;
+    overflow: visible;
     color: #e5252a;
     font-size: clamp(2.7rem, 8vw, 4rem);
     font-weight: 900;
     letter-spacing: .01em;
-    text-shadow: .18rem .18rem 0 #72140d;
+    text-shadow:
+        -2px -2px 0 #FFF6DB, 0 -2px 0 #FFF6DB, 2px -2px 0 #FFF6DB, -2px 0 0 #FFF6DB, 2px 0 0 #FFF6DB, -2px 2px 0 #FFF6DB, 0 1px 0 #FFF6DB, 2px 1px 0 #FFF6DB, 3px 2px 0 #72140d, 4px 2px 0 #72140d;
 }
 
 .popup_member_toast {

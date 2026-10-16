@@ -204,7 +204,7 @@ if (!defined('ABSPATH')) exit;
                                         data-booking-trigger data-booking-type="restaurant" data-booking-floor="1F"
                                         data-booking-venue="NHÀ HÀNG MUJIGE" data-booking-title="ĐẶT BÀN ONLINE"
                                         data-booking-subtitle="1F - NHÀ HÀNG MUJIGE"
-                                        data-booking-submit="GỬI YÊU CẦU ĐẶT LỊCH">
+                                        data-booking-submit="GỬI YÊU CẦU ĐẶT BÀN">
                                         <div class="btn-inner">
                                             ĐẶT BÀN GIỮ CHỖ
                                         </div>
@@ -309,7 +309,7 @@ if (!defined('ABSPATH')) exit;
                                         data-booking-trigger data-booking-type="rental" data-booking-floor="2F"
                                         data-booking-venue="TRANG PHỤC TRUYỀN THỐNG" data-booking-title="ĐẶT LỊCH THUÊ"
                                         data-booking-subtitle="2F - TRANG PHỤC TRUYỀN THỐNG"
-                                        data-booking-submit="GỬI YÊU CẦU ĐẶT LỊCH">
+                                        data-booking-submit="GỬI YÊU CẦU THUÊ">
                                         <div class="btn-inner">
                                             ĐẶT LỊCH THUÊ
                                         </div>
@@ -419,8 +419,8 @@ if (!defined('ABSPATH')) exit;
                                         type="button" data-booking-trigger data-booking-type="workshop"
                                         data-booking-floor="3F" data-booking-venue="WORKSHOP"
                                         data-booking-title="ĐẶT LỊCH WORKSHOP" data-booking-subtitle="3F - WORKSHOP"
-                                        data-booking-submit="GỬI YÊU CẦU ĐẶT LỊCH">
-                                        <span class="btn-inner">ĐẶT LỊCH HẸN</span>
+                                        data-booking-submit="GỬI YÊU CẦU WORKSHOP">
+                                        <span class="btn-inner">ĐẶT LỊCH WORKSHOP</span>
                                     </button>
                                 </div>
                             </div>

@@ -34,6 +34,20 @@ function wonom_submission_type_labels()
     );
 }
 
+function wonom_submission_form_titles()
+{
+    return array(
+        'general' => 'LIÊN HỆ TƯ VẤN NGAY',
+        'restaurant' => 'ĐẶT BÀN ONLINE',
+        'rental' => 'ĐẶT LỊCH THUÊ',
+        'workshop' => 'ĐẶT LỊCH WORKSHOP',
+        'appointment' => 'ĐẶT LỊCH HẸN',
+        'reservation' => 'ĐẶT CHỖ ONLINE',
+        'tour' => 'ĐẶT TOUR THAM QUAN',
+        'membership' => 'ĐĂNG KÝ THÀNH VIÊN',
+    );
+}
+
 function wonom_submission_status_labels()
 {
     return array(
@@ -264,21 +278,36 @@ function wonom_handle_home_form_submission()
 
     if ('booking' === $form_type) {
         $booking_type = sanitize_key(wonom_submission_post_text('booking_type', 30));
-        $allowed_booking_types = array('general', 'restaurant', 'rental', 'workshop', 'appointment', 'reservation');
-        $floor = wonom_submission_post_text('floor', 10);
-        $product_id = wonom_submission_post_text('product_id', 100);
-        $product_name = wonom_submission_post_text('product_name', 160);
-        if (!in_array($booking_type, $allowed_booking_types, true)) $errors['booking_type'] = wonom_home_t('invalid_form');
+        $booking_profiles = array(
+            'general' => array('floor' => '', 'venue' => 'WONOM'),
+            'restaurant' => array('floor' => '1F', 'venue' => 'NHÀ HÀNG MUJIGE'),
+            'rental' => array('floor' => '2F', 'venue' => 'TRANG PHỤC TRUYỀN THỐNG'),
+            'workshop' => array('floor' => '3F', 'venue' => 'WORKSHOP'),
+            'appointment' => array('floor' => '4F', 'venue' => 'STRESS ROOM'),
+            'reservation' => array('floor' => '5F', 'venue' => 'ROOFTOP DISCO'),
+        );
+        if (!isset($booking_profiles[$booking_type])) {
+            $errors['booking_type'] = wonom_home_t('invalid_form');
+        }
+        $profile = isset($booking_profiles[$booking_type]) ? $booking_profiles[$booking_type] : $booking_profiles['general'];
+        $floor = 'general' === $booking_type ? wonom_submission_post_text('floor', 10) : $profile['floor'];
+        $venue = $profile['venue'];
+        $product_id = 'workshop' === $booking_type ? wonom_submission_post_text('product_id', 100) : '';
+        $product_name = 'workshop' === $booking_type ? wonom_submission_post_text('product_name', 160) : '';
+        $form_titles = wonom_submission_form_titles();
         if ('general' === $booking_type && !in_array($floor, array('1F', '2F', '3F', '4F', '5F'), true)) $errors['floor'] = wonom_home_t('required_floor');
         if ('' !== $product_id && '' === $product_name) $errors['product_name'] = 'Không xác định được tên sản phẩm workshop. Vui lòng chọn lại sản phẩm.';
         $data = array_merge($data, array(
+            'form_title' => isset($form_titles[$booking_type]) ? $form_titles[$booking_type] : '',
             'booking_type' => $booking_type,
             'floor' => $floor,
-            'venue' => wonom_submission_post_text('venue', 100),
+            'venue' => $venue,
             'product_id' => $product_id,
             'product_name' => $product_name,
         ));
     } elseif ('tour' === $form_type) {
+        $form_titles = wonom_submission_form_titles();
+        $data['form_title'] = $form_titles['tour'];
         $data['tour_name'] = wonom_submission_post_text('tour_name', 160);
         if ('' === $data['tour_name']) $errors['tour_name'] = wonom_home_t('invalid_form');
     }
@@ -484,6 +513,7 @@ function wonom_submission_render_meta_box($post)
 {
     $fields = array(
         'form_type' => 'Loại biểu mẫu',
+        'form_title' => 'Tên biểu mẫu',
         'name' => 'Họ và tên',
         'phone' => 'Số điện thoại',
         'email' => 'Email',
