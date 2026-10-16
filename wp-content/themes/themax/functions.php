@@ -10,6 +10,7 @@ require dirname(__FILE__) . '/inc/zalo-oa.php';
 require dirname(__FILE__) . '/inc/homepage-settings.php';
 require dirname(__FILE__) . '/inc/workshop-products.php';
 require dirname(__FILE__) . '/inc/tours.php';
+require dirname(__FILE__) . '/inc/events.php';
 require dirname(__FILE__) . '/inc/home-tour-data.php';
 require dirname(__FILE__) . '/inc/home-event-data.php';
 require dirname(__FILE__) . '/inc/home-library-data.php';

@@ -22,13 +22,18 @@ if (!defined('ABSPATH')) exit;
                 </div>
                 <div class="popup_member_content relative">
                     <div class="popup_member_form">
+                        <div class="wonom-form-trap" aria-hidden="true">
+                            <label for="membership-website">Để trống trường này</label>
+                            <input id="membership-website" name="website" type="text" value="" tabindex="-1"
+                                autocomplete="off">
+                        </div>
                         <div class="popup_form_group">
                             <div class="popup_form_label txt_15 txt_extrabold">HỌ VÀ TÊN</div>
-                            <input type="text" class="popup_form_input" placeholder="Nhập tên của bạn">
+                            <input type="text" class="popup_form_input" placeholder="Nhập tên của bạn" maxlength="80">
                         </div>
                         <div class="popup_form_group">
                             <div class="popup_form_label txt_15 txt_extrabold cl_text">SỐ ĐIỆN THOẠI</div>
-                            <input type="text" class="popup_form_input" placeholder="Nhập số điện thoại">
+                            <input type="text" class="popup_form_input" placeholder="Nhập số điện thoại" maxlength="20">
                         </div>
                         <div class="popup_member_checkbox_wrap">
                             <label class="popup_member_checkbox_label">

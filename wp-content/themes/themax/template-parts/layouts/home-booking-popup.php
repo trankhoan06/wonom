@@ -1,5 +1,30 @@
 <?php
 if (!defined('ABSPATH')) exit;
+
+$booking_bg = wonom_get_home_image_url('home_booking_header_image', get_template_directory_uri() . '/asset/img/ex_bg_bot.png');
+$booking_title = tr_options_field('wonom_home_options.home_booking_title') ?: wonom_home_t('online_booking');
+$booking_subtitle = tr_options_field('wonom_home_options.home_booking_subtitle') ?: 'WONOM';
+
+$label_name = tr_options_field('wonom_home_options.home_booking_label_name') ?: wonom_home_t('full_name');
+$placeholder_name = tr_options_field('wonom_home_options.home_booking_placeholder_name') ?: wonom_home_t('enter_name');
+
+$label_phone = tr_options_field('wonom_home_options.home_booking_label_phone') ?: wonom_home_t('phone');
+$placeholder_phone = tr_options_field('wonom_home_options.home_booking_placeholder_phone') ?: wonom_home_t('enter_phone');
+
+$label_floor = tr_options_field('wonom_home_options.home_booking_label_floor') ?: wonom_home_t('which_floor');
+$placeholder_floor = tr_options_field('wonom_home_options.home_booking_placeholder_floor') ?: wonom_home_t('select_floor');
+
+$label_guests = tr_options_field('wonom_home_options.home_booking_label_guests') ?: wonom_home_t('guest_count');
+$placeholder_guests = tr_options_field('wonom_home_options.home_booking_placeholder_guests') ?: wonom_home_t('select_guests');
+
+$label_date = tr_options_field('wonom_home_options.home_booking_label_date') ?: wonom_home_t('select_date');
+$label_time = tr_options_field('wonom_home_options.home_booking_label_time') ?: wonom_home_t('arrival_time');
+
+$submit_text = tr_options_field('wonom_home_options.home_booking_submit_text') ?: wonom_home_t('send_reservation');
+$note_text = tr_options_field('wonom_home_options.home_booking_note_text') ?: wonom_home_t('zalo_note');
+$divider_text = tr_options_field('wonom_home_options.home_booking_support_divider') ?: wonom_home_t('or_call');
+$hotline = tr_options_field('wonom_home_options.home_booking_hotline') ?: '0968 487 096';
+$hotline_tel = preg_replace('/[^0-9+]/', '', $hotline);
 ?>
 <section class="popup_form popup_form_booking" aria-hidden="true">
         <div class="popup_form_overlay"></div>
@@ -7,14 +32,13 @@ if (!defined('ABSPATH')) exit;
             <div class="popup_form_content">
                 <div class="popup_form_head">
                     <div class="popup_tour_img img_full">
-                        <img src="/asset/img/ex_bg_bot.png" alt="">
+                        <img src="<?php echo esc_url($booking_bg); ?>" alt="">
                     </div>
                     <div class="popup_form_booking_heading">
-                        <div class="popup_tour_title popup_form_booking_title heading h4 h5_mb cl_cream">ĐẶT CHỖ ONLINE
-                        </div>
-                        <div class="popup_form_booking_subtitle txt_14 txt_extrabold cl_red">WONOM</div>
+                        <div class="popup_tour_title popup_form_booking_title heading h4 h5_mb cl_cream"><?php echo esc_html($booking_title); ?></div>
+                        <div class="popup_form_booking_subtitle txt_14 txt_extrabold cl_red"><?php echo esc_html($booking_subtitle); ?></div>
                     </div>
-                    <button class="popup_tour_close btn" type="button" aria-label="Đóng form đặt chỗ">
+                    <button class="popup_tour_close btn" type="button" aria-label="<?php echo esc_attr(wonom_home_t('close_booking')); ?>">
                         <span class="popup_tour_close_inner btn-inner svg_full">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
                                 xmlns="http://www.w3.org/2000/svg">
@@ -26,38 +50,44 @@ if (!defined('ABSPATH')) exit;
                     </button>
                 </div>
                 <form class="popup_form_body popup_form_booking_form" action="#" method="post">
+                    <div class="wonom-form-trap" aria-hidden="true">
+                        <label for="booking-website">Để trống trường này</label>
+                        <input id="booking-website" name="website" type="text" value="" tabindex="-1"
+                            autocomplete="off">
+                    </div>
                     <input type="hidden" name="booking_type" value="general">
                     <input type="hidden" name="floor" value="">
                     <input type="hidden" name="venue" value="WONOM">
                     <input type="hidden" name="product_id" value="">
-                    <input type="hidden" name="product_name" value="">
+                    <div class="popup_form_group popup_form_booking_product_group" hidden>
+                        <label class="popup_form_label txt_15 txt_extrabold cl_text" for="booking-product-name"><?php echo esc_html(wonom_home_t('format')); ?></label>
+                        <input id="booking-product-name" name="product_name" type="text"
+                            class="popup_form_input popup_form_booking_product_input" value="" readonly>
+                    </div>
                     <div class="popup_form_row">
                         <div class="popup_form_group">
-                            <label class="popup_form_label txt_15 txt_extrabold cl_text" for="booking-name">HỌ VÀ
-                                TÊN</label>
+                            <label class="popup_form_label txt_15 txt_extrabold cl_text" for="booking-name"><?php echo esc_html($label_name); ?></label>
                             <input id="booking-name" name="name" type="text" class="popup_form_input"
-                                placeholder="Nhập tên của bạn" autocomplete="name">
+                                placeholder="<?php echo esc_attr($placeholder_name); ?>" autocomplete="name" maxlength="80">
                         </div>
                         <div class="popup_form_group">
-                            <label class="popup_form_label txt_15 txt_extrabold cl_text" for="booking-phone">SỐ ĐIỆN
-                                THOẠI</label>
+                            <label class="popup_form_label txt_15 txt_extrabold cl_text" for="booking-phone"><?php echo esc_html($label_phone); ?></label>
                             <input id="booking-phone" name="phone" type="tel" class="popup_form_input"
-                                placeholder="Nhập số điện thoại" autocomplete="tel">
+                                placeholder="<?php echo esc_attr($placeholder_phone); ?>" autocomplete="tel" maxlength="20">
                         </div>
                     </div>
                     <div class="popup_form_row popup_form_booking_details_row">
                         <div class="popup_form_group popup_form_booking_floor_group">
-                            <label class="popup_form_label txt_15 txt_extrabold cl_text" for="booking-floor">BẠN MUỐN
-                                ĐẾN TẦNG NÀO?</label>
+                            <label class="popup_form_label txt_15 txt_extrabold cl_text" for="booking-floor"><?php echo esc_html($label_floor); ?></label>
                             <div class="popup_form_input_wrap relative">
                                 <select id="booking-floor" class="popup_form_input popup_form_select"
                                     data-booking-floor-select>
-                                    <option value="" disabled selected>Chọn tầng</option>
-                                    <option value="1F">Tầng 1 - Nhà hàng Mujige</option>
-                                    <option value="2F">Tầng 2 - Trang phục truyền thống</option>
-                                    <option value="3F">Tầng 3 - Workshop</option>
-                                    <option value="4F">Tầng 4 - Stress Room</option>
-                                    <option value="5F">Tầng 5 - Rooftop Disco</option>
+                                    <option value="" disabled selected><?php echo esc_html($placeholder_floor); ?></option>
+                                    <option value="1F"><?php echo esc_html(wonom_home_t('floor_1')); ?></option>
+                                    <option value="2F"><?php echo esc_html(wonom_home_t('floor_2')); ?></option>
+                                    <option value="3F"><?php echo esc_html(wonom_home_t('floor_3')); ?></option>
+                                    <option value="4F"><?php echo esc_html(wonom_home_t('floor_4')); ?></option>
+                                    <option value="5F"><?php echo esc_html(wonom_home_t('floor_5')); ?></option>
                                 </select>
                                 <span class="popup_form_input_icon absolute svg_full" aria-hidden="true">
                                     <svg width="20" height="20" viewBox="0 0 20 20" fill="none"
@@ -69,19 +99,17 @@ if (!defined('ABSPATH')) exit;
                             </div>
                         </div>
                         <div class="popup_form_group">
-                            <label class="popup_form_label txt_15 txt_extrabold cl_text" for="booking-guests">SỐ
-                                NGƯỜI</label>
+                            <label class="popup_form_label txt_15 txt_extrabold cl_text" for="booking-guests"><?php echo esc_html($label_guests); ?></label>
                             <div class="popup_form_input_wrap relative">
-                                <input id="booking-guests" name="guests" type="number" min="1" step="1"
-                                    inputmode="numeric" class="popup_form_input" placeholder="Chọn số người đến"
+                                <input id="booking-guests" name="guests" type="number" min="1" max="999" step="1"
+                                    inputmode="numeric" class="popup_form_input" placeholder="<?php echo esc_attr($placeholder_guests); ?>"
                                     required>
                             </div>
                         </div>
                     </div>
                     <div class="popup_form_row popup_form_datetime_row">
                         <div class="popup_form_group">
-                            <label class="popup_form_label txt_15 txt_extrabold cl_text" for="booking-date">CHỌN
-                                NGÀY</label>
+                            <label class="popup_form_label txt_15 txt_extrabold cl_text" for="booking-date"><?php echo esc_html($label_date); ?></label>
                             <div class="popup_form_input_wrap relative">
                                 <input id="booking-date" name="date" type="date" class="popup_form_input">
                                 <span class="popup_form_input_icon absolute svg_full" aria-hidden="true">
@@ -97,8 +125,7 @@ if (!defined('ABSPATH')) exit;
                             </div>
                         </div>
                         <div class="popup_form_group">
-                            <label class="popup_form_label txt_15 txt_extrabold cl_text" for="booking-time">THỜI GIAN
-                                ĐẾN</label>
+                            <label class="popup_form_label txt_15 txt_extrabold cl_text" for="booking-time"><?php echo esc_html($label_time); ?></label>
                             <div class="popup_form_input_wrap relative">
                                 <input id="booking-time" name="time" type="time" class="popup_form_input">
                                 <span class="popup_form_input_icon absolute svg_full" aria-hidden="true">
@@ -114,12 +141,10 @@ if (!defined('ABSPATH')) exit;
                     </div>
                     <div class="popup_form_actions">
                         <button class="popup_form_btn popup_form_booking_submit cl_cream txt_extrabold btn"
-                            type="submit">GỬI YÊU CẦU ĐẶT CHỖ</button>
-                        <div class="popup_form_note txt_13 txt_bold cl_text txt_center">Yêu cầu của bạn đã được ghi
-                            nhận. Nhân viên sẽ sớm liên hệ xác nhận.</div>
-                        <div class="popup_form_divider txt_13 txt_bold cl_dark_brown">HOẶC GỌI HỖ TRỢ</div>
-                        <a class="popup_form_btn btn2 cl_cream txt_18 txt_extrabold btn" href="tel:0968487096">0968 487
-                            096</a>
+                            type="submit"><?php echo esc_html($submit_text); ?></button>
+                        <div class="popup_form_note txt_13 txt_bold cl_text txt_center"><?php echo esc_html($note_text); ?></div>
+                        <div class="popup_form_divider txt_13 txt_bold cl_dark_brown"><?php echo esc_html($divider_text); ?></div>
+                        <a class="popup_form_btn btn2 cl_cream txt_18 txt_extrabold btn" href="tel:<?php echo esc_attr($hotline_tel); ?>"><?php echo esc_html($hotline); ?></a>
                     </div>
                 </form>
             </div>

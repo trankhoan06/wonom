@@ -595,11 +595,11 @@ function wonom_render_homepage_settings()
         echo $form->image('home_intro_image_2')->setLabel('Hình card 2');
         echo $form->image('home_intro_image_3')->setLabel('Hình card 3');
 
-        echo '<h4>Icon ghim trên từng card</h4>';
+        echo '<h3>Icon con trang trí</h3>';
         echo $form->row(
-            $form->image('home_intro_card_1_pin_image')->setLabel('Ghim card 1'),
-            $form->image('home_intro_card_2_pin_image')->setLabel('Ghim card 2'),
-            $form->image('home_intro_card_3_pin_image')->setLabel('Ghim card 3')
+            $form->image('home_intro_decor_icon_1')->setLabel('Con trang trí 1'),
+            $form->image('home_intro_decor_icon_2')->setLabel('Con trang trí 2'),
+            $form->image('home_intro_decor_icon_3')->setLabel('Con trang trí 3')
         );
     };
 
@@ -807,26 +807,32 @@ function wonom_render_homepage_settings()
         </script>';
     };
 
+    $tour_settings = function () use ($form) {
+        echo '<h2>Tour tham quan</h2>';
+        echo $form->text('home_tour_detail_button_text')
+            ->setLabel('Chữ nút xem chi tiết')
+            ->setAttribute('placeholder', 'XEM CHI TIẾT');
+
+        $tours_admin_url = admin_url('edit.php?post_type=wonom_tour');
+        echo '<div style="margin:20px 0;padding:16px 20px;background:#f0f6fc;border-left:4px solid #2271b1;border-radius:4px;">';
+        echo '<p style="margin:0 0 6px;font-size:14px;font-weight:600;color:#1d2327;">Danh sách Tour được quản lý độc lập tại menu Tour</p>';
+        echo '<p style="margin:0 0 12px;font-size:13px;color:#50575e;">Các tour tham quan được quản lý độc lập để thuận tiện tạo mới, chỉnh sửa chi tiết, sắp xếp thứ tự và dịch đa ngôn ngữ.</p>';
+        echo '<a href="' . esc_url($tours_admin_url) . '" class="button button-primary" style="margin-top:4px;">Đi đến Quản lý Tour &rarr;</a>';
+        echo '</div>';
+    };
+
     $event_settings = function () use ($form) {
         echo '<h2>Sự kiện đang diễn ra</h2>';
         echo $form->row(
             $form->text('home_event_subtitle')->setLabel('Tiêu đề nhỏ'),
             $form->textarea('home_event_title')->setLabel('Tiêu đề chính')
         );
-        echo $form->repeater('home_events')
-            ->setLabel('Danh sách sự kiện')
-            ->setHeadline('title')
-            ->setFields(array(
-                $form->rowText('<h4>Thông tin hiển thị trên card</h4>'),
-                $form->image('image')->setLabel('Hình card'),
-                $form->text('apply')->setLabel('Thời gian áp dụng, ví dụ: THƯỜNG XUYÊN'),
-                $form->text('title')->setLabel('Tên sự kiện'),
-                $form->textarea('subtitle')->setLabel('Mô tả ngắn'),
-                $form->text('category')->setLabel('Danh mục, ví dụ: ROOFTOP'),
-                $form->rowText('<hr><h4>Popup chi tiết sự kiện</h4>'),
-                $form->text('condition')->setLabel('Điều kiện áp dụng'),
-                $form->editor('content')->setLabel('Nội dung chi tiết'),
-            ));
+        $events_admin_url = admin_url('edit.php?post_type=wonom_event');
+        echo '<div style="margin:20px 0;padding:16px 20px;background:#f0f6fc;border-left:4px solid #2271b1;border-radius:4px;">';
+        echo '<p style="margin:0 0 6px;font-size:14px;font-weight:600;color:#1d2327;">Danh sách sự kiện được quản lý độc lập tại menu Sự kiện</p>';
+        echo '<p style="margin:0 0 12px;font-size:13px;color:#50575e;">Các sự kiện hiện đã được chuyển ra ngoài như Tour để thuận tiện tạo mới, chỉnh sửa chi tiết, sắp xếp thứ tự và dịch đa ngôn ngữ.</p>';
+        echo '<a href="' . esc_url($events_admin_url) . '" class="button button-primary" style="margin-top:4px;">Đi đến Quản lý Sự kiện &rarr;</a>';
+        echo '</div>';
         echo '<h3>Icon trang trí</h3>';
         echo $form->row(
             $form->image('home_event_decor_icon_1')->setLabel('Icon trang trí 1'),
@@ -881,8 +887,6 @@ function wonom_render_homepage_settings()
         echo '<hr><h3>Nội dung cuối Footer</h3>';
         echo $form->text('home_footer_social_label')
             ->setLabel('Nội dung trước các icon mạng xã hội');
-        echo $form->text('home_footer_policy_text')
-            ->setLabel('Nội dung chính sách');
 
         echo '<hr><h3>Icon Footer</h3>';
         echo $form->row(
@@ -904,6 +908,86 @@ function wonom_render_homepage_settings()
             $form->image('home_footer_facebook_icon')->setLabel('Icon Facebook'),
             $form->image('home_footer_instagram_icon')->setLabel('Icon Instagram'),
             $form->image('home_footer_tiktok_icon')->setLabel('Icon TikTok')
+        );
+    };
+
+    $policy_settings = function () use ($form) {
+        echo '<h2>Chính sách & Điều khoản</h2>';
+        echo '<p style="color:#50575e;margin-bottom:20px;">Cấu hình nội dung cho popup Chính sách & Điều khoản (khi người dùng nhấn nút chính sách ở chân trang).</p>';
+        echo $form->text('home_footer_policy_text')
+            ->setLabel('Chữ hiển thị ở nút mở chính sách (Footer)')
+            ->setAttribute('placeholder', 'CHÍNH SÁCH & ĐIỀU KHOẢN');
+        echo $form->text('home_footer_policy_popup_title')
+            ->setLabel('Tiêu đề popup chính sách')
+            ->setAttribute('placeholder', 'CHÍNH SÁCH & ĐIỀU KHOẢN');
+        echo $form->repeater('home_footer_policy_items')
+            ->setLabel('Danh sách các chính sách & điều khoản')
+            ->setHeadline('nav_title')
+            ->setFields(array(
+                $form->text('nav_title')->setLabel('Tên mục hiển thị ở cột bên trái (ví dụ: Chính sách bảo mật)'),
+                $form->text('title')->setLabel('Tiêu đề chính sách (ví dụ: CHÍNH SÁCH BẢO MẬT)'),
+                $form->text('subtitle')->setLabel('Phụ đề / Mô tả ngắn'),
+                $form->textarea('content')
+                    ->setLabel('Nội dung chi tiết chính sách')
+                    ->setAttribute('rows', 8)
+                    ->setHelp('Tự động định dạng đoạn văn bản theo các dòng xuống hàng, có thể dùng thẻ HTML (&lt;b&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;li&gt;...).'),
+            ));
+    };
+
+    $booking_settings = function () use ($form) {
+        echo '<h2>Cài đặt Form Đặt chỗ (Popup Booking)</h2>';
+        echo '<p style="color:#50575e;margin-bottom:20px;">Tùy chỉnh tiêu đề, ảnh nền, các nhãn hiển thị và thông tin hotline trên form đặt chỗ.</p>';
+
+        echo '<h3>Header & Thông tin chung</h3>';
+        echo $form->row(
+            $form->text('home_booking_title')
+                ->setLabel('Tiêu đề mặc định của form')
+                ->setAttribute('placeholder', 'ĐẶT CHỖ ONLINE'),
+            $form->text('home_booking_subtitle')
+                ->setLabel('Phụ đề mặc định')
+                ->setAttribute('placeholder', 'WONOM')
+        );
+        echo $form->image('home_booking_header_image')
+            ->setLabel('Ảnh nền header popup')
+            ->setHelp('Ảnh nền banner phía trên của form popup (mặc định nếu để trống sẽ dùng asset/img/ex_bg_bot.png).');
+
+        echo '<h3>Nhãn & Placeholder các trường nhập</h3>';
+        echo $form->row(
+            $form->text('home_booking_label_name')->setLabel('Nhãn trường "Họ và tên"')->setAttribute('placeholder', 'HỌ VÀ TÊN'),
+            $form->text('home_booking_placeholder_name')->setLabel('Gợi ý (placeholder) Họ và tên')->setAttribute('placeholder', 'Nhập tên của bạn')
+        );
+        echo $form->row(
+            $form->text('home_booking_label_phone')->setLabel('Nhãn trường "Số điện thoại"')->setAttribute('placeholder', 'SỐ ĐIỆN THOẠI'),
+            $form->text('home_booking_placeholder_phone')->setLabel('Gợi ý (placeholder) Số điện thoại')->setAttribute('placeholder', 'Nhập số điện thoại')
+        );
+        echo $form->row(
+            $form->text('home_booking_label_floor')->setLabel('Nhãn trường "Chọn tầng"')->setAttribute('placeholder', 'BẠN MUỐN ĐẾN TẦNG NÀO?'),
+            $form->text('home_booking_placeholder_floor')->setLabel('Mục chọn mặc định tầng')->setAttribute('placeholder', 'Chọn tầng')
+        );
+        echo $form->row(
+            $form->text('home_booking_label_guests')->setLabel('Nhãn trường "Số người"')->setAttribute('placeholder', 'SỐ NGƯỜI'),
+            $form->text('home_booking_placeholder_guests')->setLabel('Gợi ý (placeholder) Số người')->setAttribute('placeholder', 'Chọn số người đến')
+        );
+        echo $form->row(
+            $form->text('home_booking_label_date')->setLabel('Nhãn trường "Chọn ngày"')->setAttribute('placeholder', 'CHỌN NGÀY'),
+            $form->text('home_booking_label_time')->setLabel('Nhãn trường "Thời gian đến"')->setAttribute('placeholder', 'THỜI GIAN ĐẾN')
+        );
+
+        echo '<h3>Nút gửi & Hotline hỗ trợ</h3>';
+        echo $form->text('home_booking_submit_text')
+            ->setLabel('Chữ trên nút gửi yêu cầu')
+            ->setAttribute('placeholder', 'GỬI YÊU CẦU ĐẶT CHỖ');
+        echo $form->textarea('home_booking_note_text')
+            ->setLabel('Ghi chú xác nhận dưới nút gửi')
+            ->setAttribute('rows', 3)
+            ->setAttribute('placeholder', 'Yêu cầu của bạn đã được ghi nhận. Nhân viên sẽ sớm liên hệ xác nhận.');
+        echo $form->row(
+            $form->text('home_booking_support_divider')
+                ->setLabel('Chữ phân cách hỗ trợ')
+                ->setAttribute('placeholder', 'HOẶC GỌI HỖ TRỢ'),
+            $form->text('home_booking_hotline')
+                ->setLabel('Số điện thoại Hotline hỗ trợ')
+                ->setAttribute('placeholder', '0968 487 096')
         );
     };
 
@@ -957,9 +1041,12 @@ function wonom_render_homepage_settings()
         ->addTab('Giới thiệu', $introduce_settings)
         ->addTab('Trải nghiệm', $experience_settings)
         ->addTab('Khám phá', $explore_settings)
+        ->addTab('Tour', $tour_settings)
         ->addTab('Sự kiện', $event_settings)
         ->addTab('Thư viện', $library_settings)
         ->addTab('Liên hệ', $footer_settings)
+        ->addTab('Chính sách', $policy_settings)
+        ->addTab('Đặt chỗ', $booking_settings)
         ->render('box');
 
     echo '</form>';

@@ -25,7 +25,8 @@ $popup_first = static function ($query, $context = null) use ($popup_xpath) {
 $popup_set_text = static function ($node, $text) use ($popup_dom) {
     if (!$node) return;
     while ($node->firstChild) $node->removeChild($node->firstChild);
-    $node->appendChild($popup_dom->createTextNode((string) $text));
+    $decoded = html_entity_decode((string) $text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $node->appendChild($popup_dom->createTextNode($decoded));
 };
 $popup_set_html = static function ($node, $html) use ($popup_dom) {
     if (!$node) return;
@@ -74,7 +75,7 @@ if ($list) {
         $image_wrap->appendChild($thumb);
         $title = $popup_dom->createElement('span');
         $title->setAttribute('class', 'popup_tour_sidebar_suggest_item_title txt_bold txt_16 cl_dark_brown');
-        $title->appendChild($popup_dom->createTextNode($item_data['title']));
+        $title->appendChild($popup_dom->createTextNode(html_entity_decode((string) $item_data['title'], ENT_QUOTES | ENT_HTML5, 'UTF-8')));
         $button->appendChild($image_wrap);
         $button->appendChild($title);
         $list->appendChild($button);

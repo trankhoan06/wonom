@@ -48,7 +48,10 @@ function wonom_render_tour_fields()
     $form = tr_form();
 
     echo '<h3>Thông tin hiển thị trên slider</h3>';
-    echo $form->image('tour_image')->setLabel('Hình đại diện Tour');
+    echo $form->image('tour_image')->setLabel('Hình đại diện Tour (Desktop)');
+    echo $form->image('tour_image_mobile')
+        ->setLabel('Hình đại diện Tour (Mobile)')
+        ->setHelp('Hình hiển thị trên thiết bị di động (nếu để trống sẽ dùng hình Desktop).');
     echo $form->repeater('tour_meta_items')
         ->setLabel('Thông tin Tour')
         ->setHeadline('label')
@@ -58,7 +61,10 @@ function wonom_render_tour_fields()
         ));
 
     echo '<hr><h3>Popup chi tiết Tour</h3>';
-    echo $form->image('tour_popup_image')->setLabel('Hình trong popup');
+    echo $form->image('tour_popup_image')->setLabel('Hình trong popup (Desktop)');
+    echo $form->image('tour_popup_image_mobile')
+        ->setLabel('Hình trong popup (Mobile)')
+        ->setHelp('Hình hiển thị trong popup trên thiết bị di động (nếu để trống sẽ dùng hình Desktop).');
 
     echo $form->text('tour_intro_title')->setLabel('Tiêu đề giới thiệu');
     wonom_render_workshop_richtext_editor($post, 'tour_intro_content', 'Nội dung giới thiệu', 12);

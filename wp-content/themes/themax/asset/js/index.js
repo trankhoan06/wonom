@@ -1363,8 +1363,26 @@ $(document).ready(function () {
             }
             $metaItem.appendTo($metaItems);
         });
-        $popup.find('.popup_tour_content_img img').attr({
-            src: tour.popupImage || tour.image || '',
+        var isMobile = window.innerWidth <= 767;
+        var popupDesktopSrc = tour.popupImage || tour.image || '';
+        var $popupImgWrap = $popup.find('.popup_tour_content_img');
+        var $popupImg = $popupImgWrap.find('img');
+        var $popupSource = $popupImgWrap.find('source');
+
+        if (tour.popupImageMobile) {
+            if (!$popupSource.length && $popupImg.parent('picture').length) {
+                $popupSource = $('<source media="(max-width: 767px)">').prependTo($popupImg.parent('picture'));
+            } else if (!$popupSource.length) {
+                $popupImg.wrap('<picture style="display:block;width:100%;height:100%;"></picture>');
+                $popupSource = $('<source media="(max-width: 767px)">').prependTo($popupImg.parent('picture'));
+            }
+            $popupSource.attr('srcset', tour.popupImageMobile);
+        } else if ($popupSource.length) {
+            $popupSource.remove();
+        }
+
+        $popupImg.attr({
+            src: isMobile && tour.popupImageMobile ? tour.popupImageMobile : popupDesktopSrc,
             alt: tour.popupImageAlt || tour.title || ''
         });
 
@@ -2010,6 +2028,20 @@ $(document).ready(function () {
     $('.policy .popup_tour_close').click(function () {
         closeSlidingPopup($('.popup_tour.policy'));
     });
+
+    $('.popup_tour.policy').on('click', '.popup_tour_policy_card_item', function () {
+        var targetIndex = $(this).attr('data-policy-target');
+        var $popup = $('.popup_tour.policy');
+        $popup.find('.popup_tour_policy_card_item').removeClass('is-active');
+        $(this).addClass('is-active');
+        var $target = $popup.find('[data-policy-section="' + targetIndex + '"]');
+        var $content = $popup.find('.popup_tour_content');
+        if ($target.length && $content.length) {
+            var currentScroll = $content.scrollTop();
+            var targetOffset = $target.position().top;
+            $content.stop().animate({ scrollTop: currentScroll + targetOffset - 10 }, 300);
+        }
+    });
     var restaurantPageFlip = null;
     var restaurantMenuPages = [];
     var activeExplorePopup = null;
@@ -2500,6 +2532,7 @@ $(document).ready(function () {
         var $form = $popup.find('.popup_form_booking_form');
         var bookingType = $trigger.attr('data-booking-type');
         var subtitle = $trigger.attr('data-booking-subtitle');
+        var productName = $trigger.attr('data-booking-product-name') || '';
         var showFloorSelect = bookingType === 'general';
 
         $popup.find('.popup_form_booking_title').text($trigger.attr('data-booking-title'));
@@ -2511,7 +2544,8 @@ $(document).ready(function () {
         $form.find('[name="floor"]').val($trigger.attr('data-booking-floor'));
         $form.find('[name="venue"]').val($trigger.attr('data-booking-venue'));
         $form.find('[name="product_id"]').val($trigger.attr('data-booking-product-id') || '');
-        $form.find('[name="product_name"]').val($trigger.attr('data-booking-product-name') || '');
+        $form.find('[name="product_name"]').val(productName);
+        $form.find('.popup_form_booking_product_group').prop('hidden', !productName);
         $form.attr('data-booking-type', $trigger.attr('data-booking-type'));
         $form.attr('data-booking-floor', $trigger.attr('data-booking-floor'));
         $form.attr('data-booking-venue', $trigger.attr('data-booking-venue'));

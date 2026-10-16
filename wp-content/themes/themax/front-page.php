@@ -29,7 +29,8 @@ $homepage_parts = array(
 );
 
 $homepage_template_files = array_merge(
-    array(__FILE__, get_theme_file_path('/inc/frontend-performance.php'), get_theme_file_path('/inc/home-i18n.php')),
+    array(__FILE__),
+    glob(get_theme_file_path('/inc/*.php')) ?: array(),
     glob(get_theme_file_path('/template-parts/home-*.php')) ?: array(),
     glob(get_theme_file_path('/template-parts/layouts/home-*.php')) ?: array()
 );

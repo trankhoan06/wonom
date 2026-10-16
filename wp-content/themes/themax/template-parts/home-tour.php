@@ -30,7 +30,8 @@ $tour_set_text = static function ($node, $text) use ($tour_dom) {
     while ($node->firstChild) {
         $node->removeChild($node->firstChild);
     }
-    $node->appendChild($tour_dom->createTextNode((string) $text));
+    $decoded = html_entity_decode((string) $text, ENT_QUOTES, 'UTF-8');
+    $node->appendChild($tour_dom->createTextNode($decoded));
 };
 
 $main_wrap = $tour_first('//*[' . $tour_class('home_tour_main_wrap') . ']');
@@ -46,10 +47,25 @@ if ($main_wrap && $thumb_wrap) {
         $slide = $tour_dom->createElement('div');
         $slide->setAttribute('class', 'home_tour_main_item swiper-slide');
         $slide->setAttribute('data-tour-index', (string) $index);
-        $image = $tour_dom->createElement('img');
-        $image->setAttribute('src', $tour['image']);
-        $image->setAttribute('alt', $tour['imageAlt']);
-        $slide->appendChild($image);
+        if (!empty($tour['imageMobile'])) {
+            $picture = $tour_dom->createElement('picture');
+            $picture->setAttribute('style', 'display:block;width:100%;height:100%;');
+            $source = $tour_dom->createElement('source');
+            $source->setAttribute('media', '(max-width: 767px)');
+            $source->setAttribute('srcset', $tour['imageMobile']);
+            $picture->appendChild($source);
+
+            $image = $tour_dom->createElement('img');
+            $image->setAttribute('src', $tour['image']);
+            $image->setAttribute('alt', $tour['imageAlt']);
+            $picture->appendChild($image);
+            $slide->appendChild($picture);
+        } else {
+            $image = $tour_dom->createElement('img');
+            $image->setAttribute('src', $tour['image']);
+            $image->setAttribute('alt', $tour['imageAlt']);
+            $slide->appendChild($image);
+        }
         $main_wrap->appendChild($slide);
 
         $thumb = $tour_dom->createElement('button');
@@ -69,7 +85,11 @@ $title_node = $tour_first('//*[' . $tour_class('home_tour_card_title') . ']');
 if ($title_node) {
     $tour_set_text($title_node, $tours[0]['title']);
 }
-$tour_set_text($tour_first('//*[' . $tour_class('home_tour_card_detail_see_txt') . ']'), 'XEM CHI TIẾT');
+$tour_detail_button_text = tr_options_field('wonom_home_options.home_tour_detail_button_text');
+if (null === $tour_detail_button_text || false === $tour_detail_button_text || '' === $tour_detail_button_text) {
+    $tour_detail_button_text = 'XEM CHI TIẾT';
+}
+$tour_set_text($tour_first('//*[' . $tour_class('home_tour_card_detail_see_txt') . ']'), $tour_detail_button_text);
 $section = $tour_dom->getElementById('tour');
 if ($section) {
     $data_script = $tour_dom->createElement('script');

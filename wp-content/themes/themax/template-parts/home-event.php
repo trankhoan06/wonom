@@ -25,7 +25,8 @@ $event_first = static function ($query, $context = null) use ($event_xpath) {
 $event_set_text = static function ($node, $text) use ($event_dom) {
     if (!$node) return;
     while ($node->firstChild) $node->removeChild($node->firstChild);
-    $node->appendChild($event_dom->createTextNode((string) $text));
+    $decoded = html_entity_decode((string) $text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $node->appendChild($event_dom->createTextNode($decoded));
 };
 $event_option = static function ($field, $fallback) {
     $value = tr_options_field('wonom_home_options.' . $field);
@@ -36,7 +37,8 @@ $event_set_text($event_first('//*[' . $event_class('home_event_subtitle') . ']')
 $title_node = $event_first('//*[@id="event"]//*[' . $event_class('home_event_title') . ']');
 if ($title_node) {
     while ($title_node->firstChild) $title_node->removeChild($title_node->firstChild);
-    $title_lines = preg_split('/\r\n|\r|\n/', (string) $event_option('home_event_title', "Sự kiện đang diễn ra &\nchương trình theo mùa"));
+    $raw_title = html_entity_decode((string) $event_option('home_event_title', "Sự kiện đang diễn ra &\nchương trình theo mùa"), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $title_lines = preg_split('/\r\n|\r|\n/', $raw_title);
     foreach ($title_lines as $index => $line) {
         if ($index) $title_node->appendChild($event_dom->createElement('br'));
         $title_node->appendChild($event_dom->createTextNode($line));

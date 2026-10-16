@@ -24,12 +24,14 @@ $footer_first = static function ($query, $context = null) use ($footer_xpath) {
 $footer_set_text = static function ($node, $text) use ($footer_dom) {
     if (!$node) return;
     while ($node->firstChild) $node->removeChild($node->firstChild);
-    $node->appendChild($footer_dom->createTextNode((string) $text));
+    $decoded = html_entity_decode((string) $text, ENT_QUOTES, 'UTF-8');
+    $node->appendChild($footer_dom->createTextNode($decoded));
 };
 $footer_set_lines = static function ($node, $text) use ($footer_dom) {
     if (!$node) return;
     while ($node->firstChild) $node->removeChild($node->firstChild);
-    foreach (preg_split('/\r\n|\r|\n/', (string) $text) as $index => $line) {
+    $raw_text = html_entity_decode((string) $text, ENT_QUOTES, 'UTF-8');
+    foreach (preg_split('/\r\n|\r|\n/', $raw_text) as $index => $line) {
         if ($index) $node->appendChild($footer_dom->createElement('br'));
         $node->appendChild($footer_dom->createTextNode($line));
     }

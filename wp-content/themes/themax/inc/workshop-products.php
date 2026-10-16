@@ -125,7 +125,7 @@ function wonom_render_workshop_richtext_editor($post, $meta_key, $label, $rows =
 function wonom_workshop_tinymce_plugins($plugins)
 {
     $screen = function_exists('get_current_screen') ? get_current_screen() : null;
-    if (!$screen || !in_array($screen->post_type, array('wonom_workshop', 'wonom_tour'), true)) {
+    if (!$screen || !in_array($screen->post_type, array('wonom_workshop', 'wonom_tour', 'wonom_event'), true)) {
         return $plugins;
     }
 
@@ -143,7 +143,7 @@ add_filter('mce_external_plugins', 'wonom_workshop_tinymce_plugins');
 function wonom_workshop_editor_admin_assets()
 {
     $screen = function_exists('get_current_screen') ? get_current_screen() : null;
-    if (!$screen || !in_array($screen->post_type, array('wonom_workshop', 'wonom_tour'), true)) {
+    if (!$screen || !in_array($screen->post_type, array('wonom_workshop', 'wonom_tour', 'wonom_event'), true)) {
         return;
     }
 

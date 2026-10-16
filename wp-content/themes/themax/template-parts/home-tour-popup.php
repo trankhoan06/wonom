@@ -30,7 +30,8 @@ $popup_set_node_text = static function ($node, $value) use ($popup_dom) {
     while ($node->firstChild) {
         $node->removeChild($node->firstChild);
     }
-    $node->appendChild($popup_dom->createTextNode((string) $value));
+    $decoded = html_entity_decode((string) $value, ENT_QUOTES, 'UTF-8');
+    $node->appendChild($popup_dom->createTextNode($decoded));
 };
 $popup_set_text = static function ($class_name, $value) use ($popup_first, $popup_class, $popup_set_node_text) {
     $node = $popup_first('//*[' . $popup_class($class_name) . ']');
@@ -91,10 +92,25 @@ if ($meta_wrap) {
     }
 }
 
+$popup_image_wrap = $popup_first('//*[' . $popup_class('popup_tour_content_img') . ']');
 $popup_image = $popup_first('//*[' . $popup_class('popup_tour_content_img') . ']//img');
 if ($popup_image) {
-    $popup_image->setAttribute('src', $tour['popupImage']);
-    $popup_image->setAttribute('alt', $tour['popupImageAlt']);
+    if (!empty($tour['popupImageMobile']) && $popup_image_wrap) {
+        $picture = $popup_dom->createElement('picture');
+        $picture->setAttribute('style', 'display:block;width:100%;height:100%;');
+        $source = $popup_dom->createElement('source');
+        $source->setAttribute('media', '(max-width: 767px)');
+        $source->setAttribute('srcset', $tour['popupImageMobile']);
+        $picture->appendChild($source);
+
+        $popup_image->setAttribute('src', $tour['popupImage']);
+        $popup_image->setAttribute('alt', $tour['popupImageAlt']);
+        $popup_image_wrap->replaceChild($picture, $popup_image);
+        $picture->appendChild($popup_image);
+    } else {
+        $popup_image->setAttribute('src', $tour['popupImage']);
+        $popup_image->setAttribute('alt', $tour['popupImageAlt']);
+    }
 }
 
 $content_titles = $popup_xpath->query('//*[' . $popup_class('popup_tour_content_txt') . ']/*[' . $popup_class('popup_tour_content_subtitle') . ']');

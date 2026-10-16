@@ -71,6 +71,18 @@ function wonom_submission_valid_phone($phone)
     return (bool) preg_match('/^(?:\+?84|0)(?:3|5|7|8|9)[0-9]{8}$/', wonom_submission_normalize_phone($phone));
 }
 
+function wonom_submission_phone_rate_key($phone)
+{
+    $phone = wonom_submission_normalize_phone($phone);
+    if (0 === strpos($phone, '+84')) {
+        return '0' . substr($phone, 3);
+    }
+    if (0 === strpos($phone, '84')) {
+        return '0' . substr($phone, 2);
+    }
+    return $phone;
+}
+
 function wonom_submission_valid_date($date)
 {
     $date = (string) $date;
@@ -100,31 +112,120 @@ function wonom_submission_valid_time($time)
     return (bool) preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d(?:\s*-\s*(?:[01]\d|2[0-3]):[0-5]\d)?$/', trim((string) $time));
 }
 
+function wonom_submission_post_text($key, $max_length = 200)
+{
+    if (!isset($_POST[$key]) || !is_scalar($_POST[$key])) {
+        return '';
+    }
+
+    $value = sanitize_text_field(wp_unslash((string) $_POST[$key]));
+    if ($max_length > 0) {
+        $value = function_exists('mb_substr')
+            ? mb_substr($value, 0, $max_length)
+            : substr($value, 0, $max_length);
+    }
+    return trim($value);
+}
+
+function wonom_submission_client_ip()
+{
+    $ip = isset($_SERVER['REMOTE_ADDR']) && is_scalar($_SERVER['REMOTE_ADDR'])
+        ? sanitize_text_field(wp_unslash((string) $_SERVER['REMOTE_ADDR']))
+        : '';
+    return filter_var($ip, FILTER_VALIDATE_IP) ? $ip : 'unknown';
+}
+
+function wonom_submission_is_same_origin()
+{
+    $source = '';
+    if (!empty($_SERVER['HTTP_ORIGIN']) && is_scalar($_SERVER['HTTP_ORIGIN'])) {
+        $source = wp_unslash((string) $_SERVER['HTTP_ORIGIN']);
+    } elseif (!empty($_SERVER['HTTP_REFERER']) && is_scalar($_SERVER['HTTP_REFERER'])) {
+        $source = wp_unslash((string) $_SERVER['HTTP_REFERER']);
+    }
+    if ('' === $source) {
+        return true;
+    }
+
+    $home_host = strtolower((string) wp_parse_url(home_url('/'), PHP_URL_HOST));
+    $source_host = strtolower((string) wp_parse_url($source, PHP_URL_HOST));
+    return '' === $source_host || ($home_host && hash_equals($home_host, $source_host));
+}
+
+function wonom_submission_passes_bot_checks()
+{
+    if (isset($_POST['website']) && !is_scalar($_POST['website'])) {
+        return false;
+    }
+    if ('' !== wonom_submission_post_text('website', 200)) {
+        return false;
+    }
+
+    $elapsed = wonom_submission_post_text('form_elapsed_ms', 20);
+    return ctype_digit($elapsed)
+        && (int) $elapsed >= 1200;
+}
+
+function wonom_submission_rate_limited($bucket, $identity, $limit, $window)
+{
+    $identity = (string) $identity;
+    if ('' === $identity) {
+        return false;
+    }
+
+    $digest = hash_hmac('sha256', $identity, wp_salt('nonce'));
+    $key = 'wonom_' . sanitize_key($bucket) . '_' . $digest;
+    $count = (int) get_transient($key);
+    if ($count >= (int) $limit) {
+        return true;
+    }
+
+    set_transient($key, $count + 1, (int) $window);
+    return false;
+}
+
+function wonom_submission_rate_limit_response($retry_after)
+{
+    if (!headers_sent()) {
+        header('Retry-After: ' . absint($retry_after));
+    }
+    wp_send_json_error(array('message' => wonom_home_t('rate_limited')), 429);
+}
+
 function wonom_handle_home_form_submission()
 {
+    $content_length = isset($_SERVER['CONTENT_LENGTH']) ? absint($_SERVER['CONTENT_LENGTH']) : 0;
+    if ($content_length > 32768) {
+        wp_send_json_error(array('message' => wonom_home_t('invalid_form')), 413);
+    }
+
     if (!check_ajax_referer('wonom_submit_form', 'nonce', false)) {
         wp_send_json_error(array('message' => wonom_home_t('expired')), 403);
     }
 
-    $honeypot = isset($_POST['website']) ? trim((string) wp_unslash($_POST['website'])) : '';
-    if ('' !== $honeypot) {
+    if (!wonom_submission_is_same_origin()) {
+        wp_send_json_error(array('message' => wonom_home_t('invalid_form')), 403);
+    }
+
+    if (!wonom_submission_passes_bot_checks()) {
         wp_send_json_success(array('message' => wonom_home_t('request_received')));
     }
 
-    $ip = isset($_SERVER['REMOTE_ADDR']) ? sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR'])) : 'unknown';
-    $rate_key = 'wonom_submit_' . md5($ip);
-    $rate_count = (int) get_transient($rate_key);
-    if ($rate_count >= 8) {
-        wp_send_json_error(array('message' => wonom_home_t('rate_limited')), 429);
+    $ip = wonom_submission_client_ip();
+    if (wonom_submission_rate_limited('form_ip_burst', $ip, 12, 10 * MINUTE_IN_SECONDS)) {
+        wonom_submission_rate_limit_response(10 * MINUTE_IN_SECONDS);
+    }
+    if (wonom_submission_rate_limited('form_ip_daily', $ip, 50, DAY_IN_SECONDS)) {
+        wonom_submission_rate_limit_response(HOUR_IN_SECONDS);
     }
 
-    $form_type = isset($_POST['form_type']) ? sanitize_key(wp_unslash($_POST['form_type'])) : '';
+    $form_type = sanitize_key(wonom_submission_post_text('form_type', 20));
     if (!in_array($form_type, array('booking', 'tour', 'membership'), true)) {
         wp_send_json_error(array('message' => wonom_home_t('invalid_form')), 400);
     }
 
-    $name = isset($_POST['name']) ? sanitize_text_field(wp_unslash($_POST['name'])) : '';
-    $phone = isset($_POST['phone']) ? sanitize_text_field(wp_unslash($_POST['phone'])) : '';
+    $name = wonom_submission_post_text('name', 120);
+    $phone = wonom_submission_post_text('phone', 30);
     $errors = array();
     $name_length = function_exists('mb_strlen') ? mb_strlen($name) : strlen($name);
     if ($name_length < 2 || $name_length > 80 || preg_match('/[0-9]/', $name)) {
@@ -134,25 +235,26 @@ function wonom_handle_home_form_submission()
         $errors['phone'] = wonom_home_t('invalid_phone');
     }
 
+    $normalized_phone = wonom_submission_normalize_phone($phone);
     $data = array(
         'form_type' => $form_type,
         'name' => $name,
-        'phone' => wonom_submission_normalize_phone($phone),
+        'phone' => $normalized_phone,
     );
 
     if ('membership' === $form_type) {
-        $consent = !empty($_POST['consent']);
+        $consent = in_array(wonom_submission_post_text('consent', 10), array('1', 'yes', 'on'), true);
         if (!$consent) {
             $errors['consent'] = wonom_home_t('required_consent');
         }
         $data['consent'] = $consent ? 'yes' : 'no';
     } else {
-        $date = isset($_POST['date']) ? sanitize_text_field(wp_unslash($_POST['date'])) : '';
-        $time = isset($_POST['time']) ? sanitize_text_field(wp_unslash($_POST['time'])) : '';
-        $guests = isset($_POST['guests']) ? sanitize_text_field(wp_unslash($_POST['guests'])) : '';
+        $date = wonom_submission_post_text('date', 20);
+        $time = wonom_submission_post_text('time', 30);
+        $guests = wonom_submission_post_text('guests', 10);
         if (!wonom_submission_valid_date($date)) $errors['date'] = wonom_home_t('invalid_date');
         if (!wonom_submission_valid_time($time)) $errors['time'] = wonom_home_t('invalid_time');
-        if (!preg_match('/^(?:[1-9][0-9]*|5\+)$/', $guests)) $errors['guests'] = wonom_home_t('required_guests');
+        if (!preg_match('/^[1-9][0-9]{0,2}$/', $guests) || (int) $guests > 999) $errors['guests'] = wonom_home_t('required_guests');
         $data = array_merge($data, array(
             'date' => $date,
             'time' => $time,
@@ -161,22 +263,46 @@ function wonom_handle_home_form_submission()
     }
 
     if ('booking' === $form_type) {
-        $booking_type = isset($_POST['booking_type']) ? sanitize_key(wp_unslash($_POST['booking_type'])) : 'general';
-        $floor = isset($_POST['floor']) ? sanitize_text_field(wp_unslash($_POST['floor'])) : '';
-        if ('general' === $booking_type && '' === $floor) $errors['floor'] = wonom_home_t('required_floor');
+        $booking_type = sanitize_key(wonom_submission_post_text('booking_type', 30));
+        $allowed_booking_types = array('general', 'restaurant', 'rental', 'workshop', 'appointment', 'reservation');
+        $floor = wonom_submission_post_text('floor', 10);
+        $product_id = wonom_submission_post_text('product_id', 100);
+        $product_name = wonom_submission_post_text('product_name', 160);
+        if (!in_array($booking_type, $allowed_booking_types, true)) $errors['booking_type'] = wonom_home_t('invalid_form');
+        if ('general' === $booking_type && !in_array($floor, array('1F', '2F', '3F', '4F', '5F'), true)) $errors['floor'] = wonom_home_t('required_floor');
+        if ('' !== $product_id && '' === $product_name) $errors['product_name'] = 'Không xác định được tên sản phẩm workshop. Vui lòng chọn lại sản phẩm.';
         $data = array_merge($data, array(
             'booking_type' => $booking_type,
             'floor' => $floor,
-            'venue' => isset($_POST['venue']) ? sanitize_text_field(wp_unslash($_POST['venue'])) : '',
-            'product_id' => isset($_POST['product_id']) ? sanitize_text_field(wp_unslash($_POST['product_id'])) : '',
-            'product_name' => isset($_POST['product_name']) ? sanitize_text_field(wp_unslash($_POST['product_name'])) : '',
+            'venue' => wonom_submission_post_text('venue', 100),
+            'product_id' => $product_id,
+            'product_name' => $product_name,
         ));
     } elseif ('tour' === $form_type) {
-        $data['tour_name'] = isset($_POST['tour_name']) ? sanitize_text_field(wp_unslash($_POST['tour_name'])) : '';
+        $data['tour_name'] = wonom_submission_post_text('tour_name', 160);
+        if ('' === $data['tour_name']) $errors['tour_name'] = wonom_home_t('invalid_form');
     }
 
     if ($errors) {
         wp_send_json_error(array('message' => wonom_home_t('check_information'), 'fields' => $errors), 422);
+    }
+
+    $duplicate_key = 'wonom_form_duplicate_' . hash_hmac('sha256', wp_json_encode($data), wp_salt('nonce'));
+    $duplicate_post_id = absint(get_transient($duplicate_key));
+    if ($duplicate_post_id && 'wonom_submission' === get_post_type($duplicate_post_id)) {
+        wp_send_json_success(array(
+            'message' => wonom_home_t('success'),
+            'submission_id' => $duplicate_post_id,
+            'duplicate' => true,
+        ));
+    }
+
+    $phone_rate_key = wonom_submission_phone_rate_key($normalized_phone);
+    if (wonom_submission_rate_limited('form_phone_hourly', $phone_rate_key, 5, HOUR_IN_SECONDS)) {
+        wonom_submission_rate_limit_response(HOUR_IN_SECONDS);
+    }
+    if (wonom_submission_rate_limited('form_phone_daily', $phone_rate_key, 10, DAY_IN_SECONDS)) {
+        wonom_submission_rate_limit_response(DAY_IN_SECONDS);
     }
 
     $labels = wonom_submission_type_labels();
@@ -194,8 +320,7 @@ function wonom_handle_home_form_submission()
     }
     update_post_meta($post_id, '_wonom_status', 'new');
     update_post_meta($post_id, '_wonom_source_url', esc_url_raw(wp_get_referer() ?: ''));
-
-    set_transient($rate_key, $rate_count + 1, 10 * MINUTE_IN_SECONDS);
+    set_transient($duplicate_key, $post_id, 3 * MINUTE_IN_SECONDS);
 
     $mail_lines = array('Loại: ' . $labels[$form_type]);
     foreach ($data as $key => $value) {

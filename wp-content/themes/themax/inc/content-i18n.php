@@ -10,6 +10,7 @@ function wonom_polylang_post_types($post_types, $is_settings)
 {
     $post_types['wonom_tour'] = 'wonom_tour';
     $post_types['wonom_workshop'] = 'wonom_workshop';
+    $post_types['wonom_event'] = 'wonom_event';
 
     return $post_types;
 }
@@ -33,9 +34,11 @@ function wonom_polylang_shared_media_metas($meta_keys, $sync, $from, $to, $lang)
     $shared_meta = array();
 
     if ('wonom_tour' === $post_type) {
-        $shared_meta = array('tour_image', 'tour_popup_image');
+        $shared_meta = array('tour_image', 'tour_image_mobile', 'tour_popup_image', 'tour_popup_image_mobile');
     } elseif ('wonom_workshop' === $post_type) {
         $shared_meta = array('workshop_image', 'workshop_detail_images');
+    } elseif ('wonom_event' === $post_type) {
+        $shared_meta = array('event_image', 'event_popup_image');
     }
 
     return array_values(array_unique(array_merge($meta_keys, $shared_meta)));
@@ -55,8 +58,9 @@ function wonom_invalidate_translated_post_cache($post_id)
 }
 add_action('save_post_wonom_tour', 'wonom_invalidate_translated_post_cache');
 add_action('save_post_wonom_workshop', 'wonom_invalidate_translated_post_cache');
+add_action('save_post_wonom_event', 'wonom_invalidate_translated_post_cache');
 add_action('before_delete_post', static function ($post_id) {
-    if (in_array(get_post_type($post_id), array('wonom_tour', 'wonom_workshop'), true)) {
+    if (in_array(get_post_type($post_id), array('wonom_tour', 'wonom_workshop', 'wonom_event'), true)) {
         wonom_invalidate_translated_content_cache();
     }
 });
@@ -90,7 +94,7 @@ function wonom_migrate_content_languages()
     }
 
     $post_ids = get_posts(array(
-        'post_type' => array('wonom_tour', 'wonom_workshop'),
+        'post_type' => array('wonom_tour', 'wonom_workshop', 'wonom_event'),
         'post_status' => 'any',
         'posts_per_page' => -1,
         'fields' => 'ids',

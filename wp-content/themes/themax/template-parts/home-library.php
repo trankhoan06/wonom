@@ -25,7 +25,8 @@ $library_first = static function ($query, $context = null) use ($library_xpath) 
 $library_set_text = static function ($node, $text) use ($library_dom) {
     if (!$node) return;
     while ($node->firstChild) $node->removeChild($node->firstChild);
-    $node->appendChild($library_dom->createTextNode((string) $text));
+    $decoded = html_entity_decode((string) $text, ENT_QUOTES, 'UTF-8');
+    $node->appendChild($library_dom->createTextNode($decoded));
 };
 $library_option = static function ($field, $fallback) {
     $value = tr_options_field('wonom_home_options.' . $field);
@@ -34,7 +35,18 @@ $library_option = static function ($field, $fallback) {
 
 $section = $library_dom->getElementById('library');
 $library_set_text($library_first('.//*[' . $library_class('home_space_left_subtitle') . ']', $section), $library_option('home_library_subtitle', 'BÊN TRONG WONOM THẾ NÀO!'));
-$library_set_text($library_first('.//*[' . $library_class('home_event_title') . ']', $section), $library_option('home_library_title', 'Những khoảnh khắc của không gian.'));
+
+$library_title_node = $library_first('.//*[' . $library_class('home_event_title') . ']', $section);
+if ($library_title_node) {
+    while ($library_title_node->firstChild) $library_title_node->removeChild($library_title_node->firstChild);
+    $raw_library_title = html_entity_decode((string) $library_option('home_library_title', 'Những khoảnh khắc của không gian.'), ENT_QUOTES, 'UTF-8');
+    $title_lines = preg_split('/\r\n|\r|\n/', $raw_library_title);
+    foreach ($title_lines as $index => $line) {
+        if ($index) $library_title_node->appendChild($library_dom->createElement('br'));
+        $library_title_node->appendChild($library_dom->createTextNode($line));
+    }
+}
+
 $library_set_text($library_first('.//*[' . $library_class('home_space_left_des') . ']', $section), $library_option('home_library_description', 'Không gian chạm và tận hưởng văn hóa đời thường Hàn Quốc ngay tại Sài Gòn, mở ra nhịp cầu kết nối văn hóa hai quốc gia.'));
 $library_set_text($library_first('.//*[' . $library_class('home_space_left_button') . ']//*[' . $library_class('btn-inner') . ']', $section), 'XEM TẤT CẢ HÌNH ẢNH');
 $library_decor_icon = $library_first('.//*[' . $library_class('home_space_icon') . ']//img', $section);
@@ -72,7 +84,7 @@ if ($tracks && $tracks->length >= 2) {
         $image_wrap->appendChild($image);
         $tag = $library_dom->createElement('div');
         $tag->setAttribute('class', 'home_space_right_card_item_tag txt_14 txt_bold');
-        $tag->appendChild($library_dom->createTextNode($item['tag']));
+        $tag->appendChild($library_dom->createTextNode(html_entity_decode((string) $item['tag'], ENT_QUOTES, 'UTF-8')));
         $slide->appendChild($image_wrap);
         $slide->appendChild($tag);
         $track->appendChild($slide);

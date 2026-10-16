@@ -13,11 +13,13 @@ function wonom_get_home_tours()
         $rows[] = array(
             'id' => $tour_post->ID,
             'image' => get_post_meta($tour_post->ID, 'tour_image', true),
+            'image_mobile' => get_post_meta($tour_post->ID, 'tour_image_mobile', true),
             'title' => html_entity_decode(get_the_title($tour_post), ENT_QUOTES | ENT_HTML5, 'UTF-8'),
             'meta_items' => get_post_meta($tour_post->ID, 'tour_meta_items', true),
             'duration' => get_post_meta($tour_post->ID, 'tour_duration', true),
             'price' => get_post_meta($tour_post->ID, 'tour_price', true),
             'popup_image' => get_post_meta($tour_post->ID, 'tour_popup_image', true),
+            'popup_image_mobile' => get_post_meta($tour_post->ID, 'tour_popup_image_mobile', true),
             'intro_title' => get_post_meta($tour_post->ID, 'tour_intro_title', true),
             'intro_content' => get_post_meta($tour_post->ID, 'tour_intro_content', true),
             'itinerary_title' => get_post_meta($tour_post->ID, 'tour_itinerary_title', true),
@@ -79,6 +81,8 @@ function wonom_get_home_tours()
             $image = $asset_url . 'tour_bg.webp';
         }
         $popup_image = $resolve_image(isset($row['popup_image']) ? $row['popup_image'] : '');
+        $popup_image_mobile = $resolve_image(isset($row['popup_image_mobile']) ? $row['popup_image_mobile'] : '');
+        $image_mobile = $resolve_image(isset($row['image_mobile']) ? $row['image_mobile'] : '');
         $title = isset($row['title']) ? sanitize_text_field($row['title']) : '';
         $image_alt = $title ?: 'Wonom Culture Complex';
         $meta_items = array();
@@ -108,12 +112,14 @@ function wonom_get_home_tours()
         $tours[] = array(
             'id' => isset($row['id']) ? (int) $row['id'] : 0,
             'image' => $image,
+            'imageMobile' => $image_mobile,
             'imageAlt' => $image_alt,
             'title' => $title,
             'metaItems' => $meta_items,
             'duration' => isset($row['duration']) ? sanitize_text_field($row['duration']) : '',
             'price' => isset($row['price']) ? sanitize_text_field($row['price']) : '',
             'popupImage' => $popup_image ?: $asset_url . 'img_popup.webp',
+            'popupImageMobile' => $popup_image_mobile,
             'popupImageAlt' => $title ?: 'Wonom Culture Complex',
             'introTitle' => isset($row['intro_title']) ? sanitize_text_field($row['intro_title']) : '',
             'introContent' => isset($row['intro_content']) ? wp_kses_post($row['intro_content']) : '',

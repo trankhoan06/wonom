@@ -846,7 +846,7 @@ function wonom_zalo_submission_message($post_id)
         'booking_type' => 'Loại đặt chỗ',
         'floor' => 'Tầng',
         'venue' => 'Khu vực',
-        'product_name' => 'Dịch vụ',
+        'product_name' => 'Sản phẩm workshop',
         'tour_name' => 'Tour',
     );
     $lines = array(

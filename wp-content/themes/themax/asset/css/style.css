@@ -6620,6 +6620,17 @@ h2 {
     color: #b31521;
 }
 
+.wonom-form-trap {
+    position: fixed !important;
+    left: -10000px !important;
+    top: auto !important;
+    width: 1px !important;
+    height: 1px !important;
+    overflow: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
 button.is-loading {
     opacity: .7;
     pointer-events: none;
@@ -6733,6 +6744,12 @@ button.is-loading {
 
 .popup_form_booking .popup_form_group {
     margin-bottom: 2rem;
+}
+
+.popup_form_booking_product_input[readonly] {
+    color: #460700;
+    font-weight: 700;
+    cursor: default;
 }
 
 .popup_form_booking .popup_form_actions {

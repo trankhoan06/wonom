@@ -2,8 +2,27 @@
 
 function wonom_get_home_events()
 {
-    $rows = tr_options_field('wonom_home_options.home_events');
     $asset_url = trailingslashit(get_template_directory_uri()) . 'asset/img/';
+    $event_posts = function_exists('wonom_get_event_posts') ? wonom_get_event_posts() : array();
+    $rows = array();
+
+    foreach ($event_posts as $event_post) {
+        $rows[] = array(
+            'id' => $event_post->ID,
+            'image' => get_post_meta($event_post->ID, 'event_image', true),
+            'title' => html_entity_decode(get_the_title($event_post), ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+            'apply' => get_post_meta($event_post->ID, 'event_apply', true),
+            'subtitle' => get_post_meta($event_post->ID, 'event_subtitle', true),
+            'category' => get_post_meta($event_post->ID, 'event_category', true),
+            'condition' => get_post_meta($event_post->ID, 'event_condition', true),
+            'popup_image' => get_post_meta($event_post->ID, 'event_popup_image', true),
+            'content' => get_post_meta($event_post->ID, 'event_content', true),
+        );
+    }
+
+    if (!$rows && !get_option('wonom_events_migrated')) {
+        $rows = tr_options_field('wonom_home_options.home_events');
+    }
 
     if (!is_array($rows) || !$rows) {
         $rows = array(
@@ -41,11 +60,13 @@ function wonom_get_home_events()
         }
         $image = $resolve_image(isset($row['image']) ? $row['image'] : '');
         if (!$image) {
-            continue;
+            $image = $asset_url . 'store.jpg';
         }
+        $popup_image = $resolve_image(isset($row['popup_image']) ? $row['popup_image'] : '');
         $title = isset($row['title']) ? sanitize_text_field($row['title']) : '';
         $image_alt = $title ?: 'Wonom Culture Complex';
         $events[] = array(
+            'id' => isset($row['id']) ? (int) $row['id'] : 0,
             'image' => $image,
             'imageAlt' => $image_alt,
             'title' => $title,
@@ -53,7 +74,7 @@ function wonom_get_home_events()
             'category' => isset($row['category']) ? sanitize_text_field($row['category']) : '',
             'condition' => isset($row['condition']) ? sanitize_text_field($row['condition']) : '',
             'subtitle' => isset($row['subtitle']) ? sanitize_text_field($row['subtitle']) : '',
-            'popupImage' => $image,
+            'popupImage' => $popup_image ?: $image,
             'popupImageAlt' => $image_alt,
             'content' => isset($row['content']) ? wp_kses_post($row['content']) : '',
         );

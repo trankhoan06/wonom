@@ -107,26 +107,31 @@ if (!defined('ABSPATH')) exit;
                         tempus elementum sed erat. Risus lectus justo vitae mauris egestas magna dictum commodo sit.
                     </div>
                     <form class="tour_detail_form" action="#" method="post">
+                        <div class="wonom-form-trap" aria-hidden="true">
+                            <label for="tour-booking-website">Để trống trường này</label>
+                            <input id="tour-booking-website" name="website" type="text" value="" tabindex="-1"
+                                autocomplete="off">
+                        </div>
                         <input type="hidden" name="tour_name" value="TOUR CHỤP ẢNH CÂU CÁ + ĐÁNH GOFT NGOẠI CẢNH">
                         <div class="tour_detail_form_row">
                             <div class="popup_form_group">
                                 <label class="popup_form_label txt_13 txt_extrabold cl_text" for="tour-booking-name">HỌ
                                     VÀ TÊN</label>
                                 <input id="tour-booking-name" name="name" type="text" class="popup_form_input"
-                                    placeholder="Nhập tên của bạn" autocomplete="name" required>
+                                    placeholder="Nhập tên của bạn" autocomplete="name" maxlength="80" required>
                             </div>
                             <div class="popup_form_group">
                                 <label class="popup_form_label txt_13 txt_extrabold cl_text" for="tour-booking-phone">SỐ
                                     ĐIỆN THOẠI</label>
                                 <input id="tour-booking-phone" name="phone" type="tel" class="popup_form_input"
-                                    placeholder="Nhập số điện thoại" autocomplete="tel" required>
+                                    placeholder="Nhập số điện thoại" autocomplete="tel" maxlength="20" required>
                             </div>
                         </div>
                         <div class="popup_form_group">
                             <label class="popup_form_label txt_13 txt_extrabold cl_text" for="tour-booking-guests">SỐ
                                 NGƯỜI</label>
                             <div class="popup_form_input_wrap relative">
-                                <input id="tour-booking-guests" name="guests" type="number" min="1" step="1"
+                                <input id="tour-booking-guests" name="guests" type="number" min="1" max="999" step="1"
                                     inputmode="numeric" class="popup_form_input" placeholder="Chọn số người đến"
                                     required>
                             </div>

@@ -43,19 +43,23 @@ $intro_images = array(
     array(
         'url' => $resolve_image($get_option('home_intro_image_1'), $image_asset_url . 'store.jpg'),
         'alt' => 'Wonom Culture Complex',
-        'pin' => wonom_get_home_image_url('home_intro_card_1_pin_image', $image_asset_url . 'RedPin.svg'),
+        'pin' => $image_asset_url . 'RedPin.svg',
     ),
     array(
         'url' => $resolve_image($get_option('home_intro_image_2'), $image_asset_url . 'intro2.webp'),
         'alt' => wp_strip_all_tags($eyebrow),
-        'pin' => wonom_get_home_image_url('home_intro_card_2_pin_image', $image_asset_url . 'YellowPin.svg'),
+        'pin' => $image_asset_url . 'YellowPin.svg',
     ),
     array(
         'url' => $resolve_image($get_option('home_intro_image_3'), $image_asset_url . 'intro3.webp'),
         'alt' => preg_replace('/\s+/', ' ', wp_strip_all_tags($title)),
-        'pin' => wonom_get_home_image_url('home_intro_card_3_pin_image', $image_asset_url . 'BluePin.svg'),
+        'pin' => $image_asset_url . 'BluePin.svg',
     ),
 );
+
+$decor_icon_1 = wonom_get_home_image_url('home_intro_decor_icon_1', $image_asset_url . 'intro_icon1.webp');
+$decor_icon_2 = wonom_get_home_image_url('home_intro_decor_icon_2', $image_asset_url . 'intro_icon2.webp');
+$decor_icon_3 = wonom_get_home_image_url('home_intro_decor_icon_3', $image_asset_url . 'intro_icon.webp');
 ?>
 <section id="introduce" class="home_intro relative pa_section">
     <div class="container">
@@ -69,9 +73,9 @@ $intro_images = array(
             </div>
         </div>
         <div class="home_intro_arrow img_full"><img src="<?php echo esc_url($image_asset_url . 'intro_arrow.svg'); ?>" alt=""></div>
-        <div class="home_intro_icon1 img_full absolute"><img src="<?php echo esc_url($image_asset_url . 'intro_icon1.webp'); ?>" alt=""></div>
-        <div class="home_intro_icon2 img_full absolute"><img src="<?php echo esc_url($image_asset_url . 'intro_icon2.webp'); ?>" alt=""></div>
-        <div class="home_intro_icon img_full absolute"><img src="<?php echo esc_url($image_asset_url . 'intro_icon.webp'); ?>" alt=""></div>
+        <div class="home_intro_icon1 img_full absolute"><img src="<?php echo esc_url($decor_icon_1); ?>" alt=""></div>
+        <div class="home_intro_icon2 img_full absolute"><img src="<?php echo esc_url($decor_icon_2); ?>" alt=""></div>
+        <div class="home_intro_icon img_full absolute"><img src="<?php echo esc_url($decor_icon_3); ?>" alt=""></div>
         <div class="home_intro_image_wrap absolute">
             <?php foreach ($intro_images as $index => $intro_image) : ?>
                 <div class="home_intro_image<?php echo esc_attr($index + 1); ?> home_intro_image_item relative">

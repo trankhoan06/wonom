@@ -4,6 +4,7 @@
     var config = window.wonomHome || {};
     var i18n = config.i18n || {};
     var submitting = new WeakSet();
+    var pageStartedAt = Date.now();
 
     function t(key, fallback) {
         return i18n[key] || fallback;
@@ -23,7 +24,8 @@
     }
 
     function isValidGuests(value) {
-        return /^[1-9][0-9]*$/.test(String(value || '').trim());
+        value = String(value || '').trim();
+        return /^[1-9][0-9]{0,2}$/.test(value) && Number(value) <= 999;
     }
 
     function isValidDate(value) {
@@ -140,6 +142,8 @@
         var date = form.querySelector('[name="date"]');
         var time = form.querySelector('[name="time"]');
         var bookingType = form.querySelector('[name="booking_type"]');
+        var productId = form.querySelector('[name="product_id"]');
+        var productName = form.querySelector('[name="product_name"]');
         var floor = form.querySelector('[data-booking-floor-select]');
 
         if (!isValidName(name.value)) { showFieldError(name, t('invalid_name', 'Vui lòng nhập họ tên hợp lệ.')); errors++; }
@@ -149,6 +153,9 @@
         if (!isValidTime(time.value)) { showFieldError(time, t('invalid_time_short', 'Nhập thời gian theo định dạng HH:mm.')); errors++; }
         if (bookingType && 'general' === bookingType.value && floor && !floor.value) {
             showFieldError(floor, t('required_floor', 'Vui lòng chọn tầng bạn muốn đến.')); errors++;
+        }
+        if (productId && productId.value && productName && !productName.value.trim()) {
+            showFieldError(productName, 'Không xác định được tên sản phẩm workshop. Vui lòng chọn lại sản phẩm.'); errors++;
         }
         if (errors) focusFirstError(form);
         return 0 === errors;
@@ -183,7 +190,9 @@
         data.append('action', 'wonom_submit_form');
         data.append('nonce', config.submitNonce || '');
         data.append('lang', config.language || 'vi');
-        data.append('website', '');
+        var honeypot = scope.querySelector('[name="website"]');
+        data.set('website', honeypot ? honeypot.value : '');
+        data.set('form_elapsed_ms', String(Math.max(0, Date.now() - pageStartedAt)));
 
         fetch(config.ajaxUrl || '/wp-admin/admin-ajax.php', {
             method: 'POST',
