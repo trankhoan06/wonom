@@ -6203,8 +6203,8 @@ h2 {
     outline-offset: 2px;
 }
 
-.wonom-lazy-media.is-playing > .wonom-lazy-video-thumbnail,
-.wonom-lazy-media.is-playing > .wonom-lazy-video-play {
+.wonom-lazy-media.is-playing>.wonom-lazy-video-thumbnail,
+.wonom-lazy-media.is-playing>.wonom-lazy-video-play {
     display: none;
 }
 
@@ -6912,8 +6912,7 @@ button.is-loading {
     min-height: 100%;
     display: flex;
     justify-content: center;
-    align-items: center;
-    padding: min(2rem, 3vh) 0;
+    padding: min(6.4rem, 6.4vh) 0;
 }
 
 .popup_member_overlay {
@@ -6926,7 +6925,6 @@ button.is-loading {
     flex-direction: column;
     align-items: center;
     position: relative;
-    z-index: 2;
     width: 100%;
 }
 
@@ -7061,14 +7059,47 @@ button.is-loading {
 }
 
 .popup_member_icon {
-    width: min(24rem, 26vh);
+    width: min(37.2rem, 39.3vh);
     bottom: min(-11.5rem, -12vh);
-    left: min(-22rem, -24vh);
+    right: calc(100% + 5rem);
     z-index: 3;
 }
 
+.popup_member_icon_right {
+    width: min(33.1rem, 35.1vh);
+    bottom: min(3.6rem, 4vh);
+    right: 0;
+    position: fixed;
+    z-index: 4;
+}
+
+.popup_member_bg_bot {
+    position: absolute;
+    left: 0px;
+    right: 0px;
+    bottom: 0px;
+    height: max(5.6rem, 6.4vh);
+    z-index: 2;
+    background-color: rgb(255, 206, 86);
+    border-bottom: 3px solid rgb(70, 7, 0);
+    border-top: 3px solid rgb(70, 7, 0);
+    overflow: hidden;
+}
+
+.popup_member_bg_bot::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 150vw;
+    height: 150vw;
+    background: repeating-linear-gradient(90deg, transparent 0, transparent 19px, #F9C034 19px, #F9C034 21px);
+    transform: translate(-50%, -50%) rotate(45deg);
+    transform-origin: center;
+    pointer-events: none;
+}
+
 .popup_member_back {
-    margin-top: min(3.2rem, 3.6vh);
     display: inline-flex;
     align-items: center;
     cursor: pointer;
@@ -7078,6 +7109,9 @@ button.is-loading {
     background-color: #fff;
     box-shadow: 2px 2px 0 0 #460700;
     transition: all .3s ease-in-out;
+    position: fixed;
+    top: min(6.4rem, 7vh);
+    left: 8rem;
 }
 
 .popup_member_back:hover {
@@ -7191,4 +7225,543 @@ html.wonom-page-loaded [data-wonom-popup-image][data-wonom-image-ready="true"] {
 
 .popup_form_input[type="number"] {
     font-size: 16px;
+}
+
+/* Keep the membership modal inside the viewport. Only its white form scrolls. */
+.popup_member {
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+
+
+.popup_member_inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    padding: max(6.4rem, 7vh) 0;
+    overflow: hidden;
+    background: #fff5d6;
+    box-sizing: border-box;
+}
+
+.popup_member_overlay {
+    position: absolute;
+    inset: 0;
+}
+
+.popup_member_bg {
+    top: 0;
+}
+
+.popup_member_content_wrap {
+    z-index: 5;
+    justify-content: flex-start;
+    height: 100%;
+    min-height: 0;
+}
+
+.popup_member_header {
+    margin: 0 0 2.6rem;
+    text-align: left;
+    width: 50rem;
+    flex: 0 0 auto;
+}
+
+.popup_member_subtitle {
+    margin: 0 0 1.2rem;
+    color: #ed1c24;
+    font-size: 1.25rem;
+    font-weight: 800;
+}
+
+.popup_member_title {
+    margin: 0;
+    -webkit-text-stroke: .3rem #460700;
+    text-shadow: .35rem .3rem 0 #460700;
+}
+
+.popup_member_content {
+    width: 50rem;
+    min-height: 0;
+    flex: 1 1 auto;
+    display: flex;
+}
+
+.popup_member_panel {
+    display: none;
+}
+
+.popup_member_panel.is-active {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    width: 100%;
+    min-height: 0;
+    animation: member-panel-in .24s ease both;
+}
+
+@keyframes member-panel-in {
+    from {
+        opacity: 0;
+        transform: translateY(.8rem);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.popup_member_form {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 2.8rem 3rem 2.4rem;
+    border-radius: 1.4rem;
+    box-shadow: .35rem .35rem 0 #460700;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: #e5252a transparent;
+}
+
+.popup_member_form::-webkit-scrollbar {
+    width: .6rem;
+}
+
+.popup_member_form::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: #e5252a;
+}
+
+.popup_member_form::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.popup_member_lead {
+    margin: 0 0 2rem;
+    color: #333;
+    font-size: 1.35rem;
+    line-height: 1.45;
+}
+
+.popup_member_fields_row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2.2rem;
+}
+
+.popup_member .popup_form_group {
+    display: block;
+    margin-bottom: max(1.8rem, 2vh);
+}
+
+.popup_member .popup_form_label {
+    display: block;
+    margin-bottom: .7rem;
+    font-size: 1.25rem;
+}
+
+.popup_member .popup_form_input {
+    width: 100%;
+    min-height: 3.8rem;
+    padding: .6rem 0 .9rem;
+    border: 0;
+    border-bottom: 1px solid #ddd;
+    border-radius: 0;
+    background: transparent;
+    color: #460700;
+    font-family: inherit;
+    font-size: 1.35rem;
+    outline: 0;
+}
+
+.popup_member .popup_form_input:focus {
+    border-bottom-color: #e5252a;
+}
+
+.popup_member_checkbox_wrap {
+    margin: .6rem 0 2rem;
+}
+
+.popup_member_checkbox_txt {
+    line-height: 1.45;
+}
+
+.popup_member_checkbox_txt strong {
+    font-weight: 800;
+}
+
+.popup_member_btn,
+.popup_member_form:has(.popup_member_checkbox:checked) .popup_member_btn {
+    min-height: 4.7rem;
+    margin: 0;
+    padding: 1.1rem 1.6rem;
+    opacity: 1;
+    pointer-events: auto;
+    cursor: pointer;
+    font-size: 1.3rem;
+}
+
+.popup_member_btn:disabled,
+.popup_member_form:has(.popup_member_checkbox:checked) .popup_member_btn:disabled {
+    opacity: .45;
+    pointer-events: none;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.popup_member_hint {
+    margin: 1.3rem 0 0;
+    text-align: center;
+    color: #666;
+    font-size: 1.15rem;
+}
+
+.popup_member_switch {
+    flex: 0 0 auto;
+    margin-top: 2rem;
+    padding: 1.3rem;
+    border: 2px solid #460700;
+    border-radius: .8rem;
+    background: #fff;
+    color: #555;
+    font-size: 1.2rem;
+    text-align: center;
+    box-shadow: .2rem .2rem 0 #460700;
+}
+
+.popup_member_switch button,
+.popup_member_switch a,
+.popup_member_resend button {
+    display: inline;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #e5252a;
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.popup_member_back {
+    z-index: 8;
+    top: max(6.4rem, 6.4vh);
+    left: 7rem;
+    padding: .8rem 1.1rem;
+    font-size: 1.2rem;
+}
+
+.popup_member_back .btn-inner {
+    display: flex;
+    align-items: center;
+    gap: .7rem;
+}
+
+.popup_member_back img {
+    width: 1.5rem;
+}
+
+.popup_member_icon {
+    position: absolute;
+    width: min(34rem, 36vh);
+    right: calc(50% + 29rem);
+    left: auto;
+    bottom: -2rem;
+    z-index: 5;
+}
+
+.popup_member_icon_right {
+    width: min(36rem, 38vh);
+    right: 0;
+    bottom: 2.2rem;
+    z-index: 4;
+}
+
+.popup_member_bg_bot {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: max(5.6rem, 6vh);
+    z-index: 3;
+}
+
+.popup_member_otp {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 1rem;
+    margin: 2.4rem 0 1.8rem;
+}
+
+.popup_member_otp input {
+    width: 100%;
+    aspect-ratio: 1;
+    border: 2px solid #682016;
+    border-radius: .7rem;
+    color: #4166a8;
+    background: #fff;
+    font-family: inherit;
+    font-size: 2.5rem;
+    font-weight: 800;
+    text-align: center;
+    outline: 0;
+}
+
+.popup_member_otp input:focus {
+    border-color: #e5252a;
+    box-shadow: 0 0 0 .2rem rgba(229, 37, 42, .14);
+}
+
+.popup_member_resend {
+    margin: 0 0 2rem;
+    text-align: center;
+    color: #555;
+    font-size: 1.15rem;
+}
+
+.popup_member_resend button:disabled {
+    color: #e5252a;
+    cursor: default;
+}
+
+.popup_member_card_panel {
+    padding: 2.8rem 3rem;
+}
+
+.popup_member_card {
+    margin: 2rem 2.4rem 2.6rem;
+    overflow: hidden;
+    border: 2px solid #460700;
+    border-radius: 1.5rem;
+    background: #fff5d6;
+    box-shadow: .25rem .25rem 0 #460700;
+}
+
+.popup_member_card_top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 10rem;
+    padding: 1.6rem 2.4rem;
+    background: #e5252a;
+    color: #ffce56;
+}
+
+.popup_member_card_brand {
+    font-size: 3.8rem;
+    font-weight: 900;
+    font-style: italic;
+}
+
+.popup_member_card_brand sup {
+    font-size: 1.2rem;
+}
+
+.popup_member_card_mascot {
+    display: grid;
+    place-items: center;
+    width: 6rem;
+    height: 6rem;
+    border: .35rem solid #fff;
+    border-radius: 50%;
+    background: #ffce56;
+    color: #e5252a;
+    font-size: 3.4rem;
+    font-weight: 900;
+}
+
+.popup_member_card_body {
+    display: flex;
+    flex-direction: column;
+    gap: .8rem;
+    padding: 2rem 2.4rem;
+}
+
+.popup_member_card_body strong {
+    color: #460700;
+    font-size: 1.4rem;
+}
+
+.popup_member_card_body span {
+    color: #e5252a;
+    font-size: 3rem;
+    font-weight: 900;
+}
+
+.popup_member_toast {
+    position: fixed;
+    z-index: 12;
+    top: 4.8rem;
+    right: 4.8rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    min-width: 31rem;
+    padding: 1.2rem 1.4rem;
+    border: 2px solid #460700;
+    border-radius: 1rem;
+    background: #fff;
+    box-shadow: .3rem .3rem 0 rgba(70, 7, 0, .25);
+    opacity: 0;
+    transform: translateX(calc(100% + 6rem));
+    transition: opacity .3s ease, transform .3s ease;
+    pointer-events: none;
+}
+
+.popup_member_toast.is-visible {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
+}
+
+.popup_member_toast_icon {
+    display: grid;
+    place-items: center;
+    width: 3.2rem;
+    height: 3.2rem;
+    border: 1px solid #087300;
+    border-radius: 50%;
+    background: #18b400;
+    color: #fff;
+    font-weight: 900;
+}
+
+.popup_member_toast strong,
+.popup_member_toast small {
+    display: block;
+}
+
+.popup_member_toast strong {
+    color: #460700;
+    font-size: 1.2rem;
+}
+
+.popup_member_toast small {
+    margin-top: .3rem;
+    color: #666;
+    font-size: 1rem;
+}
+
+.popup_member_toast button {
+    margin-left: auto;
+    border: 0;
+    background: none;
+    color: #460700;
+    font-size: 2rem;
+    cursor: pointer;
+}
+
+.popup_member .wonom-form-status {
+    margin-top: 1.2rem;
+}
+
+@media only screen and (max-width: 1100px) {
+    .popup_member_icon_right {
+        width: 25rem;
+    }
+
+    .popup_member_icon {
+        right: calc(50% + 25rem);
+        width: 24rem;
+    }
+
+    .popup_member_back {
+        left: 4.5rem;
+    }
+}
+
+@media only screen and (max-width: 767px) {
+    .popup_member {
+        padding: 0;
+    }
+
+    .popup_member::before {
+        display: none;
+    }
+
+    .popup_member_inner {
+        height: 100vh;
+        height: 100dvh;
+        min-height: 0;
+        padding: 8rem 1.6rem 12rem;
+        overflow: hidden;
+    }
+
+    .popup_member_header,
+    .popup_member_content {
+        width: min(100%, 50rem);
+    }
+
+    .popup_member_header {
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+
+    .popup_member_title {
+        font-size: 3rem;
+    }
+
+    .popup_member_back {
+        position: fixed;
+        top: 1.6rem;
+        left: 1.6rem;
+    }
+
+    .popup_member_form {
+        padding: 2.2rem 1.8rem;
+    }
+
+    .popup_member_fields_row {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+
+    .popup_member_icon_right {
+        display: none;
+    }
+
+    .popup_member_icon {
+        width: 18rem;
+        right: auto;
+        left: -3rem;
+        bottom: 1.8rem;
+        opacity: .95;
+    }
+
+    .popup_member_bg_bot {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 4rem;
+    }
+
+    .popup_member_otp {
+        gap: .6rem;
+    }
+
+    .popup_member_otp input {
+        font-size: 2rem;
+    }
+
+    .popup_member_card {
+        margin: 1.6rem 0 2rem;
+    }
+
+    .popup_member_card_brand {
+        font-size: 3rem;
+    }
+
+    .popup_member_toast {
+        top: 1.2rem;
+        right: 1.2rem;
+        left: 1.2rem;
+        min-width: 0;
+    }
 }

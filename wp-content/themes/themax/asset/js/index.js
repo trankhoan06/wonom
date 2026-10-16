@@ -2748,9 +2748,10 @@ $(document).ready(function () {
 
     // popup_member close
     $('.popup_member_back').click(function () {
-        $('.popup_member').removeClass('active');
+        $('.popup_member').removeClass('active').attr('aria-hidden', 'true');
     });
-    $('.header_button_member').click(function () {
-        $('.popup_member').addClass('active');
+    $('.header_button_member').click(function (event) {
+        event.preventDefault();
+        $('.popup_member').addClass('active').attr('aria-hidden', 'false');
     });
 });

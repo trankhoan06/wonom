@@ -16,6 +16,7 @@ require dirname(__FILE__) . '/inc/home-event-data.php';
 require dirname(__FILE__) . '/inc/home-library-data.php';
 require dirname(__FILE__) . '/inc/home-detail-ajax.php';
 require dirname(__FILE__) . '/inc/home-form-submissions.php';
+require dirname(__FILE__) . '/inc/membership.php';
 require dirname(__FILE__) . '/inc/upload-image-optimizer.php';
 
 add_filter('tr_theme_options_page', function () {

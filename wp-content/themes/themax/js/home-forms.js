@@ -260,50 +260,265 @@
     }
 
     function bindMembership() {
-        var scope = document.querySelector('.popup_member_form');
-        if (!scope) return;
-        var inputs = scope.querySelectorAll('.popup_form_input');
-        var name = inputs[0];
-        var phone = inputs[1];
-        var consent = scope.querySelector('.popup_member_checkbox');
-        var button = scope.querySelector('.popup_member_btn');
-        if (!name || !phone || !consent || !button) return;
-        name.name = 'name';
-        name.autocomplete = 'name';
-        phone.name = 'phone';
-        phone.type = 'tel';
-        phone.autocomplete = 'tel';
+        var popup = document.querySelector('.popup_member');
+        if (!popup) return;
 
-        button.addEventListener('click', function (event) {
+        var title = popup.querySelector('[data-member-title]');
+        var registerForm = popup.querySelector('.popup_member_register');
+        var lookupForm = popup.querySelector('.popup_member_lookup');
+        var verifyForm = popup.querySelector('.popup_member_verify');
+        var otpInputs = Array.prototype.slice.call(popup.querySelectorAll('[data-member-otp] input'));
+        var confirmButton = popup.querySelector('[data-member-confirm]');
+        var resendButton = popup.querySelector('[data-member-resend]');
+        var countdown = popup.querySelector('[data-member-countdown]');
+        var maskedEmail = popup.querySelector('[data-member-masked-email]');
+        var toast = popup.querySelector('.popup_member_toast');
+        var session = { token: '', mode: 'register', email: '', timer: null, card: null };
+        var titles = {
+            register: 'ĐĂNG KÝ THÀNH VIÊN',
+            verify: 'XÁC MINH THÀNH VIÊN',
+            lookup: 'XEM THẺ THÀNH VIÊN',
+            card: 'NHẬN THẺ THÀNH VIÊN'
+        };
+
+        function setMemberState(state) {
+            popup.setAttribute('data-member-state', state);
+            popup.querySelectorAll('[data-member-panel]').forEach(function (panel) {
+                panel.classList.toggle('is-active', panel.getAttribute('data-member-panel') === state);
+            });
+            title.textContent = titles[state] || titles.register;
+            resetValidationState(popup);
+            if ('verify' !== state && session.timer) {
+                window.clearInterval(session.timer);
+                session.timer = null;
+            }
+        }
+
+        function setButtonLoading(button, loading, text) {
+            if (!button) return;
+            if (loading) {
+                button.dataset.originalText = button.textContent;
+                button.textContent = text || 'ĐANG GỬI...';
+                button.disabled = true;
+                button.classList.add('is-loading');
+            } else {
+                button.textContent = button.dataset.originalText || button.textContent;
+                button.classList.remove('is-loading');
+                button.disabled = false;
+            }
+        }
+
+        function membershipRequest(data) {
+            data.append('action', 'wonom_membership');
+            data.append('nonce', config.submitNonce || '');
+            data.append('lang', config.language || 'vi');
+            return fetch(config.ajaxUrl || '/wp-admin/admin-ajax.php', {
+                method: 'POST', credentials: 'same-origin', body: data
+            }).then(function (response) {
+                return response.json().then(function (body) {
+                    if (!response.ok || !body.success) {
+                        var payload = body && body.data ? body.data : {};
+                        var error = new Error(payload.message || 'Không thể xử lý yêu cầu. Vui lòng thử lại.');
+                        error.fields = payload.fields || {};
+                        throw error;
+                    }
+                    return body.data;
+                });
+            });
+        }
+
+        function showRequestError(form, button, error) {
+            Object.keys(error.fields || {}).forEach(function (name) {
+                var field = form.querySelector('[name="' + name + '"]');
+                showFieldError(field, error.fields[name]);
+            });
+            setStatus(form, button, 'error', error.message);
+            focusFirstError(form);
+        }
+
+        function startCountdown(seconds) {
+            if (session.timer) window.clearInterval(session.timer);
+            var remaining = Number(seconds) || 60;
+            resendButton.disabled = true;
+            resendButton.innerHTML = 'Gửi lại sau <span data-member-countdown>' + remaining + '</span> giây';
+            countdown = resendButton.querySelector('[data-member-countdown]');
+            session.timer = window.setInterval(function () {
+                remaining -= 1;
+                if (countdown) countdown.textContent = String(Math.max(0, remaining));
+                if (remaining <= 0) {
+                    window.clearInterval(session.timer);
+                    session.timer = null;
+                    resendButton.disabled = false;
+                    resendButton.textContent = 'Gửi mã';
+                }
+            }, 1000);
+        }
+
+        function openVerification(payload) {
+            session.token = payload.token;
+            session.mode = payload.mode;
+            titles.verify = session.mode === 'lookup' ? 'XÁC NHẬN EMAIL' : 'XÁC MINH THÀNH VIÊN';
+            maskedEmail.textContent = payload.masked_email;
+            otpInputs.forEach(function (input) { input.value = ''; });
+            confirmButton.disabled = true;
+            confirmButton.textContent = session.mode === 'lookup' ? 'XÁC NHẬN & XEM THẺ' : 'XÁC NHẬN & HOÀN TẤT';
+            setMemberState('verify');
+            startCountdown(payload.resend_after);
+            otpInputs[0].focus();
+        }
+
+        function validateEmail(field) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(field.value || '').trim());
+        }
+
+        registerForm.addEventListener('submit', function (event) {
             event.preventDefault();
-            clearErrors(scope);
+            clearErrors(registerForm);
+            var name = registerForm.elements.name;
+            var phone = registerForm.elements.phone;
+            var email = registerForm.elements.email;
+            var consent = registerForm.elements.consent;
+            var button = registerForm.querySelector('[type="submit"]');
             var errors = 0;
             if (!isValidName(name.value)) { showFieldError(name, t('invalid_name', 'Vui lòng nhập họ tên hợp lệ.')); errors++; }
             if (!isValidPhone(phone.value)) { showFieldError(phone, t('invalid_phone', 'Vui lòng nhập đúng số điện thoại Việt Nam.')); errors++; }
+            if (!validateEmail(email)) { showFieldError(email, 'Vui lòng nhập địa chỉ email hợp lệ.'); errors++; }
             if (!consent.checked) { showFieldError(consent, t('required_consent', 'Bạn cần đồng ý điều khoản để đăng ký.')); errors++; }
-            if (errors) {
-                setStatus(scope, button, 'error', t('check_fields', 'Vui lòng kiểm tra lại các thông tin đã nhập.'));
-                focusFirstError(scope);
-                return;
+            if (errors) return focusFirstError(registerForm);
+
+            var data = new FormData(registerForm);
+            data.append('operation', 'begin');
+            data.append('mode', 'register');
+            session.email = email.value.trim();
+            setButtonLoading(button, true, 'ĐANG GỬI MÃ...');
+            membershipRequest(data).then(openVerification).catch(function (error) {
+                showRequestError(registerForm, button, error);
+            }).finally(function () { setButtonLoading(button, false); });
+        });
+
+        lookupForm.addEventListener('submit', function (event) {
+            event.preventDefault();
+            clearErrors(lookupForm);
+            var email = lookupForm.elements.email;
+            var button = lookupForm.querySelector('[type="submit"]');
+            if (!validateEmail(email)) {
+                showFieldError(email, 'Vui lòng nhập địa chỉ email hợp lệ.');
+                return focusFirstError(lookupForm);
             }
-            var data = new FormData();
-            data.append('form_type', 'membership');
-            data.append('name', name.value.trim());
-            data.append('phone', phone.value.trim());
-            data.append('consent', '1');
-            submitData(scope, button, data, function () {
-                name.value = '';
-                phone.value = '';
-                consent.checked = false;
-                clearErrors(scope);
+            var data = new FormData(lookupForm);
+            data.append('operation', 'begin');
+            data.append('mode', 'lookup');
+            session.email = email.value.trim();
+            setButtonLoading(button, true, 'ĐANG GỬI MÃ...');
+            membershipRequest(data).then(openVerification).catch(function (error) {
+                showRequestError(lookupForm, button, error);
+            }).finally(function () { setButtonLoading(button, false); });
+        });
+
+        function updateOtpButton() {
+            confirmButton.disabled = otpInputs.some(function (input) { return !/^\d$/.test(input.value); });
+        }
+
+        otpInputs.forEach(function (input, index) {
+            input.addEventListener('input', function () {
+                input.value = input.value.replace(/\D/g, '').slice(-1);
+                if (input.value && otpInputs[index + 1]) otpInputs[index + 1].focus();
+                updateOtpButton();
+            });
+            input.addEventListener('keydown', function (event) {
+                if ('Backspace' === event.key && !input.value && otpInputs[index - 1]) otpInputs[index - 1].focus();
+            });
+            input.addEventListener('paste', function (event) {
+                var digits = (event.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 6);
+                if (!digits) return;
+                event.preventDefault();
+                digits.split('').forEach(function (digit, digitIndex) {
+                    if (otpInputs[digitIndex]) otpInputs[digitIndex].value = digit;
+                });
+                otpInputs[Math.min(digits.length, 6) - 1].focus();
+                updateOtpButton();
             });
         });
-        scope.addEventListener('keydown', function (event) {
-            if ('Enter' === event.key && 'BUTTON' !== event.target.tagName) {
-                event.preventDefault();
-                button.click();
-            }
+
+        verifyForm.addEventListener('submit', function (event) {
+            event.preventDefault();
+            var code = otpInputs.map(function (input) { return input.value; }).join('');
+            if (!/^\d{6}$/.test(code)) return;
+            var data = new FormData();
+            data.append('operation', 'verify');
+            data.append('token', session.token);
+            data.append('code', code);
+            setButtonLoading(confirmButton, true, 'ĐANG XÁC NHẬN...');
+            membershipRequest(data).then(function (payload) {
+                session.card = payload.card;
+                titles.card = payload.mode === 'lookup' ? 'THẺ THÀNH VIÊN' : 'NHẬN THẺ THÀNH VIÊN';
+                popup.querySelector('[data-member-name]').textContent = payload.card.name;
+                popup.querySelector('[data-member-number]').textContent = payload.card.number;
+                setMemberState('card');
+                if ('register' === payload.mode) {
+                    toast.classList.add('is-visible');
+                    window.setTimeout(function () { toast.classList.remove('is-visible'); }, 5000);
+                }
+            }).catch(function (error) {
+                setStatus(verifyForm, confirmButton, 'error', error.message);
+                otpInputs.forEach(function (input) { input.value = ''; });
+                updateOtpButton();
+                otpInputs[0].focus();
+            }).finally(function () { setButtonLoading(confirmButton, false); updateOtpButton(); });
         });
+
+        resendButton.addEventListener('click', function () {
+            var data = new FormData();
+            data.append('operation', 'resend');
+            data.append('token', session.token);
+            resendButton.disabled = true;
+            membershipRequest(data).then(function (payload) {
+                setStatus(verifyForm, confirmButton, 'success', payload.message);
+                startCountdown(payload.resend_after);
+            }).catch(function (error) {
+                setStatus(verifyForm, confirmButton, 'error', error.message);
+                resendButton.disabled = false;
+            });
+        });
+
+        popup.querySelectorAll('[data-member-go]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                var next = button.getAttribute('data-member-go');
+                if ('register' === next && session.email) registerForm.elements.email.value = session.email;
+                setMemberState(next);
+            });
+        });
+        document.querySelectorAll('.header_button_member').forEach(function (button) {
+            button.addEventListener('click', function () {
+                registerForm.reset();
+                lookupForm.reset();
+                session.email = '';
+                setMemberState('register');
+            });
+        });
+        toast.querySelector('button').addEventListener('click', function () { toast.classList.remove('is-visible'); });
+
+        popup.querySelector('[data-member-download]').addEventListener('click', function () {
+            if (!session.card) return;
+            var safeName = String(session.card.name || '').replace(/[<>&"']/g, '');
+            var safeNumber = String(session.card.number || '').replace(/[<>&"']/g, '');
+            var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="560" viewBox="0 0 1000 560">'
+                + '<rect width="1000" height="560" rx="36" fill="#fff5d6"/><path d="M0 0h1000v235H0z" fill="#e5252a"/>'
+                + '<text x="70" y="125" fill="#ffce56" font-family="Arial,sans-serif" font-size="76" font-weight="900">Wonom</text>'
+                + '<text x="70" y="335" fill="#460700" font-family="Arial,sans-serif" font-size="34" font-weight="700">NGUYÊN VĂN A</text>'
+                + '<text x="70" y="430" fill="#e5252a" font-family="Arial,sans-serif" font-size="72" font-weight="900">WN-000000</text></svg>';
+            svg = svg.replace('NGUYÊN VĂN A', safeName.toUpperCase()).replace('WN-000000', safeNumber);
+            var url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
+            var link = document.createElement('a');
+            link.href = url;
+            link.download = 'the-thanh-vien-' + safeNumber + '.svg';
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        });
+
+        setMemberState('register');
     }
 
     function formatDateForDisplay(value) {
