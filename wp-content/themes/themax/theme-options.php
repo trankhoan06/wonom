@@ -4,9 +4,19 @@ if (!function_exists('add_action')) {
     exit;
 }
 
-$form = tr_form()->useJson()->setGroup($this->getName());
+$theme_options = get_option('tr_theme_options', array());
+$theme_options = is_array($theme_options) ? $theme_options : array();
+$smtp_value = static function ($key) use ($theme_options) {
+    return isset($theme_options[$key]) ? (string) $theme_options[$key] : '';
+};
 ?>
 <h1><?php esc_html_e('Cấu hình thông báo', 'wonom'); ?></h1>
+<?php if (isset($_GET['wonom_smtp_saved'])) : ?>
+    <?php $smtp_saved = 'success' === sanitize_key(wp_unslash($_GET['wonom_smtp_saved'])); ?>
+    <div class="notice <?php echo $smtp_saved ? 'notice-success' : 'notice-error'; ?> is-dismissible">
+        <p><?php echo esc_html($smtp_saved ? __('Đã lưu cấu hình SMTP.', 'wonom') : __('Không thể lưu cấu hình SMTP. Vui lòng kiểm tra lại dữ liệu.', 'wonom')); ?></p>
+    </div>
+<?php endif; ?>
 <?php if (isset($_GET['wonom_smtp_test'])) : ?>
     <?php $smtp_test_success = 'success' === sanitize_key(wp_unslash($_GET['wonom_smtp_test'])); ?>
     <div class="notice <?php echo $smtp_test_success ? 'notice-success' : 'notice-error'; ?> is-dismissible">
@@ -62,33 +72,62 @@ $form = tr_form()->useJson()->setGroup($this->getName());
     </div>
 <?php endif; ?>
 <div class="typerocket-container">
-    <?php
-    echo $form->open(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-
-    $smtp_settings = function () use ($form) {
-        echo '<h3>SMTP</h3>';
-        echo $form->text('smtp_host')->setLabel('SMTP Host');
-        echo $form->text('smtp_port')->setLabel('SMTP Port')->setAttribute('type', 'number');
-        echo $form->text('username')->setLabel('SMTP Username');
-        echo $form->text('smtp_password')->setLabel('Password')->setAttribute('type', 'password');
-        echo $form->checkbox('authentication')->setLabel('SMTP Authentication')->setText('Bật xác thực SMTP');
-        echo $form->select('encryption')->setLabel('Encryption')->setOptions(array(
-            'SSL' => 'ssl',
-            'TLS' => 'tls',
-            'Không mã hóa' => '',
-        ));
-        echo $form->text('from_email')->setLabel('From Email');
-        echo $form->text('from_name')->setLabel('From Name');
-        echo $form->text('receive_email')->setLabel('Email nhận thông báo bổ sung')->setHelp('Mọi yêu cầu luôn được gửi đến wonomcomplex@gmail.com. Có thể nhập thêm nhiều email, phân cách bằng dấu phẩy.');
-    };
-
-    tr_tabs()
-        ->setSidebar($form->submit('Lưu cấu hình'))
-        ->addTab('SMTP', $smtp_settings)
-        ->render('box');
-
-    echo $form->close(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-    ?>
+    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" style="max-width:1000px">
+        <input type="hidden" name="action" value="wonom_save_smtp_settings">
+        <?php wp_nonce_field('wonom_save_smtp_settings'); ?>
+        <h2>SMTP</h2>
+        <table class="form-table" role="presentation">
+            <tr>
+                <th scope="row"><label for="smtp_host">SMTP Host</label></th>
+                <td><input class="regular-text" id="smtp_host" name="smtp_host" type="text" value="<?php echo esc_attr($smtp_value('smtp_host')); ?>" autocomplete="off" required></td>
+            </tr>
+            <tr>
+                <th scope="row"><label for="smtp_port">SMTP Port</label></th>
+                <td><input class="small-text" id="smtp_port" name="smtp_port" type="number" min="1" max="65535" value="<?php echo esc_attr($smtp_value('smtp_port') ?: '587'); ?>" required></td>
+            </tr>
+            <tr>
+                <th scope="row"><label for="smtp_username">SMTP Username</label></th>
+                <td><input class="regular-text" id="smtp_username" name="username" type="text" value="<?php echo esc_attr($smtp_value('username')); ?>" autocomplete="username" required></td>
+            </tr>
+            <tr>
+                <th scope="row"><label for="smtp_password">Password</label></th>
+                <td>
+                    <input class="regular-text" id="smtp_password" name="smtp_password" type="password" value="" autocomplete="new-password" placeholder="<?php echo esc_attr($smtp_value('smtp_password') ? __('Đã lưu — để trống nếu không đổi', 'wonom') : ''); ?>">
+                    <p class="description"><?php esc_html_e('Với Gmail, dùng App Password 16 ký tự; không dùng mật khẩu đăng nhập Gmail.', 'wonom'); ?></p>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row">SMTP Authentication</th>
+                <td><label><input name="authentication" type="checkbox" value="1" <?php checked(!empty($theme_options['authentication'])); ?>> <?php esc_html_e('Bật xác thực SMTP', 'wonom'); ?></label></td>
+            </tr>
+            <tr>
+                <th scope="row"><label for="smtp_encryption">Encryption</label></th>
+                <td>
+                    <select id="smtp_encryption" name="encryption">
+                        <option value="tls" <?php selected($smtp_value('encryption'), 'tls'); ?>>TLS</option>
+                        <option value="ssl" <?php selected($smtp_value('encryption'), 'ssl'); ?>>SSL</option>
+                        <option value="" <?php selected($smtp_value('encryption'), ''); ?>>Không mã hóa</option>
+                    </select>
+                </td>
+            </tr>
+            <tr>
+                <th scope="row"><label for="smtp_from_email">From Email</label></th>
+                <td><input class="regular-text" id="smtp_from_email" name="from_email" type="email" value="<?php echo esc_attr($smtp_value('from_email')); ?>" required></td>
+            </tr>
+            <tr>
+                <th scope="row"><label for="smtp_from_name">From Name</label></th>
+                <td><input class="regular-text" id="smtp_from_name" name="from_name" type="text" value="<?php echo esc_attr($smtp_value('from_name')); ?>"></td>
+            </tr>
+            <tr>
+                <th scope="row"><label for="smtp_receive_email">Email nhận thông báo bổ sung</label></th>
+                <td>
+                    <input class="regular-text" id="smtp_receive_email" name="receive_email" type="text" value="<?php echo esc_attr($smtp_value('receive_email')); ?>">
+                    <p class="description"><?php esc_html_e('Mọi yêu cầu luôn được gửi đến wonomcomplex@gmail.com. Có thể nhập thêm nhiều email, phân cách bằng dấu phẩy.', 'wonom'); ?></p>
+                </td>
+            </tr>
+        </table>
+        <?php submit_button(__('Lưu cấu hình', 'wonom')); ?>
+    </form>
 
     <hr style="margin:24px 0">
     <h2><?php esc_html_e('Kiểm tra SMTP', 'wonom'); ?></h2>

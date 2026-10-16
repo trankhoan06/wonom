@@ -7,13 +7,85 @@ if (!defined('ABSPATH')) exit;
  * here: wp_mail() uses the SMTP settings already available in Theme Options.
  */
 
-function wonom_membership_find($email = '', $phone = '')
+function wonom_register_member_post_type()
 {
-    $meta_query = array(
-        'relation' => 'AND',
-        array('key' => '_wonom_form_type', 'value' => 'membership'),
-        array('key' => '_wonom_member_status', 'value' => 'active'),
-    );
+    register_post_type('wonom_member', array(
+        'labels' => array(
+            'name' => 'Thành viên WONOM',
+            'singular_name' => 'Thành viên',
+            'menu_name' => 'Thành viên WONOM',
+            'all_items' => 'Danh sách thành viên',
+            'add_new' => 'Thêm thành viên',
+            'add_new_item' => 'Thêm thành viên mới',
+            'edit_item' => 'Sửa thành viên',
+            'new_item' => 'Thành viên mới',
+            'search_items' => 'Tìm thành viên',
+            'not_found' => 'Chưa có thành viên nào',
+            'not_found_in_trash' => 'Thùng rác không có thành viên',
+        ),
+        'public' => false,
+        'show_ui' => true,
+        'show_in_menu' => true,
+        'supports' => array(),
+        'capability_type' => 'post',
+        'map_meta_cap' => true,
+        'menu_icon' => 'dashicons-groups',
+        'menu_position' => 24,
+    ));
+}
+add_action('init', 'wonom_register_member_post_type');
+
+function wonom_membership_migrate_legacy_records()
+{
+    if ('1' === get_option('wonom_member_migration_v1')) return;
+
+    $legacy_ids = get_posts(array(
+        'post_type' => 'wonom_submission',
+        'post_status' => 'private',
+        'posts_per_page' => -1,
+        'fields' => 'ids',
+        'no_found_rows' => true,
+        'meta_query' => array(
+            array('key' => '_wonom_form_type', 'value' => 'membership'),
+            array('key' => '_wonom_member_status', 'value' => 'active'),
+        ),
+    ));
+
+    foreach ($legacy_ids as $legacy_id) {
+        $email = (string) get_post_meta($legacy_id, '_wonom_email', true);
+        $phone = (string) get_post_meta($legacy_id, '_wonom_phone', true);
+        if (!$email || wonom_membership_query_id('wonom_member', 'publish', $email, $phone, false)) continue;
+
+        $name = (string) get_post_meta($legacy_id, '_wonom_name', true);
+        $member_id = wp_insert_post(array(
+            'post_type' => 'wonom_member',
+            'post_status' => 'publish',
+            'post_title' => $name ?: ('Thành viên #' . $legacy_id),
+            'post_date' => get_post_field('post_date', $legacy_id),
+        ), true);
+        if (is_wp_error($member_id)) continue;
+
+        foreach (array('name', 'phone', 'email', 'consent', 'member_number', 'member_status', 'verified_at', 'source_url') as $key) {
+            $value = get_post_meta($legacy_id, '_wonom_' . $key, true);
+            if ('' !== (string) $value) update_post_meta($member_id, '_wonom_' . $key, $value);
+        }
+        update_post_meta($member_id, '_wonom_form_type', 'membership');
+        update_post_meta($member_id, '_wonom_status', 'completed');
+        update_post_meta($member_id, '_wonom_legacy_submission_id', $legacy_id);
+    }
+
+    update_option('wonom_member_migration_v1', '1', false);
+}
+add_action('admin_init', 'wonom_membership_migrate_legacy_records');
+
+function wonom_membership_query_id($post_type, $post_status, $email, $phone, $require_active = true)
+{
+    $meta_query = array('relation' => 'AND');
+    if ($require_active) $meta_query[] = array('key' => '_wonom_member_status', 'value' => 'active');
+    if ('wonom_submission' === $post_type) {
+        $meta_query[] = array('key' => '_wonom_form_type', 'value' => 'membership');
+    }
+
     $identity = array('relation' => 'OR');
     if ($email) $identity[] = array('key' => '_wonom_email', 'value' => strtolower($email));
     if ($phone) $identity[] = array('key' => '_wonom_phone', 'value' => wonom_submission_phone_rate_key($phone));
@@ -21,14 +93,23 @@ function wonom_membership_find($email = '', $phone = '')
     $meta_query[] = $identity;
 
     $query = new WP_Query(array(
-        'post_type' => 'wonom_submission',
-        'post_status' => 'private',
+        'post_type' => $post_type,
+        'post_status' => $post_status,
         'posts_per_page' => 1,
         'fields' => 'ids',
         'no_found_rows' => true,
         'meta_query' => $meta_query,
     ));
     return $query->posts ? absint($query->posts[0]) : 0;
+}
+
+function wonom_membership_find($email = '', $phone = '')
+{
+    $member_id = wonom_membership_query_id('wonom_member', 'publish', $email, $phone);
+    if ($member_id) return $member_id;
+
+    // Keep cards created before the dedicated member area was introduced.
+    return wonom_membership_query_id('wonom_submission', 'private', $email, $phone);
 }
 
 function wonom_membership_mask_email($email)
@@ -175,7 +256,11 @@ function wonom_membership_verify()
 
     if ('lookup' === $data['mode']) {
         $post_id = absint($data['member_id']);
-        if (!$post_id || 'active' !== get_post_meta($post_id, '_wonom_member_status', true)) {
+        if (
+            !$post_id
+            || !in_array(get_post_type($post_id), array('wonom_member', 'wonom_submission'), true)
+            || 'active' !== get_post_meta($post_id, '_wonom_member_status', true)
+        ) {
             delete_transient($key);
             wonom_membership_json_error('Không tìm thấy thẻ thành viên.', 404);
         }
@@ -190,9 +275,9 @@ function wonom_membership_verify()
     }
 
     $post_id = wp_insert_post(array(
-        'post_type' => 'wonom_submission',
-        'post_status' => 'private',
-        'post_title' => sprintf('[Thành viên] %s · %s', $data['name'], current_time('d/m/Y H:i')),
+        'post_type' => 'wonom_member',
+        'post_status' => 'publish',
+        'post_title' => $data['name'],
     ), true);
     if (is_wp_error($post_id)) wonom_membership_json_error(wonom_home_t('save_failed'), 500);
 
@@ -211,6 +296,10 @@ function wonom_membership_verify()
     );
     foreach ($member_data as $meta_key => $value) update_post_meta($post_id, '_wonom_' . $meta_key, $value);
     delete_transient($key);
+
+    if (function_exists('wonom_zalo_queue_submission')) {
+        wonom_zalo_queue_submission($post_id);
+    }
 
     wp_mail(
         wonom_submission_notification_emails(),
@@ -235,3 +324,220 @@ function wonom_handle_membership_ajax()
 add_action('wp_ajax_wonom_membership', 'wonom_handle_membership_ajax');
 add_action('wp_ajax_nopriv_wonom_membership', 'wonom_handle_membership_ajax');
 
+/**
+ * Member management in wp-admin.
+ */
+function wonom_member_add_meta_box()
+{
+    add_meta_box(
+        'wonom-member-details',
+        'Thông tin thành viên',
+        'wonom_member_render_meta_box',
+        'wonom_member',
+        'normal',
+        'high'
+    );
+}
+add_action('add_meta_boxes_wonom_member', 'wonom_member_add_meta_box');
+
+function wonom_member_render_meta_box($post)
+{
+    $name = (string) get_post_meta($post->ID, '_wonom_name', true);
+    $phone = (string) get_post_meta($post->ID, '_wonom_phone', true);
+    $email = (string) get_post_meta($post->ID, '_wonom_email', true);
+    $number = (string) get_post_meta($post->ID, '_wonom_member_number', true);
+    $status = (string) get_post_meta($post->ID, '_wonom_member_status', true) ?: 'active';
+    $verified_at = (string) get_post_meta($post->ID, '_wonom_verified_at', true);
+    wp_nonce_field('wonom_save_member', 'wonom_member_nonce');
+    ?>
+    <table class="form-table" role="presentation">
+        <tr>
+            <th scope="row"><label for="wonom_member_name">Họ và tên</label></th>
+            <td><input class="regular-text" id="wonom_member_name" name="wonom_member_name" type="text" maxlength="80" value="<?php echo esc_attr($name); ?>" required></td>
+        </tr>
+        <tr>
+            <th scope="row"><label for="wonom_member_phone">Số điện thoại</label></th>
+            <td><input class="regular-text" id="wonom_member_phone" name="wonom_member_phone" type="tel" maxlength="20" value="<?php echo esc_attr($phone); ?>" required></td>
+        </tr>
+        <tr>
+            <th scope="row"><label for="wonom_member_email">Email</label></th>
+            <td><input class="regular-text" id="wonom_member_email" name="wonom_member_email" type="email" maxlength="190" value="<?php echo esc_attr($email); ?>" required></td>
+        </tr>
+        <tr>
+            <th scope="row"><label for="wonom_member_number">Mã thành viên</label></th>
+            <td>
+                <input class="regular-text" id="wonom_member_number" name="wonom_member_number" type="text" maxlength="30" value="<?php echo esc_attr($number); ?>" placeholder="Tự động tạo khi lưu">
+                <p class="description">Có thể nhập mã riêng hoặc để trống để hệ thống tạo dạng WN-000123.</p>
+            </td>
+        </tr>
+        <tr>
+            <th scope="row"><label for="wonom_member_status">Trạng thái</label></th>
+            <td>
+                <select id="wonom_member_status" name="wonom_member_status">
+                    <option value="active" <?php selected($status, 'active'); ?>>Đang hoạt động</option>
+                    <option value="inactive" <?php selected($status, 'inactive'); ?>>Tạm khóa</option>
+                </select>
+            </td>
+        </tr>
+        <?php if ($verified_at) : ?>
+            <tr><th scope="row">Xác nhận lúc</th><td><?php echo esc_html($verified_at); ?></td></tr>
+        <?php endif; ?>
+    </table>
+    <?php
+}
+
+function wonom_member_duplicate_id($post_id, $email, $phone, $number)
+{
+    $identity = array('relation' => 'OR');
+    if ($email) $identity[] = array('key' => '_wonom_email', 'value' => strtolower($email));
+    if ($phone) $identity[] = array('key' => '_wonom_phone', 'value' => $phone);
+    if ($number) $identity[] = array('key' => '_wonom_member_number', 'value' => $number);
+    if (count($identity) < 2) return 0;
+
+    $query = new WP_Query(array(
+        'post_type' => 'wonom_member',
+        'post_status' => array('publish', 'draft', 'pending', 'private'),
+        'post__not_in' => array(absint($post_id)),
+        'posts_per_page' => 1,
+        'fields' => 'ids',
+        'no_found_rows' => true,
+        'meta_query' => $identity,
+    ));
+    return $query->posts ? absint($query->posts[0]) : 0;
+}
+
+function wonom_member_set_notice($message, $type = 'error')
+{
+    set_transient('wonom_member_notice_' . get_current_user_id(), array(
+        'message' => (string) $message,
+        'type' => 'success' === $type ? 'success' : 'error',
+    ), MINUTE_IN_SECONDS);
+}
+
+function wonom_member_save($post_id, $post)
+{
+    if (
+        empty($_POST['wonom_member_nonce'])
+        || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['wonom_member_nonce'])), 'wonom_save_member')
+        || !current_user_can('edit_post', $post_id)
+        || (defined('DOING_AUTOSAVE') && DOING_AUTOSAVE)
+        || wp_is_post_revision($post_id)
+    ) {
+        return;
+    }
+
+    $name = isset($_POST['wonom_member_name']) ? sanitize_text_field(wp_unslash($_POST['wonom_member_name'])) : '';
+    $phone = isset($_POST['wonom_member_phone']) ? wonom_submission_phone_rate_key(wp_unslash($_POST['wonom_member_phone'])) : '';
+    $email = isset($_POST['wonom_member_email']) ? strtolower(sanitize_email(wp_unslash($_POST['wonom_member_email']))) : '';
+    $number = isset($_POST['wonom_member_number']) ? strtoupper(sanitize_text_field(wp_unslash($_POST['wonom_member_number']))) : '';
+    $status = isset($_POST['wonom_member_status']) ? sanitize_key(wp_unslash($_POST['wonom_member_status'])) : 'active';
+    $name_length = function_exists('mb_strlen') ? mb_strlen($name) : strlen($name);
+
+    if ($name_length < 2 || $name_length > 80 || !wonom_submission_valid_phone($phone) || !is_email($email)) {
+        wonom_member_set_notice('Không thể lưu: vui lòng kiểm tra lại họ tên, số điện thoại và email.');
+        return;
+    }
+    if (!in_array($status, array('active', 'inactive'), true)) $status = 'active';
+    if (!$number) $number = 'WN-' . str_pad((string) $post_id, 6, '0', STR_PAD_LEFT);
+
+    if (wonom_member_duplicate_id($post_id, $email, $phone, $number)) {
+        wonom_member_set_notice('Không thể lưu: email, số điện thoại hoặc mã thành viên đã được sử dụng.');
+        return;
+    }
+
+    update_post_meta($post_id, '_wonom_name', $name);
+    update_post_meta($post_id, '_wonom_phone', $phone);
+    update_post_meta($post_id, '_wonom_email', $email);
+    update_post_meta($post_id, '_wonom_member_number', $number);
+    update_post_meta($post_id, '_wonom_member_status', $status);
+    update_post_meta($post_id, '_wonom_form_type', 'membership');
+    update_post_meta($post_id, '_wonom_status', 'completed');
+    if (!get_post_meta($post_id, '_wonom_verified_at', true)) {
+        update_post_meta($post_id, '_wonom_verified_at', current_time('mysql'));
+    }
+
+    if ($post->post_title !== $name) {
+        remove_action('save_post_wonom_member', 'wonom_member_save', 10);
+        wp_update_post(array('ID' => $post_id, 'post_title' => $name));
+        add_action('save_post_wonom_member', 'wonom_member_save', 10, 2);
+    }
+    wonom_member_set_notice('Đã lưu thông tin thành viên.', 'success');
+}
+add_action('save_post_wonom_member', 'wonom_member_save', 10, 2);
+
+function wonom_member_admin_notice()
+{
+    $screen = get_current_screen();
+    if (!$screen || 'wonom_member' !== $screen->post_type) return;
+    $key = 'wonom_member_notice_' . get_current_user_id();
+    $notice = get_transient($key);
+    if (!$notice || !is_array($notice)) return;
+    delete_transient($key);
+    echo '<div class="notice notice-' . esc_attr($notice['type']) . ' is-dismissible"><p>' . esc_html($notice['message']) . '</p></div>';
+}
+add_action('admin_notices', 'wonom_member_admin_notice');
+
+function wonom_member_columns($columns)
+{
+    return array(
+        'cb' => isset($columns['cb']) ? $columns['cb'] : '<input type="checkbox">',
+        'title' => 'Họ và tên',
+        'wonom_member_number' => 'Mã thành viên',
+        'wonom_member_email' => 'Email',
+        'wonom_member_phone' => 'Số điện thoại',
+        'wonom_member_status' => 'Trạng thái',
+        'date' => 'Ngày tạo',
+    );
+}
+add_filter('manage_wonom_member_posts_columns', 'wonom_member_columns');
+
+function wonom_member_column($column, $post_id)
+{
+    if ('wonom_member_number' === $column) echo '<strong>' . esc_html(get_post_meta($post_id, '_wonom_member_number', true)) . '</strong>';
+    if ('wonom_member_email' === $column) echo esc_html(get_post_meta($post_id, '_wonom_email', true));
+    if ('wonom_member_phone' === $column) echo esc_html(get_post_meta($post_id, '_wonom_phone', true));
+    if ('wonom_member_status' === $column) {
+        $active = 'active' === get_post_meta($post_id, '_wonom_member_status', true);
+        echo '<span class="wonom-member-status ' . ($active ? 'is-active' : 'is-inactive') . '">'
+            . esc_html($active ? 'Đang hoạt động' : 'Tạm khóa') . '</span>';
+    }
+}
+add_action('manage_wonom_member_posts_custom_column', 'wonom_member_column', 10, 2);
+
+function wonom_member_admin_search($search, $query)
+{
+    global $wpdb;
+    if (
+        !is_admin()
+        || !$query->is_main_query()
+        || 'wonom_member' !== $query->get('post_type')
+        || !$query->get('s')
+    ) {
+        return $search;
+    }
+    $like = '%' . $wpdb->esc_like((string) $query->get('s')) . '%';
+    return $wpdb->prepare(
+        " AND ({$wpdb->posts}.post_title LIKE %s OR EXISTS (
+            SELECT 1 FROM {$wpdb->postmeta} wm_search
+            WHERE wm_search.post_id = {$wpdb->posts}.ID
+            AND wm_search.meta_key IN ('_wonom_email','_wonom_phone','_wonom_member_number')
+            AND wm_search.meta_value LIKE %s
+        )) ",
+        $like,
+        $like
+    );
+}
+add_filter('posts_search', 'wonom_member_admin_search', 10, 2);
+
+function wonom_member_admin_styles()
+{
+    $screen = get_current_screen();
+    if (!$screen || 'wonom_member' !== $screen->post_type) return;
+    echo '<style>
+        .wonom-member-status{display:inline-block;padding:4px 9px;border-radius:999px;font-weight:600}
+        .wonom-member-status.is-active{background:#e7f7ed;color:#176b3a}
+        .wonom-member-status.is-inactive{background:#fdebec;color:#a51d2d}
+        #minor-publishing-actions{display:none}
+    </style>';
+}
+add_action('admin_head', 'wonom_member_admin_styles');

@@ -87,11 +87,8 @@ $member_zalo_url = esc_url((string) tr_options_field('tr_theme_options.home_foot
                     <div class="popup_member_form popup_member_card_panel">
                         <p class="popup_member_lead">Xuất trình thẻ thành viên và theo dõi <strong>Zalo OA Wonom Culture Complex</strong> khi thanh toán để được nhận ưu đãi áp dụng tại thời điểm trực tiếp.</p>
                         <div class="popup_member_card" data-member-card>
-                            <div class="popup_member_card_top">
-                                <span class="popup_member_card_brand">Wonom<sup>®</sup></span>
-                                <span class="popup_member_card_mascot">☺</span>
-                            </div>
-                            <div class="popup_member_card_body">
+                            <img class="popup_member_card_art" data-member-card-image src="<?php echo esc_url(get_template_directory_uri() . '/asset/img/card.webp'); ?>" alt="Mẫu thẻ thành viên WONOM">
+                            <div class="popup_member_card_identity">
                                 <strong data-member-name>THÀNH VIÊN WONOM</strong>
                                 <span data-member-number>WN-000000</span>
                             </div>

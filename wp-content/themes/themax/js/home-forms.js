@@ -452,7 +452,7 @@
             membershipRequest(data).then(function (payload) {
                 session.card = payload.card;
                 titles.card = payload.mode === 'lookup' ? 'THẺ THÀNH VIÊN' : 'NHẬN THẺ THÀNH VIÊN';
-                popup.querySelector('[data-member-name]').textContent = payload.card.name;
+                popup.querySelector('[data-member-name]').textContent = String(payload.card.name || '').toLocaleUpperCase('vi-VN');
                 popup.querySelector('[data-member-number]').textContent = payload.card.number;
                 setMemberState('card');
                 if ('register' === payload.mode) {
@@ -500,22 +500,87 @@
 
         popup.querySelector('[data-member-download]').addEventListener('click', function () {
             if (!session.card) return;
-            var safeName = String(session.card.name || '').replace(/[<>&"']/g, '');
-            var safeNumber = String(session.card.number || '').replace(/[<>&"']/g, '');
-            var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="560" viewBox="0 0 1000 560">'
-                + '<rect width="1000" height="560" rx="36" fill="#fff5d6"/><path d="M0 0h1000v235H0z" fill="#e5252a"/>'
-                + '<text x="70" y="125" fill="#ffce56" font-family="Arial,sans-serif" font-size="76" font-weight="900">Wonom</text>'
-                + '<text x="70" y="335" fill="#460700" font-family="Arial,sans-serif" font-size="34" font-weight="700">NGUYÊN VĂN A</text>'
-                + '<text x="70" y="430" fill="#e5252a" font-family="Arial,sans-serif" font-size="72" font-weight="900">WN-000000</text></svg>';
-            svg = svg.replace('NGUYÊN VĂN A', safeName.toUpperCase()).replace('WN-000000', safeNumber);
-            var url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
-            var link = document.createElement('a');
-            link.href = url;
-            link.download = 'the-thanh-vien-' + safeNumber + '.svg';
-            document.body.appendChild(link);
-            link.click();
-            link.remove();
-            window.setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+            var button = this;
+            var cardImage = popup.querySelector('[data-member-card-image]');
+            var cardPanel = popup.querySelector('.popup_member_card_panel');
+            var safeName = String(session.card.name || '').trim().toLocaleUpperCase('vi-VN');
+            var safeNumber = String(session.card.number || '').trim().toUpperCase();
+            var imageSource = cardImage.currentSrc || cardImage.getAttribute('src') || cardImage.getAttribute('data-wonom-src');
+
+            function fitCanvasText(context, textValue, maxWidth, startSize, minSize, weight) {
+                var size = startSize;
+                do {
+                    context.font = weight + ' ' + size + 'px "Mona Sans", Arial, sans-serif';
+                    if (context.measureText(textValue).width <= maxWidth) break;
+                    size -= 1;
+                } while (size > minSize);
+            }
+
+            function createCardDownload(image) {
+                var width = image.naturalWidth || 766;
+                var height = image.naturalHeight || 440;
+                var scale = width / 766;
+                var canvas = document.createElement('canvas');
+                var context = canvas.getContext('2d');
+                canvas.width = width;
+                canvas.height = height;
+                context.drawImage(image, 0, 0, width, height);
+
+                context.textBaseline = 'alphabetic';
+                context.fillStyle = '#460700';
+                fitCanvasText(context, safeName, 628 * scale, 34 * scale, 22 * scale, '800');
+                context.fillText(safeName, 70 * scale, 316 * scale);
+
+                context.fillStyle = '#ed1c24';
+                context.shadowColor = '#72140d';
+                context.shadowBlur = 0;
+                context.shadowOffsetX = 3 * scale;
+                context.shadowOffsetY = 4 * scale;
+                fitCanvasText(context, safeNumber, 628 * scale, 66 * scale, 42 * scale, '900');
+                context.fillText(safeNumber, 70 * scale, 405 * scale);
+                context.shadowColor = 'transparent';
+
+                canvas.toBlob(function (blob) {
+                    if (!blob) {
+                        setStatus(cardPanel, button, 'error', 'Không thể tạo ảnh thẻ. Vui lòng thử lại.');
+                        setButtonLoading(button, false);
+                        return;
+                    }
+                    var url = URL.createObjectURL(blob);
+                    var link = document.createElement('a');
+                    link.href = url;
+                    link.download = 'the-thanh-vien-' + safeNumber.replace(/[^A-Z0-9-]/g, '') + '.png';
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    window.setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+                    setButtonLoading(button, false);
+                }, 'image/png', 1);
+            }
+
+            if (!imageSource) {
+                setStatus(cardPanel, button, 'error', 'Không tìm thấy ảnh mẫu thẻ thành viên.');
+                return;
+            }
+
+            setButtonLoading(button, true, 'ĐANG TẠO ẢNH THẺ...');
+            var exportImage = new Image();
+            exportImage.onload = function () {
+                var fontsReady = document.fonts && document.fonts.load
+                    ? Promise.all([
+                        document.fonts.load('800 34px "Mona Sans"'),
+                        document.fonts.load('900 66px "Mona Sans"')
+                    ])
+                    : Promise.resolve();
+                fontsReady
+                    .then(function () { createCardDownload(exportImage); })
+                    .catch(function () { createCardDownload(exportImage); });
+            };
+            exportImage.onerror = function () {
+                setStatus(cardPanel, button, 'error', 'Không tải được ảnh mẫu thẻ thành viên.');
+                setButtonLoading(button, false);
+            };
+            exportImage.src = imageSource;
         });
 
         setMemberState('register');

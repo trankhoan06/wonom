@@ -7377,7 +7377,7 @@ html.wonom-page-loaded [data-wonom-popup-image][data-wonom-image-ready="true"] {
     background: transparent;
     color: #460700;
     font-family: inherit;
-    font-size: 1.35rem;
+    font-size: 16px;
     outline: 0;
 }
 
@@ -7535,63 +7535,53 @@ html.wonom-page-loaded [data-wonom-popup-image][data-wonom-image-ready="true"] {
 }
 
 .popup_member_card {
+    position: relative;
     margin: 2rem 2.4rem 2.6rem;
     overflow: hidden;
-    border: 2px solid #460700;
-    border-radius: 1.5rem;
-    background: #fff5d6;
-    box-shadow: .25rem .25rem 0 #460700;
+    aspect-ratio: 766 / 440;
+    border-radius: 1.8rem;
+    background: transparent;
 }
 
-.popup_member_card_top {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    min-height: 10rem;
-    padding: 1.6rem 2.4rem;
-    background: #e5252a;
-    color: #ffce56;
+.popup_member_card_art {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
 }
 
-.popup_member_card_brand {
-    font-size: 3.8rem;
-    font-weight: 900;
-    font-style: italic;
+.popup_member_card_identity {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
 }
 
-.popup_member_card_brand sup {
-    font-size: 1.2rem;
+.popup_member_card_identity strong,
+.popup_member_card_identity span {
+    position: absolute;
+    left: 9%;
+    display: block;
+    max-width: 82%;
+    overflow: hidden;
+    line-height: 1;
+    white-space: nowrap;
+    text-transform: uppercase;
 }
 
-.popup_member_card_mascot {
-    display: grid;
-    place-items: center;
-    width: 6rem;
-    height: 6rem;
-    border: .35rem solid #fff;
-    border-radius: 50%;
-    background: #ffce56;
-    color: #e5252a;
-    font-size: 3.4rem;
-    font-weight: 900;
-}
-
-.popup_member_card_body {
-    display: flex;
-    flex-direction: column;
-    gap: .8rem;
-    padding: 2rem 2.4rem;
-}
-
-.popup_member_card_body strong {
+.popup_member_card_identity strong {
+    top: 66.5%;
     color: #460700;
-    font-size: 1.4rem;
+    font-size: clamp(1.4rem, 4vw, 2rem);
+    font-weight: 800;
 }
 
-.popup_member_card_body span {
+.popup_member_card_identity span {
+    top: 79%;
     color: #e5252a;
-    font-size: 3rem;
+    font-size: clamp(2.7rem, 8vw, 4rem);
     font-weight: 900;
+    letter-spacing: .01em;
+    text-shadow: .18rem .18rem 0 #72140d;
 }
 
 .popup_member_toast {
@@ -7752,10 +7742,6 @@ html.wonom-page-loaded [data-wonom-popup-image][data-wonom-image-ready="true"] {
 
     .popup_member_card {
         margin: 1.6rem 0 2rem;
-    }
-
-    .popup_member_card_brand {
-        font-size: 3rem;
     }
 
     .popup_member_toast {

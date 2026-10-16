@@ -162,6 +162,91 @@ function wonom_capture_mail_error($error)
 }
 add_action('wp_mail_failed', 'wonom_capture_mail_error');
 
+/**
+ * Save SMTP settings through WordPress' native admin-post endpoint. This does
+ * not depend on TypeRocket's JSON route, which can return 404 on some hosts.
+ */
+function wonom_handle_save_smtp_settings()
+{
+    if (!current_user_can('manage_options')) {
+        wp_die(esc_html__('Bạn không có quyền thực hiện thao tác này.', 'wonom'));
+    }
+    check_admin_referer('wonom_save_smtp_settings');
+
+    $options = get_option('tr_theme_options', array());
+    $options = is_array($options) ? $options : array();
+
+    $host = isset($_POST['smtp_host'])
+        ? strtolower(sanitize_text_field(wp_unslash($_POST['smtp_host'])))
+        : '';
+    $port = isset($_POST['smtp_port']) ? absint($_POST['smtp_port']) : 0;
+    $username = isset($_POST['username'])
+        ? sanitize_text_field(wp_unslash($_POST['username']))
+        : '';
+    $encryption = isset($_POST['encryption'])
+        ? sanitize_key(wp_unslash($_POST['encryption']))
+        : '';
+    $from_email = isset($_POST['from_email'])
+        ? sanitize_email(wp_unslash($_POST['from_email']))
+        : '';
+    $from_name = isset($_POST['from_name'])
+        ? sanitize_text_field(wp_unslash($_POST['from_name']))
+        : '';
+
+    $valid = $host
+        && $port >= 1
+        && $port <= 65535
+        && $username
+        && $from_email
+        && is_email($from_email)
+        && in_array($encryption, array('', 'ssl', 'tls'), true);
+
+    if (!$valid) {
+        wp_safe_redirect(add_query_arg(array(
+            'page' => 'theme_options',
+            'wonom_smtp_saved' => 'error',
+        ), admin_url('themes.php')));
+        exit;
+    }
+
+    $options['smtp_host'] = $host;
+    $options['smtp_port'] = $port;
+    $options['username'] = $username;
+    $options['authentication'] = isset($_POST['authentication']) ? '1' : '';
+    $options['encryption'] = $encryption;
+    $options['from_email'] = $from_email;
+    $options['from_name'] = $from_name;
+
+    if (isset($_POST['smtp_password']) && is_scalar($_POST['smtp_password'])) {
+        $password = trim((string) wp_unslash($_POST['smtp_password']));
+        if ($password) {
+            // Google displays App Passwords in groups separated by spaces.
+            $options['smtp_password'] = 'smtp.gmail.com' === $host
+                ? preg_replace('/\s+/', '', $password)
+                : $password;
+        }
+    }
+
+    $receive_email = isset($_POST['receive_email']) && is_scalar($_POST['receive_email'])
+        ? (string) wp_unslash($_POST['receive_email'])
+        : '';
+    $receive_emails = array();
+    foreach (preg_split('/[\s,;]+/', $receive_email, -1, PREG_SPLIT_NO_EMPTY) as $candidate) {
+        $email = sanitize_email($candidate);
+        if ($email && is_email($email)) $receive_emails[] = $email;
+    }
+    $options['receive_email'] = implode(', ', array_unique($receive_emails));
+
+    update_option('tr_theme_options', $options);
+
+    wp_safe_redirect(add_query_arg(array(
+        'page' => 'theme_options',
+        'wonom_smtp_saved' => 'success',
+    ), admin_url('themes.php')));
+    exit;
+}
+add_action('admin_post_wonom_save_smtp_settings', 'wonom_handle_save_smtp_settings');
+
 function wonom_handle_smtp_test()
 {
     if (!current_user_can('manage_options')) {

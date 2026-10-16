@@ -836,6 +836,29 @@ add_action('admin_post_wonom_zalo_select_group', 'wonom_zalo_handle_select_group
 function wonom_zalo_submission_message($post_id)
 {
     $type = (string) get_post_meta($post_id, '_wonom_form_type', true);
+
+    if ('membership' === $type) {
+        $lines = array(
+            '[WONOM] THÀNH VIÊN MỚI',
+            'Họ tên: ' . trim((string) get_post_meta($post_id, '_wonom_name', true)),
+            'Mã thành viên: ' . trim((string) get_post_meta($post_id, '_wonom_member_number', true)),
+            'Số điện thoại: ' . trim((string) get_post_meta($post_id, '_wonom_phone', true)),
+            'Email/Gmail: ' . trim((string) get_post_meta($post_id, '_wonom_email', true)),
+            'Đăng ký lúc: ' . get_the_date('d/m/Y H:i', $post_id),
+        );
+        $edit_url = get_edit_post_link($post_id, '');
+        if ($edit_url) {
+            $lines[] = 'Xem thành viên: ' . $edit_url;
+        }
+
+        $message = implode("\n", $lines);
+        if (function_exists('mb_strimwidth')) {
+            return mb_strimwidth($message, 0, 1900, '…', 'UTF-8');
+        }
+
+        return substr($message, 0, 1900);
+    }
+
     $type_labels = function_exists('wonom_submission_type_labels') ? wonom_submission_type_labels() : array();
     $labels = array(
         'name' => 'Khách hàng',
@@ -883,7 +906,7 @@ function wonom_zalo_queue_submission($post_id, $attempt = 0)
         return false;
     }
     $form_type = (string) get_post_meta($post_id, '_wonom_form_type', true);
-    if (!in_array($form_type, array('booking', 'tour'), true)) {
+    if (!in_array($form_type, array('booking', 'tour', 'membership'), true)) {
         return false;
     }
 
@@ -909,7 +932,7 @@ function wonom_zalo_process_submission($post_id, $attempt = 0)
 {
     $post_id = absint($post_id);
     $attempt = absint($attempt);
-    if (!$post_id || 'wonom_submission' !== get_post_type($post_id)) {
+    if (!$post_id || !in_array(get_post_type($post_id), array('wonom_submission', 'wonom_member'), true)) {
         return;
     }
     if ('sent' === get_post_meta($post_id, '_wonom_zalo_status', true)) {
