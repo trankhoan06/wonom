@@ -7222,13 +7222,22 @@ button.is-loading {
     cursor: not-allowed;
     text-align: center;
     box-shadow: 2px 2px 0 0 #460700;
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .8rem;
     font-family: inherit;
     font-size: 1.6rem;
     transition: all .3s ease-in-out;
     margin-bottom: min(2.4rem, 2.6vh);
     opacity: 0.5;
     pointer-events: none;
+}
+
+.popup_member_btn svg {
+    width: 2rem;
+    height: 2rem;
+    flex: 0 0 auto;
 }
 
 .popup_member_form:has(.popup_member_checkbox:checked) .popup_member_btn {
@@ -8046,6 +8055,8 @@ html.wonom-page-loaded [data-wonom-popup-image][data-wonom-image-ready="true"] {
         min-height: auto;
         align-items: center;
         width: 100%;
+        position: relative;
+        z-index: 20;
     }
 
     .popup_member_header {

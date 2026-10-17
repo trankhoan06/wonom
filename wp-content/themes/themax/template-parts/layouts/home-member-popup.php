@@ -100,7 +100,12 @@ $member_zalo_url = 'https://zalo.me/1291446489467973585';
                                 <span data-member-number>WN-000000</span>
                             </div>
                         </div>
-                        <button class="popup_member_btn bg_ffce56 cl_text txt_extrabold btn" type="button" data-member-download>LƯU THẺ THÀNH VIÊN <span aria-hidden="true">⇩</span></button>
+                        <button class="popup_member_btn bg_ffce56 cl_text txt_extrabold btn" type="button" data-member-download>
+                            <span>LƯU THẺ THÀNH VIÊN</span>
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                                <path d="M11.25 2.4978V7.65769L13.9499 7.65774L10.3215 12.1118C10.1547 12.3165 9.84198 12.3165 9.67529 12.1117L6.05011 7.65761L8.75 7.65766L8.75 2.4978H11.25ZM2.99 16.1859C3.31611 16.512 3.70833 16.6751 4.16667 16.6751H15.8333C16.2917 16.6751 16.6842 16.512 17.0108 16.1859C17.3369 15.8593 17.5 15.4668 17.5 15.0084V11.6751H15.625V14.8001H4.375V11.6751H2.5V15.0084C2.5 15.4668 2.66333 15.8593 2.99 16.1859Z" fill-rule="evenodd" clip-rule="evenodd" fill="currentColor" />
+                            </svg>
+                        </button>
                     </div>
                     <div class="popup_member_switch">Chưa theo dõi Zalo OA Wonom? <a href="<?php echo esc_url($member_zalo_url); ?>" target="_blank" rel="noopener">Theo dõi ngay</a></div>
                 </div>
