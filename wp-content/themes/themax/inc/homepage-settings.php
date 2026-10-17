@@ -371,6 +371,9 @@ function wonom_get_home_explore_popup_data()
     foreach ($popup_defaults as $floor => $defaults) {
         $prefix = 'home_explore_floor_' . $floor . '_popup_';
         $title = tr_options_field('wonom_home_options.' . $prefix . 'title');
+        if (!$title) {
+            $title = tr_options_field('wonom_home_options.home_explore_floor_' . $floor . '_subtitle');
+        }
         $menu_label = tr_options_field('wonom_home_options.' . $prefix . 'menu_label');
         $menu_rows = tr_options_field('wonom_home_options.' . $prefix . 'menu_pages');
         $gallery_rows = tr_options_field('wonom_home_options.' . $prefix . 'gallery');
@@ -464,8 +467,8 @@ function wonom_get_home_explore_popup_data()
         }
 
         $floor_data = array(
-            'title' => $title ?: $defaults['title'],
-            'menuLabel' => $menu_label ?: $defaults['menu_label'],
+            'title' => preg_replace('/&amp;/i', '&', html_entity_decode((string) ($title ?: $defaults['title']), ENT_QUOTES | ENT_HTML5, 'UTF-8')),
+            'menuLabel' => preg_replace('/&amp;/i', '&', html_entity_decode((string) ($menu_label ?: $defaults['menu_label']), ENT_QUOTES | ENT_HTML5, 'UTF-8')),
             'menuPages' => $menu_pages,
             'galleryImages' => $gallery_images,
         );

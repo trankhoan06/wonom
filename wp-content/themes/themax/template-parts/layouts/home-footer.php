@@ -240,7 +240,7 @@ if (!defined('ABSPATH')) exit;
                         </div>
                     </div>
                 </div>
-                <div class="footer_bot_right">
+                <div class="footer_bot_right" role="button" tabindex="0" aria-label="CHÍNH SÁCH & ĐIỀU KHOẢN">
                     <div class="footer_bot_right_txt txt_14 txt_bold">CHÍNH SÁCH & ĐIỀU KHOẢN</div>
                     <div class="footer_bot_right_img img_height">
                         <img src="asset/img/footer_policy.png" alt="">

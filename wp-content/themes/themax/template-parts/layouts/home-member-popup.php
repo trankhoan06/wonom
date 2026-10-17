@@ -9,6 +9,13 @@ $member_zalo_url = esc_url((string) tr_options_field('tr_theme_options.home_foot
         </span>
     </button>
 
+    <button class="popup_member_logout btn" type="button" data-member-logout aria-label="Đăng xuất" hidden>
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+            <path d="M10 5H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h4M14 8l4 4-4 4M18 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+        <span>Đăng Xuất</span>
+    </button>
+
     <div class="popup_member_inner">
         <div class="popup_member_overlay bg_cream">
             <div class="popup_member_bg img_full absolute"><img src="/asset/img/intro_bg.png" alt=""></div>
@@ -114,5 +121,18 @@ $member_zalo_url = esc_url((string) tr_options_field('tr_theme_options.home_foot
         <span><strong>ĐĂNG KÝ THÀNH CÔNG</strong><small>Chúc mừng bạn đã trở thành Wonom-er!</small></span>
         <button type="button" aria-label="Đóng thông báo">×</button>
     </div>
+
+    <div class="popup_member_confirm" role="dialog" aria-modal="true" aria-labelledby="member-confirm-title" aria-hidden="true">
+        <button class="popup_member_confirm_overlay" type="button" data-member-confirm-cancel aria-label="Đóng xác nhận"></button>
+        <div class="popup_member_confirm_box">
+            <h3 id="member-confirm-title">VỀ TRANG CHỦ?</h3>
+            <p>Bạn có chắc muốn rời màn hình thành viên?</p>
+            <div class="popup_member_confirm_actions">
+                <button class="popup_member_confirm_cancel" type="button" data-member-confirm-cancel>Ở LẠI</button>
+                <button class="popup_member_confirm_leave" type="button" data-member-confirm-leave>VỀ TRANG CHỦ</button>
+            </div>
+        </div>
+    </div>
+
     <div class="popup_member_bg_bot"></div>
 </section>

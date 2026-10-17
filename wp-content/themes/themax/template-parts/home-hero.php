@@ -47,7 +47,7 @@ if (is_array($slides) && $slides) {
         $mobile_image_url = $resolve_hero_image_url($mobile_image);
 
         $title = isset($slide['title']) ? trim($slide['title']) : '';
-        if (!$image_url || !$title) {
+        if (!$image_url) {
             continue;
         }
 
@@ -84,7 +84,7 @@ $GLOBALS['wonom_home_lcp_mobile_image'] = isset($slides[0]['mobile_image_url']) 
                             sizes="100vw">
                 <?php endif; ?>
                         <img src="<?php echo esc_url($slide['image_url']); ?>"
-                            alt="<?php echo esc_attr($slide['title']); ?>"
+                            alt="<?php echo esc_attr(!empty($slide['title']) ? $slide['title'] : get_bloginfo('name')); ?>"
                             <?php echo 0 === $index ? 'fetchpriority="high"' : 'loading="lazy"'; ?>>
                 <?php if (!empty($slide['mobile_image_url'])) : ?>
                     </picture>
@@ -98,9 +98,11 @@ $GLOBALS['wonom_home_lcp_mobile_image'] = isset($slides[0]['mobile_image_url']) 
             <?php foreach ($slides as $slide) : ?>
                 <div class="swiper-slide home_banner_item">
                     <div class="home_banner_overlay"></div>
-                    <div class="swiper-slide-txt heading txt_uppercase txt_center absolute h1 cl_white h4_mb">
-                        <?php echo nl2br(esc_html($slide['title'])); ?>
-                    </div>
+                    <?php if (!empty($slide['title'])) : ?>
+                        <div class="swiper-slide-txt heading txt_uppercase txt_center absolute h1 cl_white h4_mb">
+                            <?php echo nl2br(esc_html($slide['title'])); ?>
+                        </div>
+                    <?php endif; ?>
                 </div>
             <?php endforeach; ?>
         </div>

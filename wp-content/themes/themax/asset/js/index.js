@@ -213,7 +213,7 @@ $(document).ready(function () {
         customCursor.classList.add('is-visible');
         customCursor.classList.toggle(
             'is-interactive',
-            event.target instanceof Element && Boolean(event.target.closest('a, button, .btn, .workshop_card, input:not([type="hidden"]), textarea, select, [contenteditable="true"], [data-explore-tab], [data-footer-href]'))
+            event.target instanceof Element && Boolean(event.target.closest('a, button, .btn, .workshop_card, input:not([type="hidden"]), textarea, select, [contenteditable="true"], [data-explore-tab], [data-footer-href], .footer_bot_right_txt, .footer_bot_right, .popup_tour_policy_card_item'))
         );
 
         if (!customCursorFrame) customCursorFrame = window.requestAnimationFrame(renderCustomCursor);
@@ -2012,7 +2012,9 @@ $(document).ready(function () {
     $('.event .popup_tour_close').click(function () {
         closeSlidingPopup($('.popup_tour.event'));
     });
-    $('.footer_bot_right_txt').click(function () {
+    $('.footer_bot_right_txt, .footer_bot_right').on('click keydown', function (event) {
+        if ('keydown' === event.type && 'Enter' !== event.key && ' ' !== event.key) return;
+        event.preventDefault();
         openSlidingPopup($('.popup_tour.policy'));
     });
 
@@ -2036,10 +2038,17 @@ $(document).ready(function () {
         $(this).addClass('is-active');
         var $target = $popup.find('[data-policy-section="' + targetIndex + '"]');
         var $content = $popup.find('.popup_tour_content');
-        if ($target.length && $content.length) {
-            var currentScroll = $content.scrollTop();
-            var targetOffset = $target.position().top;
-            $content.stop().animate({ scrollTop: currentScroll + targetOffset - 10 }, 300);
+        if ($target.length) {
+            if (window.innerWidth <= 991) {
+                var popupScroll = $popup.scrollTop();
+                var targetOffset = $target.offset().top - $popup.offset().top + popupScroll;
+                var headHeight = $popup.find('.popup_tour_head').outerHeight() || 60;
+                $popup.stop().animate({ scrollTop: targetOffset - headHeight - 16 }, 300);
+            } else if ($content.length) {
+                var currentScroll = $content.scrollTop();
+                var targetOffset = $target.position().top;
+                $content.stop().animate({ scrollTop: currentScroll + targetOffset - 10 }, 300);
+            }
         }
     });
     var restaurantPageFlip = null;
@@ -2749,10 +2758,29 @@ $(document).ready(function () {
 
     // popup_member close
     $('.popup_member_back').click(function () {
+        $('.popup_member_confirm').addClass('is-visible').attr('aria-hidden', 'false');
+        window.setTimeout(function () {
+            $('.popup_member_confirm_cancel').trigger('focus');
+        }, 0);
+    });
+    $('[data-member-confirm-cancel]').click(function () {
+        $('.popup_member_confirm').removeClass('is-visible').attr('aria-hidden', 'true');
+        $('.popup_member_back').trigger('focus');
+    });
+    $('[data-member-confirm-leave]').click(function () {
+        $('.popup_member_confirm').removeClass('is-visible').attr('aria-hidden', 'true');
         $('.popup_member').removeClass('active').attr('aria-hidden', 'true');
+    });
+    $(document).keydown(function (event) {
+        if (event.key === 'Escape' && $('.popup_member_confirm').hasClass('is-visible')) {
+            event.preventDefault();
+            $('.popup_member_confirm').removeClass('is-visible').attr('aria-hidden', 'true');
+            $('.popup_member_back').trigger('focus');
+        }
     });
     $('.header_button_member').click(function (event) {
         event.preventDefault();
+        $('.popup_member_confirm').removeClass('is-visible').attr('aria-hidden', 'true');
         $('.popup_member').addClass('active').attr('aria-hidden', 'false');
     });
 });

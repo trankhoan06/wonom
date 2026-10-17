@@ -123,6 +123,11 @@ $footer_set_text(
     $footer_first('.//*[' . $footer_class('footer_bot_right_txt') . ']', $policy_wrap),
     $footer_option('home_footer_policy_text', 'CHÍNH SÁCH & ĐIỀU KHOẢN')
 );
+if ($policy_wrap) {
+    $policy_wrap->setAttribute('role', 'button');
+    $policy_wrap->setAttribute('tabindex', '0');
+    $policy_wrap->setAttribute('aria-label', $footer_option('home_footer_policy_text', 'CHÍNH SÁCH & ĐIỀU KHOẢN'));
+}
 
 $social_links = $footer_xpath->query('.//a[' . $footer_class('footer_contact_info_social_icon') . ']', $footer);
 $social_urls = array(

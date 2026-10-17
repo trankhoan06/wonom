@@ -273,7 +273,10 @@
         var countdown = popup.querySelector('[data-member-countdown]');
         var maskedEmail = popup.querySelector('[data-member-masked-email]');
         var toast = popup.querySelector('.popup_member_toast');
-        var session = { token: '', mode: 'register', email: '', timer: null, card: null };
+        var logoutButton = popup.querySelector('[data-member-logout]');
+        var cardSessionKey = 'wonomMembershipCardSession';
+        var cardSessionDuration = 30 * 60 * 1000;
+        var session = { token: '', mode: 'register', email: '', timer: null, card: null, expiresAt: 0, logoutTimer: null };
         var titles = {
             register: 'ĐĂNG KÝ THÀNH VIÊN',
             verify: 'XÁC MINH THÀNH VIÊN',
@@ -287,10 +290,70 @@
                 panel.classList.toggle('is-active', panel.getAttribute('data-member-panel') === state);
             });
             title.textContent = titles[state] || titles.register;
+            logoutButton.hidden = 'card' !== state;
             resetValidationState(popup);
             if ('verify' !== state && session.timer) {
                 window.clearInterval(session.timer);
                 session.timer = null;
+            }
+        }
+
+        function renderMemberCard(card) {
+            if (!card) return;
+            popup.querySelector('[data-member-name]').textContent = String(card.name || '').toLocaleUpperCase('vi-VN');
+            popup.querySelector('[data-member-number]').textContent = card.number || '';
+        }
+
+        function clearCardSession(showRegister) {
+            session.card = null;
+            session.expiresAt = 0;
+            if (session.logoutTimer) window.clearTimeout(session.logoutTimer);
+            session.logoutTimer = null;
+            try { window.sessionStorage.removeItem(cardSessionKey); } catch (error) { /* Storage may be disabled. */ }
+            if (showRegister) {
+                registerForm.reset();
+                lookupForm.reset();
+                session.email = '';
+                setMemberState('register');
+            }
+        }
+
+        function scheduleCardLogout() {
+            if (session.logoutTimer) window.clearTimeout(session.logoutTimer);
+            var delay = session.expiresAt - Date.now();
+            if (delay <= 0) return clearCardSession(true);
+            session.logoutTimer = window.setTimeout(function () {
+                clearCardSession(true);
+            }, delay);
+        }
+
+        function saveCardSession(card) {
+            session.card = card;
+            session.expiresAt = Date.now() + cardSessionDuration;
+            try {
+                window.sessionStorage.setItem(cardSessionKey, JSON.stringify({
+                    card: card,
+                    expiresAt: session.expiresAt
+                }));
+            } catch (error) { /* Keep the in-memory session when storage is unavailable. */ }
+            scheduleCardLogout();
+        }
+
+        function restoreCardSession() {
+            try {
+                var saved = JSON.parse(window.sessionStorage.getItem(cardSessionKey) || 'null');
+                if (!saved || !saved.card || Number(saved.expiresAt) <= Date.now()) {
+                    clearCardSession(false);
+                    return false;
+                }
+                session.card = saved.card;
+                session.expiresAt = Number(saved.expiresAt);
+                renderMemberCard(session.card);
+                scheduleCardLogout();
+                return true;
+            } catch (error) {
+                clearCardSession(false);
+                return false;
             }
         }
 
@@ -450,10 +513,9 @@
             data.append('code', code);
             setButtonLoading(confirmButton, true, 'ĐANG XÁC NHẬN...');
             membershipRequest(data).then(function (payload) {
-                session.card = payload.card;
+                saveCardSession(payload.card);
                 titles.card = payload.mode === 'lookup' ? 'THẺ THÀNH VIÊN' : 'NHẬN THẺ THÀNH VIÊN';
-                popup.querySelector('[data-member-name]').textContent = String(payload.card.name || '').toLocaleUpperCase('vi-VN');
-                popup.querySelector('[data-member-number]').textContent = payload.card.number;
+                renderMemberCard(payload.card);
                 setMemberState('card');
                 if ('register' === payload.mode) {
                     toast.classList.add('is-visible');
@@ -490,13 +552,20 @@
         });
         document.querySelectorAll('.header_button_member').forEach(function (button) {
             button.addEventListener('click', function () {
-                registerForm.reset();
-                lookupForm.reset();
-                session.email = '';
-                setMemberState('register');
+                if (session.card && session.expiresAt > Date.now()) {
+                    renderMemberCard(session.card);
+                    setMemberState('card');
+                    return;
+                }
+                clearCardSession(true);
             });
         });
+        logoutButton.addEventListener('click', function () {
+            clearCardSession(true);
+        });
         toast.querySelector('button').addEventListener('click', function () { toast.classList.remove('is-visible'); });
+
+        restoreCardSession();
 
         popup.querySelector('[data-member-download]').addEventListener('click', function () {
             if (!session.card) return;
