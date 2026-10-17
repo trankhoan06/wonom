@@ -74,9 +74,10 @@ if (!defined('ABSPATH')) exit;
                         <div class="footer_contact_num_txt txt_64 h3_mb">0968 487 096</div>
                     </div>
                     <div class="footer_contact_or txt_15 txt_bold">HOẶC</div>
-                    <div class="footer_contact_button btn">
+                    <a class="footer_contact_button btn" href="https://zalo.me/1291446489467973585"
+                        target="_blank" rel="noopener noreferrer">
                         <div class="btn-inner txt_18 txt_extrabold cl_cream">GỌI ZALO ĐẶT BÀN NGAY!!!</div>
-                    </div>
+                    </a>
                     <div class="footer_contact_icon img_full">
                         <img src="/asset/img/footer_icon.png" alt="">
                     </div>

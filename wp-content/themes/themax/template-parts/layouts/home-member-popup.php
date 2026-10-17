@@ -1,6 +1,6 @@
 <?php
 if (!defined('ABSPATH')) exit;
-$member_zalo_url = esc_url((string) tr_options_field('tr_theme_options.home_footer_zalo_url')) ?: 'https://zalo.me/';
+$member_zalo_url = 'https://zalo.me/1291446489467973585';
 ?>
 <section class="popup_member" aria-hidden="true" data-member-state="register">
     <button class="popup_member_back btn txt_14 txt_extrabold cl_text" type="button">

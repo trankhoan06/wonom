@@ -457,6 +457,39 @@ $(document).ready(function () {
     const $exploreMobileTabs = $('.home_explore_content_subtitle_wrap');
     const $exploreFloorSelector = $('.home_explore_sidebar_bottom_inner');
     const $exploreFloorControls = $exploreFloorSelector.find('.home_explore_floor_control');
+    const exploreSeeAllDesktopMedia = window.matchMedia('(min-width: 992px)');
+    let exploreSeeAllAlignmentFrame = null;
+
+    function alignExploreSeeAllButtons() {
+        exploreSeeAllAlignmentFrame = null;
+
+        $exploreContentTabs.each(function () {
+            var tab = this;
+            var button = tab.querySelector('.home_explore_seeall');
+            if (!button) return;
+
+            if (!exploreSeeAllDesktopMedia.matches) {
+                tab.style.removeProperty('--explore-seeall-center-x');
+                return;
+            }
+
+            var slider = tab.querySelector('.home_explore_list');
+            var firstSlide = slider && slider.querySelector('.home_explore_list_item');
+            if (!slider || !firstSlide) return;
+
+            var tabRect = tab.getBoundingClientRect();
+            var sliderRect = slider.getBoundingClientRect();
+            var slideWidth = firstSlide.getBoundingClientRect().width;
+            var centerX = sliderRect.left - tabRect.left + (slideWidth / 2);
+
+            tab.style.setProperty('--explore-seeall-center-x', centerX + 'px');
+        });
+    }
+
+    function requestExploreSeeAllAlignment() {
+        if (exploreSeeAllAlignmentFrame !== null) return;
+        exploreSeeAllAlignmentFrame = window.requestAnimationFrame(alignExploreSeeAllButtons);
+    }
 
     function setExploreFloorControl($control, targetIndex) {
         var isDisabled = targetIndex < 0 || targetIndex >= $exploreContentTabs.length;
@@ -510,6 +543,7 @@ $(document).ready(function () {
                 $(this).removeClass('active remove');
             }
         });
+        requestExploreSeeAllAlignment();
 
         if (animate) {
             exploreTabTransitionTimer = window.setTimeout(function () {
@@ -618,6 +652,9 @@ $(document).ready(function () {
     }
 
     exploreMobileMedia.addEventListener('change', syncExploreMobileAccordion);
+    exploreSeeAllDesktopMedia.addEventListener('change', requestExploreSeeAllAlignment);
+    window.addEventListener('resize', requestExploreSeeAllAlignment, { passive: true });
+    window.addEventListener('load', requestExploreSeeAllAlignment);
     syncExploreMobileAccordion();
 
 
@@ -737,6 +774,7 @@ $(document).ready(function () {
                     swiper.params.slidesOffsetAfter = offset;
                     swiper.update();
                 }
+                requestExploreSeeAllAlignment();
             },
             resize: function (swiper) {
                 if (swiper.slides.length > 0) {
@@ -744,6 +782,7 @@ $(document).ready(function () {
                     swiper.params.slidesOffsetAfter = offset;
                     swiper.update();
                 }
+                requestExploreSeeAllAlignment();
             }
         },
         navigation: {

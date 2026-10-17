@@ -2679,6 +2679,18 @@ h2 {
     color: #FFF6DB;
 }
 
+@media (min-width: 992px) {
+    .home_explore_content_tab .home_explore_seeall {
+        right: auto;
+        left: var(--explore-seeall-center-x, 75%);
+        transform: translateX(-50%);
+    }
+
+    .home_explore_content_tab .home_explore_seeall.btn:hover {
+        transform: translate(calc(-50% + 1px), 1px);
+    }
+}
+
 .home_explore_list_button.btn:hover {
     transform: translate(1px, calc(-50% + 1px));
 }

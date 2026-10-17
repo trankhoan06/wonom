@@ -23,7 +23,7 @@ $global_actions = array(
         'class' => 'item3',
         'icon' => wonom_get_home_image_url('home_global_zalo_icon', '/asset/img/icon_zal.svg'),
         'text' => $global_action_option('home_global_zalo_text', '0968 487 096'),
-        'link' => $global_action_option('home_global_zalo_link', 'tel:0968487096'),
+        'link' => 'https://zalo.me/1291446489467973585',
         'text_class' => ' cl_cream',
     ),
 );
@@ -44,6 +44,7 @@ $global_actions = array(
             <?php foreach ($global_actions as $global_action) : ?>
                 <a class="global_btn_list_item <?php echo esc_attr($global_action['class']); ?>"
                     href="<?php echo esc_url($global_action['link']); ?>"
+                    <?php if ('item3' === $global_action['class']) : ?>target="_blank" rel="noopener noreferrer"<?php endif; ?>
                     data-label="<?php echo esc_attr($global_action['text']); ?>"
                     aria-label="<?php echo esc_attr($global_action['text']); ?>">
                     <div class="global_btn_list_item_icon img_full">

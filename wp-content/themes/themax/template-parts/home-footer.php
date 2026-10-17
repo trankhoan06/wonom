@@ -106,7 +106,7 @@ if ($phone_wrap) {
     $phone_wrap->setAttribute('data-footer-href', 'tel:' . preg_replace('/[^0-9+]/', '', $phone));
 }
 $zalo_button = $footer_first('.//*[' . $footer_class('footer_contact_button') . ']', $footer);
-$zalo_url = esc_url($footer_option('home_footer_zalo_url'));
+$zalo_url = 'https://zalo.me/1291446489467973585';
 if ($zalo_button && $zalo_url) {
     $zalo_button->setAttribute('role', 'link');
     $zalo_button->setAttribute('tabindex', '0');
