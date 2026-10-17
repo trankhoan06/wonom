@@ -936,20 +936,12 @@ function wonom_render_homepage_settings()
 
     $booking_settings = function () use ($form) {
         echo '<h2>Cài đặt Form Đặt chỗ (Popup Booking)</h2>';
-        echo '<p style="color:#50575e;margin-bottom:20px;">Tùy chỉnh tiêu đề, ảnh nền, các nhãn hiển thị và thông tin hotline trên form đặt chỗ.</p>';
+        echo '<p style="color:#50575e;margin-bottom:20px;">Tùy chỉnh tiêu đề, các nhãn hiển thị và thông tin hotline trên form đặt chỗ.</p>';
 
         echo '<h3>Header & Thông tin chung</h3>';
-        echo $form->row(
-            $form->text('home_booking_title')
-                ->setLabel('Tiêu đề mặc định của form')
-                ->setAttribute('placeholder', 'ĐẶT CHỖ ONLINE'),
-            $form->text('home_booking_subtitle')
-                ->setLabel('Phụ đề mặc định')
-                ->setAttribute('placeholder', 'WONOM')
-        );
-        echo $form->image('home_booking_header_image')
-            ->setLabel('Ảnh nền header popup')
-            ->setHelp('Ảnh nền banner phía trên của form popup (mặc định nếu để trống sẽ dùng asset/img/ex_bg_bot.png).');
+        echo $form->text('home_booking_title')
+            ->setLabel('Tiêu đề mặc định của form')
+            ->setAttribute('placeholder', 'ĐẶT CHỖ ONLINE');
 
         echo '<h3>Nhãn & Placeholder các trường nhập</h3>';
         echo $form->row(

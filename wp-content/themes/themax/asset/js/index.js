@@ -2532,7 +2532,7 @@ $(document).ready(function () {
         var $form = $popup.find('.popup_form_booking_form');
         var bookingType = $trigger.attr('data-booking-type');
         var subtitle = $trigger.attr('data-booking-subtitle');
-        var productName = $trigger.attr('data-booking-product-name') || '';
+        var productName = ($trigger.attr('data-booking-product-name') || '').replace(/\s+/g, ' ').trim();
         var showFloorSelect = bookingType === 'general';
 
         $popup.find('.popup_form_booking_title').text($trigger.attr('data-booking-title'));
@@ -2545,6 +2545,7 @@ $(document).ready(function () {
         $form.find('[name="venue"]').val($trigger.attr('data-booking-venue'));
         $form.find('[name="product_id"]').val($trigger.attr('data-booking-product-id') || '');
         $form.find('[name="product_name"]').val(productName);
+        $form.find('[data-booking-product-display]').text(productName);
         $form.find('.popup_form_booking_product_group').prop('hidden', !productName);
         $form.attr('data-booking-type', $trigger.attr('data-booking-type'));
         $form.attr('data-booking-floor', $trigger.attr('data-booking-floor'));
@@ -2642,7 +2643,7 @@ $(document).ready(function () {
 
     function openWorkshopDetail($card) {
         var productId = $card.attr('data-product-id');
-        var productName = $card.find('.workshop_card_title').text().trim();
+        var productName = $card.find('.workshop_card_title').text().replace(/\s+/g, ' ').trim();
         var mainImage = $card.find('.workshop_card_image img').attr('src');
         var configuredDetailImages = [];
 
@@ -2696,7 +2697,7 @@ $(document).ready(function () {
 
     $('.workshop_card').each(function () {
         var $card = $(this);
-        var productName = $card.find('.workshop_card_title').text().trim();
+        var productName = $card.find('.workshop_card_title').text().replace(/\s+/g, ' ').trim();
         $card.attr({
             role: 'button',
             tabindex: '0',

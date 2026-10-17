@@ -1,9 +1,9 @@
 <?php
 if (!defined('ABSPATH')) exit;
 
-$booking_bg = wonom_get_home_image_url('home_booking_header_image', get_template_directory_uri() . '/asset/img/ex_bg_bot.png');
+$booking_bg = get_template_directory_uri() . '/asset/img/ex_bg_bot.png';
 $booking_title = tr_options_field('wonom_home_options.home_booking_title') ?: wonom_home_t('online_booking');
-$booking_subtitle = tr_options_field('wonom_home_options.home_booking_subtitle') ?: 'WONOM';
+$booking_subtitle = 'WONOM';
 
 $label_name = tr_options_field('wonom_home_options.home_booking_label_name') ?: wonom_home_t('full_name');
 $placeholder_name = tr_options_field('wonom_home_options.home_booking_placeholder_name') ?: wonom_home_t('enter_name');
@@ -60,9 +60,9 @@ $hotline_tel = preg_replace('/[^0-9+]/', '', $hotline);
                     <input type="hidden" name="venue" value="WONOM">
                     <input type="hidden" name="product_id" value="">
                     <div class="popup_form_group popup_form_booking_product_group" hidden>
-                        <label class="popup_form_label txt_15 txt_extrabold cl_text" for="booking-product-name"><?php echo esc_html(wonom_home_t('format')); ?></label>
-                        <input id="booking-product-name" name="product_name" type="text"
-                            class="popup_form_input popup_form_booking_product_input" value="" readonly>
+                        <div class="popup_form_label txt_15 txt_extrabold cl_text"><?php echo esc_html(wonom_home_t('format')); ?></div>
+                        <input name="product_name" type="hidden" value="">
+                        <div class="popup_form_booking_product_display" data-booking-product-display></div>
                     </div>
                     <div class="popup_form_row">
                         <div class="popup_form_group">
