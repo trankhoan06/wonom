@@ -844,6 +844,61 @@ function wonom_zalo_display_date($value)
     return $date ? $date->format('d/m/Y') : (string) $value;
 }
 
+/**
+ * Zalo OA text messages do not support rich-text markup. Use mathematical
+ * sans-serif bold characters so the form title is visually emphasized.
+ */
+function wonom_zalo_bold_title($value)
+{
+    $value = (string) $value;
+
+    if (class_exists('Normalizer')) {
+        $normalized = Normalizer::normalize($value, Normalizer::FORM_D);
+        if (false !== $normalized) {
+            $value = $normalized;
+        }
+    } else {
+        // Vietnamese fallback for hosts where the PHP intl extension is absent.
+        $value = strtr($value, array(
+            'À' => "A\u{0300}", 'Á' => "A\u{0301}", 'Ả' => "A\u{0309}", 'Ã' => "A\u{0303}", 'Ạ' => "A\u{0323}",
+            'Ă' => "A\u{0306}", 'Ằ' => "A\u{0306}\u{0300}", 'Ắ' => "A\u{0306}\u{0301}", 'Ẳ' => "A\u{0306}\u{0309}", 'Ẵ' => "A\u{0306}\u{0303}", 'Ặ' => "A\u{0306}\u{0323}",
+            'Â' => "A\u{0302}", 'Ầ' => "A\u{0302}\u{0300}", 'Ấ' => "A\u{0302}\u{0301}", 'Ẩ' => "A\u{0302}\u{0309}", 'Ẫ' => "A\u{0302}\u{0303}", 'Ậ' => "A\u{0302}\u{0323}",
+            'Đ' => "D\u{0335}",
+            'È' => "E\u{0300}", 'É' => "E\u{0301}", 'Ẻ' => "E\u{0309}", 'Ẽ' => "E\u{0303}", 'Ẹ' => "E\u{0323}",
+            'Ê' => "E\u{0302}", 'Ề' => "E\u{0302}\u{0300}", 'Ế' => "E\u{0302}\u{0301}", 'Ể' => "E\u{0302}\u{0309}", 'Ễ' => "E\u{0302}\u{0303}", 'Ệ' => "E\u{0302}\u{0323}",
+            'Ì' => "I\u{0300}", 'Í' => "I\u{0301}", 'Ỉ' => "I\u{0309}", 'Ĩ' => "I\u{0303}", 'Ị' => "I\u{0323}",
+            'Ò' => "O\u{0300}", 'Ó' => "O\u{0301}", 'Ỏ' => "O\u{0309}", 'Õ' => "O\u{0303}", 'Ọ' => "O\u{0323}",
+            'Ô' => "O\u{0302}", 'Ồ' => "O\u{0302}\u{0300}", 'Ố' => "O\u{0302}\u{0301}", 'Ổ' => "O\u{0302}\u{0309}", 'Ỗ' => "O\u{0302}\u{0303}", 'Ộ' => "O\u{0302}\u{0323}",
+            'Ơ' => "O\u{031B}", 'Ờ' => "O\u{031B}\u{0300}", 'Ớ' => "O\u{031B}\u{0301}", 'Ở' => "O\u{031B}\u{0309}", 'Ỡ' => "O\u{031B}\u{0303}", 'Ợ' => "O\u{031B}\u{0323}",
+            'Ù' => "U\u{0300}", 'Ú' => "U\u{0301}", 'Ủ' => "U\u{0309}", 'Ũ' => "U\u{0303}", 'Ụ' => "U\u{0323}",
+            'Ư' => "U\u{031B}", 'Ừ' => "U\u{031B}\u{0300}", 'Ứ' => "U\u{031B}\u{0301}", 'Ử' => "U\u{031B}\u{0309}", 'Ữ' => "U\u{031B}\u{0303}", 'Ự' => "U\u{031B}\u{0323}",
+            'Ỳ' => "Y\u{0300}", 'Ý' => "Y\u{0301}", 'Ỷ' => "Y\u{0309}", 'Ỹ' => "Y\u{0303}", 'Ỵ' => "Y\u{0323}",
+            'à' => "a\u{0300}", 'á' => "a\u{0301}", 'ả' => "a\u{0309}", 'ã' => "a\u{0303}", 'ạ' => "a\u{0323}",
+            'ă' => "a\u{0306}", 'ằ' => "a\u{0306}\u{0300}", 'ắ' => "a\u{0306}\u{0301}", 'ẳ' => "a\u{0306}\u{0309}", 'ẵ' => "a\u{0306}\u{0303}", 'ặ' => "a\u{0306}\u{0323}",
+            'â' => "a\u{0302}", 'ầ' => "a\u{0302}\u{0300}", 'ấ' => "a\u{0302}\u{0301}", 'ẩ' => "a\u{0302}\u{0309}", 'ẫ' => "a\u{0302}\u{0303}", 'ậ' => "a\u{0302}\u{0323}",
+            'đ' => "d\u{0335}",
+            'è' => "e\u{0300}", 'é' => "e\u{0301}", 'ẻ' => "e\u{0309}", 'ẽ' => "e\u{0303}", 'ẹ' => "e\u{0323}",
+            'ê' => "e\u{0302}", 'ề' => "e\u{0302}\u{0300}", 'ế' => "e\u{0302}\u{0301}", 'ể' => "e\u{0302}\u{0309}", 'ễ' => "e\u{0302}\u{0303}", 'ệ' => "e\u{0302}\u{0323}",
+            'ì' => "i\u{0300}", 'í' => "i\u{0301}", 'ỉ' => "i\u{0309}", 'ĩ' => "i\u{0303}", 'ị' => "i\u{0323}",
+            'ò' => "o\u{0300}", 'ó' => "o\u{0301}", 'ỏ' => "o\u{0309}", 'õ' => "o\u{0303}", 'ọ' => "o\u{0323}",
+            'ô' => "o\u{0302}", 'ồ' => "o\u{0302}\u{0300}", 'ố' => "o\u{0302}\u{0301}", 'ổ' => "o\u{0302}\u{0309}", 'ỗ' => "o\u{0302}\u{0303}", 'ộ' => "o\u{0302}\u{0323}",
+            'ơ' => "o\u{031B}", 'ờ' => "o\u{031B}\u{0300}", 'ớ' => "o\u{031B}\u{0301}", 'ở' => "o\u{031B}\u{0309}", 'ỡ' => "o\u{031B}\u{0303}", 'ợ' => "o\u{031B}\u{0323}",
+            'ù' => "u\u{0300}", 'ú' => "u\u{0301}", 'ủ' => "u\u{0309}", 'ũ' => "u\u{0303}", 'ụ' => "u\u{0323}",
+            'ư' => "u\u{031B}", 'ừ' => "u\u{031B}\u{0300}", 'ứ' => "u\u{031B}\u{0301}", 'ử' => "u\u{031B}\u{0309}", 'ữ' => "u\u{031B}\u{0303}", 'ự' => "u\u{031B}\u{0323}",
+            'ỳ' => "y\u{0300}", 'ý' => "y\u{0301}", 'ỷ' => "y\u{0309}", 'ỹ' => "y\u{0303}", 'ỵ' => "y\u{0323}",
+        ));
+    }
+
+    $plain = str_split('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789');
+    $bold = preg_split('//u', '𝗔𝗕𝗖𝗗𝗘𝗙𝗚𝗛𝗜𝗝𝗞𝗟𝗠𝗡𝗢𝗣𝗤𝗥𝗦𝗧𝗨𝗩𝗪𝗫𝗬𝗭𝗮𝗯𝗰𝗱𝗲𝗳𝗴𝗵𝗶𝗷𝗸𝗹𝗺𝗻𝗼𝗽𝗾𝗿𝘀𝘁𝘂𝘃𝘄𝘅𝘆𝘇𝟬𝟭𝟮𝟯𝟰𝟱𝟲𝟳𝟴𝟵', -1, PREG_SPLIT_NO_EMPTY);
+
+    if (count($plain) !== count($bold)) {
+        return $value;
+    }
+
+    return strtr($value, array_combine($plain, $bold));
+}
+
 function wonom_zalo_add_message_field(&$lines, $label, $value)
 {
     $value = trim((string) $value);
@@ -869,7 +924,7 @@ function wonom_zalo_submission_message($post_id)
     if ('membership' === $type) {
         if ('' === $form_title) $form_title = 'ĐĂNG KÝ THÀNH VIÊN';
         $lines = array(
-            '🟡 WONOM • ' . $form_title,
+            '🟡 WONOM • ' . wonom_zalo_bold_title($form_title),
             '━━━━━━━━━━━━━━━━━━',
             '✅ Đăng ký thành công',
             '',
@@ -884,7 +939,7 @@ function wonom_zalo_submission_message($post_id)
     if ('tour' === $type) {
         if ('' === $form_title) $form_title = 'ĐẶT TOUR THAM QUAN';
         $lines = array(
-            '🚌 WONOM • ' . $form_title,
+            '🚌 WONOM • ' . wonom_zalo_bold_title($form_title),
             '━━━━━━━━━━━━━━━━━━',
             '✅ Đã tiếp nhận yêu cầu',
             '',
@@ -913,7 +968,7 @@ function wonom_zalo_submission_message($post_id)
         '✅ Đã tiếp nhận yêu cầu',
     );
     if ('' === $form_title) $form_title = $profile[1];
-    $lines = array($profile[0] . ' WONOM • ' . $form_title, '━━━━━━━━━━━━━━━━━━', $profile[2], '');
+    $lines = array($profile[0] . ' WONOM • ' . wonom_zalo_bold_title($form_title), '━━━━━━━━━━━━━━━━━━', $profile[2], '');
 
     wonom_zalo_add_message_field($lines, '👤 Khách hàng', wonom_zalo_submission_meta($post_id, 'name'));
     wonom_zalo_add_message_field($lines, '📞 Điện thoại', wonom_zalo_submission_meta($post_id, 'phone'));
